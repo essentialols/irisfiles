@@ -12,6 +12,7 @@
   "devDependencies": {
     "esbuild": "^0.24.0",
     "fflate": "^0.8.2",
+    "gifenc": "^1.0.3",
     "heic-to": "^1.4.2",
     "jspdf": "^4.2.0",
     "pdf-lib": "^1.17.1",

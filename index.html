@@ -99,7 +99,7 @@
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
       <p>Drop any file here, or <strong>click to browse</strong></p>
       <p style="font-size:0.8rem;margin-top:0.5rem;color:var(--text-muted)">We'll detect the format and show your options.</p>
-      <input type="file" id="smart-file-input" accept="image/*,.heic,.heif,.pdf,application/pdf" multiple>
+      <input type="file" id="smart-file-input" accept="image/*,.heic,.heif,.pdf,application/pdf,video/*,.mp4,.webm,.mov" multiple>
     </div>
     <div id="route-panel" class="route-panel" style="display:none"></div>
 
@@ -115,6 +115,13 @@
         <a href="/jpg-to-webp" class="tool-link">JPG to WebP</a>
         <a href="/png-to-webp" class="tool-link">PNG to WebP</a>
         <a href="/compress" class="tool-link">Compress</a>
+      </div>
+    </section>
+
+    <section class="tools-section">
+      <h2 class="tools-section__heading">Animation</h2>
+      <div class="tools-grid">
+        <a href="/video-to-gif" class="tool-link">Video to GIF</a>
       </div>
     </section>
 
