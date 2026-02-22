@@ -28,6 +28,7 @@ const PAGES = [
   '/extract-zip', '/create-zip',
   '/split-pdf', '/resize-image', '/strip-exif',
   '/mov-to-mp4', '/avi-to-mp4', '/mkv-to-mp4', '/webm-to-mp4', '/mp4-to-webm',
+  '/compress-video',
   '/about'
 ];
 
@@ -169,7 +170,7 @@ async function globalChecks() {
   const urls = [];
   let m;
   while ((m = locRe.exec(sitemap)) !== null) urls.push(m[1]);
-  ok(urls.length === 76, `sitemap.xml: has ${urls.length} URLs (expected 76)`);
+  ok(urls.length === 77, `sitemap.xml: has ${urls.length} URLs (expected 77)`);
 
   // each sitemap URL corresponds to a real page
   for (const url of urls) {
