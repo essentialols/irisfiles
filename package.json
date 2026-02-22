@@ -6,14 +6,25 @@
   "scripts": {
     "build": "bash build.sh",
     "dev": "npx serve . -p 3000",
-    "start": "npx serve . -p 3000"
+    "start": "npx serve . -p 3000",
+    "test": "node test/validate.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.24.0",
     "fflate": "^0.8.2",
     "heic-to": "^1.4.2",
+    "jspdf": "^4.2.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^5.4.624",
     "serve": "^14.2.0"
   },
-  "keywords": ["image-converter", "heic", "webp", "privacy", "wasm", "client-side"],
+  "keywords": [
+    "image-converter",
+    "heic",
+    "webp",
+    "privacy",
+    "wasm",
+    "client-side"
+  ],
   "license": "MIT"
 }
