@@ -10,7 +10,7 @@ const PAGES = [
   '/', '/heic-to-jpg', '/heic-to-png', '/webp-to-jpg', '/webp-to-png',
   '/png-to-jpg', '/jpg-to-png', '/jpg-to-webp', '/png-to-webp',
   '/compress', '/jpg-to-pdf', '/png-to-pdf',
-  '/pdf-to-jpg', '/pdf-to-png', '/merge-pdf', '/about'
+  '/pdf-to-jpg', '/pdf-to-png', '/merge-pdf', '/video-to-gif', '/about'
 ];
 
 let passed = 0;
@@ -151,7 +151,7 @@ async function globalChecks() {
   const urls = [];
   let m;
   while ((m = locRe.exec(sitemap)) !== null) urls.push(m[1]);
-  ok(urls.length === 16, `sitemap.xml: has ${urls.length} URLs (expected 16)`);
+  ok(urls.length === 17, `sitemap.xml: has ${urls.length} URLs (expected 17)`);
 
   // each sitemap URL corresponds to a real page
   for (const url of urls) {

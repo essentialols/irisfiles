@@ -11,6 +11,8 @@ const SIGS = [
   { mime: 'image/gif',  ext: 'gif',  label: 'GIF',  offsets: [[0,[0x47,0x49,0x46]]] },
   { mime: 'image/bmp',  ext: 'bmp',  label: 'BMP',  offsets: [[0,[0x42,0x4D]]] },
   { mime: 'application/pdf', ext: 'pdf', label: 'PDF', offsets: [[0,[0x25,0x50,0x44,0x46]]] },
+  { mime: 'video/mp4',  ext: 'mp4',  label: 'MP4',  offsets: [[4,[0x66,0x74,0x79,0x70]]] },
+  { mime: 'video/webm', ext: 'webm', label: 'WebM', offsets: [[0,[0x1A,0x45,0xDF,0xA3]]] },
 ];
 
 // Format -> available conversion targets
@@ -22,6 +24,8 @@ const ROUTES = {
   'image/gif':   [{ label: 'Compress', href: '/compress' }],
   'image/bmp':   [{ label: 'Compress', href: '/compress' }],
   'application/pdf': [{ label: 'Convert to JPG', href: '/pdf-to-jpg' }, { label: 'Convert to PNG', href: '/pdf-to-png' }, { label: 'Merge PDFs', href: '/merge-pdf' }],
+  'video/mp4':  [{ label: 'Convert to GIF', href: '/video-to-gif' }],
+  'video/webm': [{ label: 'Convert to GIF', href: '/video-to-gif' }],
 };
 
 async function detect(file) {
