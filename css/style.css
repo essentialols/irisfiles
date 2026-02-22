@@ -355,6 +355,7 @@ body {
 }
 .badge--wasm { background: #dbeafe; color: #1e40af; }
 .badge--native { background: #f0fdf4; color: #166534; }
+.badge--pdf { background: #fef3c7; color: #92400e; }
 
 /* About page */
 .prose { max-width: 640px; margin: 0 auto; padding: 2rem 0; }

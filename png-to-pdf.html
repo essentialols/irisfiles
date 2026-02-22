@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PNG to PDF Converter - Free, Private, No Upload | ConvertFast</title>
+  <meta name="description" content="Convert PNG images to PDF in your browser. No upload, no server. Combine multiple PNGs into one document.">
+  <meta property="og:title" content="PNG to PDF Converter - Free, Private, No Upload | ConvertFast">
+  <meta property="og:description" content="Convert PNG images to PDF in your browser. No upload, no server. Combine multiple PNGs into one document.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://convertfast.app/png-to-pdf">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="PNG to PDF Converter - Free, Private, No Upload | ConvertFast">
+  <meta name="twitter:description" content="Convert PNG images to PDF in your browser. No upload, no server. Combine multiple PNGs into one document.">
+  <link rel="canonical" href="https://convertfast.app/png-to-pdf">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "PNG to PDF Converter - ConvertFast",
+      "url": "https://convertfast.app/png-to-pdf",
+      "description": "Convert PNG images to PDF entirely in your browser. No server upload. Combine multiple PNGs into one document. Private and free.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Can I convert multiple PNG files into a single PDF?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Drop or select all your PNG files at once. ConvertFast will place each image on its own page and combine them into a single PDF document."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Will my PNG transparency be preserved in the PDF?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "PNG images with transparent backgrounds will have the transparency embedded into the PDF. How it renders depends on the PDF viewer, but most modern viewers display the transparency correctly."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is this converter safe and private?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Completely. ConvertFast runs entirely in your browser. Your PNG files are never uploaded to any server. The conversion uses client-side JavaScript, so your images stay on your device at all times."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is there a limit on file size or number of images?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "You can add up to 50 PNG images per batch. There is no hard file size limit, but very large images may take longer to process depending on your device. All processing uses your browser's memory."
+          }
+        }
+      ]
+    }
+  ]
+  </script>
+</head>
+<body>
+  <header class="header">
+    <div class="container container--wide">
+      <a href="/" class="logo">Convert<span>Fast</span></a>
+      <nav class="nav">
+        <a href="/">All Converters</a>
+        <a href="/about">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>PNG to PDF Converter</h1>
+      <p>Convert PNG images to PDF instantly. Combine multiple images into one document. All processing happens in your browser.</p>
+    </section>
+
+    <div class="trust-banner">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 1L3 5v4c0 4.4 3 8.5 7 9.9 4-1.4 7-5.5 7-9.9V5l-7-4z" fill="#16a34a" opacity=".15"/><path d="M10 1L3 5v4c0 4.4 3 8.5 7 9.9 4-1.4 7-5.5 7-9.9V5l-7-4z" stroke="#16a34a" stroke-width="1.5" fill="none"/><path d="M7 10l2 2 4-4" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Your files never leave your browser. Zero server uploads. 100% private.
+    </div>
+
+    <div id="drop-zone" class="drop-zone">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
+      <p>Drag & drop PNG images here, or <strong>click to browse</strong></p>
+      <p style="font-size:0.8rem;margin-top:0.5rem">Multiple images will be combined into one PDF.</p>
+      <input type="file" id="file-input" accept=".png,image/png" multiple>
+    </div>
+
+    <div id="file-list" class="file-list"></div>
+
+    <div class="batch-actions">
+      <button id="action-btn" class="btn btn--primary" style="display:none">Convert to PDF</button>
+      <button id="clear-all" class="btn btn--secondary" style="display:none">Clear All</button>
+    </div>
+
+    <section class="faq">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-item">
+        <button class="faq-question">Can I convert multiple PNG files into a single PDF?</button>
+        <div class="faq-answer">
+          <p>Yes. Drop or select all your PNG files at once. ConvertFast will place each image on its own page and combine them into a single PDF document.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Will my PNG transparency be preserved in the PDF?</button>
+        <div class="faq-answer">
+          <p>PNG images with transparent backgrounds will have the transparency embedded into the PDF. How it renders depends on the PDF viewer, but most modern viewers display the transparency correctly.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Is this converter safe and private?</button>
+        <div class="faq-answer">
+          <p>Completely. ConvertFast runs entirely in your browser. Your PNG files are never uploaded to any server. The conversion uses client-side JavaScript, so your images stay on your device at all times.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Is there a limit on file size or number of images?</button>
+        <div class="faq-answer">
+          <p>You can add up to 50 PNG images per batch. There is no hard file size limit, but very large images may take longer to process depending on your device. All processing uses your browser's memory.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="/">All Converters</a>
+        <a href="/jpg-to-pdf">JPG to PDF</a>
+        <a href="/pdf-to-png">PDF to PNG</a>
+        <a href="/merge-pdf">Merge PDF</a>
+        <a href="/about">About</a>
+      </div>
+      <p>ConvertFast. All processing happens in your browser. <a href="https://buymeacoffee.com/convertfast">Buy me a coffee</a></p>
+    </div>
+  </footer>
+
+  <div id="converter-config" data-pdf-mode="img-to-pdf" data-target-mime=""></div>
+  <script src="js/fflate.min.js"></script>
+  <script type="module" src="js/pdf-boot.js"></script>
+</body>
+</html>
