@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF to JPG Converter - Free, Private, No Upload | ConvertFast</title>
+  <meta name="description" content="Convert PDF pages to JPG images in your browser. No upload required. Each page becomes a separate image. Batch download as ZIP.">
+  <meta property="og:title" content="PDF to JPG Converter - Free, Private, No Upload | ConvertFast">
+  <meta property="og:description" content="Convert PDF pages to JPG images in your browser. No upload required. Each page becomes a separate image. Batch download as ZIP.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://convertfast.app/pdf-to-jpg">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="PDF to JPG Converter - Free, Private, No Upload | ConvertFast">
+  <meta name="twitter:description" content="Convert PDF pages to JPG images in your browser. No upload required. Each page becomes a separate image. Batch download as ZIP.">
+  <link rel="canonical" href="https://convertfast.app/pdf-to-jpg">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "PDF to JPG Converter - ConvertFast",
+      "url": "https://convertfast.app/pdf-to-jpg",
+      "description": "Convert PDF pages to JPG images entirely in your browser. No server upload. Each page becomes a separate image. Private and free.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How does PDF to JPG conversion work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "ConvertFast renders each page of your PDF using PDF.js, a browser-based PDF renderer. Each rendered page is then converted to a JPG image using the Canvas API. The entire process runs locally in your browser."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I convert a multi-page PDF to separate JPG files?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Each page in your PDF becomes a separate JPG image. You can download them individually or grab all pages at once as a ZIP file."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What quality setting should I use for PDF to JPG?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The default setting of 92% works well for most documents. If you need smaller file sizes, try 75-85%. For archival-quality output, use 100%. The quality slider lets you find the right balance for your needs."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is my PDF uploaded to any server?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. ConvertFast processes everything in your browser. Your PDF files are never sent to a server. This makes it safe even for confidential or sensitive documents."
+          }
+        }
+      ]
+    }
+  ]
+  </script>
+</head>
+<body>
+  <header class="header">
+    <div class="container container--wide">
+      <a href="/" class="logo">Convert<span>Fast</span></a>
+      <nav class="nav">
+        <a href="/">All Converters</a>
+        <a href="/about">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>PDF to JPG Converter</h1>
+      <p>Convert PDF pages to JPG images instantly. Each page becomes a separate image. All processing happens in your browser.</p>
+    </section>
+
+    <div class="trust-banner">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 1L3 5v4c0 4.4 3 8.5 7 9.9 4-1.4 7-5.5 7-9.9V5l-7-4z" fill="#16a34a" opacity=".15"/><path d="M10 1L3 5v4c0 4.4 3 8.5 7 9.9 4-1.4 7-5.5 7-9.9V5l-7-4z" stroke="#16a34a" stroke-width="1.5" fill="none"/><path d="M7 10l2 2 4-4" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Your files never leave your browser. Zero server uploads. 100% private.
+    </div>
+
+    <div id="drop-zone" class="drop-zone">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
+      <p>Drag & drop PDF files here, or <strong>click to browse</strong></p>
+      <p style="font-size:0.8rem;margin-top:0.5rem">Each page will be converted to a separate JPG image.</p>
+      <input type="file" id="file-input" accept=".pdf,application/pdf" multiple>
+    </div>
+
+    <div class="controls">
+      <div class="quality-control">
+        <label for="quality-slider">Quality:</label>
+        <input type="range" id="quality-slider" min="10" max="100" value="92">
+        <span id="quality-value" class="quality-value">92%</span>
+      </div>
+    </div>
+
+    <div id="file-list" class="file-list"></div>
+
+    <div class="batch-actions">
+      <button id="action-btn" class="btn btn--primary" style="display:none">Convert to JPG</button>
+      <button id="clear-all" class="btn btn--secondary" style="display:none">Clear All</button>
+    </div>
+
+    <section class="faq">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-item">
+        <button class="faq-question">How does PDF to JPG conversion work?</button>
+        <div class="faq-answer">
+          <p>ConvertFast renders each page of your PDF using PDF.js, a browser-based PDF renderer. Each rendered page is then converted to a JPG image using the Canvas API. The entire process runs locally in your browser.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Can I convert a multi-page PDF to separate JPG files?</button>
+        <div class="faq-answer">
+          <p>Yes. Each page in your PDF becomes a separate JPG image. You can download them individually or grab all pages at once as a ZIP file.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">What quality setting should I use for PDF to JPG?</button>
+        <div class="faq-answer">
+          <p>The default setting of 92% works well for most documents. If you need smaller file sizes, try 75-85%. For archival-quality output, use 100%. The quality slider lets you find the right balance for your needs.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Is my PDF uploaded to any server?</button>
+        <div class="faq-answer">
+          <p>No. ConvertFast processes everything in your browser. Your PDF files are never sent to a server. This makes it safe even for confidential or sensitive documents.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="/">All Converters</a>
+        <a href="/pdf-to-png">PDF to PNG</a>
+        <a href="/jpg-to-pdf">JPG to PDF</a>
+        <a href="/merge-pdf">Merge PDF</a>
+        <a href="/about">About</a>
+      </div>
+      <p>ConvertFast. All processing happens in your browser. <a href="https://buymeacoffee.com/convertfast">Buy me a coffee</a></p>
+    </div>
+  </footer>
+
+  <div id="converter-config" data-pdf-mode="pdf-to-img" data-target-mime="image/jpeg"></div>
+  <script src="js/fflate.min.js"></script>
+  <script type="module" src="js/pdf-boot.js"></script>
+</body>
+</html>

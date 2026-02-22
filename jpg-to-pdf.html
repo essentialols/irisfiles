@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JPG to PDF Converter - Free, Private, No Upload | ConvertFast</title>
+  <meta name="description" content="Convert JPG images to PDF instantly in your browser. No upload needed. Combine multiple photos into one PDF. Batch support.">
+  <meta property="og:title" content="JPG to PDF Converter - Free, Private, No Upload | ConvertFast">
+  <meta property="og:description" content="Convert JPG images to PDF instantly in your browser. No upload needed. Combine multiple photos into one PDF. Batch support.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://convertfast.app/jpg-to-pdf">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="JPG to PDF Converter - Free, Private, No Upload | ConvertFast">
+  <meta name="twitter:description" content="Convert JPG images to PDF instantly in your browser. No upload needed. Combine multiple photos into one PDF. Batch support.">
+  <link rel="canonical" href="https://convertfast.app/jpg-to-pdf">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "JPG to PDF Converter - ConvertFast",
+      "url": "https://convertfast.app/jpg-to-pdf",
+      "description": "Convert JPG images to PDF entirely in your browser. No server upload. Combine multiple photos into one document. Private and free.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I combine multiple JPG images into one PDF?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Drop or select all your JPG files at once. ConvertFast will combine them into a single PDF in the order they appear in the file list. Each image becomes one page in the final document."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Are my photos uploaded to a server during conversion?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. ConvertFast converts your images entirely inside your browser using JavaScript. Your files never leave your device. There is no server involved at any point in the process."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does converting JPG to PDF support multiple pages?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. You can add up to 50 JPG images at once. Each image will be placed on its own page in the resulting PDF, preserving the original image dimensions."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Will converting to PDF affect my image quality?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. The JPG images are embedded directly into the PDF at their original quality. There is no re-encoding or additional compression applied during the conversion."
+          }
+        }
+      ]
+    }
+  ]
+  </script>
+</head>
+<body>
+  <header class="header">
+    <div class="container container--wide">
+      <a href="/" class="logo">Convert<span>Fast</span></a>
+      <nav class="nav">
+        <a href="/">All Converters</a>
+        <a href="/about">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>JPG to PDF Converter</h1>
+      <p>Convert JPG images to PDF instantly. Combine multiple photos into one document. All processing happens in your browser.</p>
+    </section>
+
+    <div class="trust-banner">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 1L3 5v4c0 4.4 3 8.5 7 9.9 4-1.4 7-5.5 7-9.9V5l-7-4z" fill="#16a34a" opacity=".15"/><path d="M10 1L3 5v4c0 4.4 3 8.5 7 9.9 4-1.4 7-5.5 7-9.9V5l-7-4z" stroke="#16a34a" stroke-width="1.5" fill="none"/><path d="M7 10l2 2 4-4" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Your files never leave your browser. Zero server uploads. 100% private.
+    </div>
+
+    <div id="drop-zone" class="drop-zone">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
+      <p>Drag & drop JPG images here, or <strong>click to browse</strong></p>
+      <p style="font-size:0.8rem;margin-top:0.5rem">Multiple images will be combined into one PDF.</p>
+      <input type="file" id="file-input" accept=".jpg,.jpeg,image/jpeg" multiple>
+    </div>
+
+    <div id="file-list" class="file-list"></div>
+
+    <div class="batch-actions">
+      <button id="action-btn" class="btn btn--primary" style="display:none">Convert to PDF</button>
+      <button id="clear-all" class="btn btn--secondary" style="display:none">Clear All</button>
+    </div>
+
+    <section class="faq">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-item">
+        <button class="faq-question">How do I combine multiple JPG images into one PDF?</button>
+        <div class="faq-answer">
+          <p>Drop or select all your JPG files at once. ConvertFast will combine them into a single PDF in the order they appear in the file list. Each image becomes one page in the final document.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Are my photos uploaded to a server during conversion?</button>
+        <div class="faq-answer">
+          <p>No. ConvertFast converts your images entirely inside your browser using JavaScript. Your files never leave your device. There is no server involved at any point in the process.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Does converting JPG to PDF support multiple pages?</button>
+        <div class="faq-answer">
+          <p>Yes. You can add up to 50 JPG images at once. Each image will be placed on its own page in the resulting PDF, preserving the original image dimensions.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Will converting to PDF affect my image quality?</button>
+        <div class="faq-answer">
+          <p>No. The JPG images are embedded directly into the PDF at their original quality. There is no re-encoding or additional compression applied during the conversion.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="/">All Converters</a>
+        <a href="/png-to-pdf">PNG to PDF</a>
+        <a href="/pdf-to-jpg">PDF to JPG</a>
+        <a href="/merge-pdf">Merge PDF</a>
+        <a href="/about">About</a>
+      </div>
+      <p>ConvertFast. All processing happens in your browser. <a href="https://buymeacoffee.com/convertfast">Buy me a coffee</a></p>
+    </div>
+  </footer>
+
+  <div id="converter-config" data-pdf-mode="img-to-pdf" data-target-mime=""></div>
+  <script src="js/fflate.min.js"></script>
+  <script type="module" src="js/pdf-boot.js"></script>
+</body>
+</html>
