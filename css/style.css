@@ -373,15 +373,19 @@ body {
 .back-link {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  color: var(--text-muted);
+  gap: 0.4rem;
+  color: var(--primary);
   text-decoration: none;
-  font-size: 0.85rem;
-  font-weight: 500;
-  padding: 0.75rem 0 0;
-  transition: color .15s;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 1rem 0 0;
+  padding: 0.5rem 1rem 0.5rem 0.75rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  transition: background .15s, border-color .15s;
 }
-.back-link:hover { color: var(--primary); }
+.back-link:hover { background: #dbeafe; border-color: var(--primary); }
 .back-link svg { width: 16px; height: 16px; }
 
 /* Converter grid (index page) */
