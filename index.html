@@ -100,7 +100,7 @@
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
       <p>Drop any file here, or <strong>click to browse</strong></p>
       <p style="font-size:0.8rem;margin-top:0.5rem;color:var(--text-muted)">We'll detect the format and show your options.</p>
-      <input type="file" id="smart-file-input" accept="image/*,.heic,.heif,.avif,.svg,.bmp,.gif,.tiff,.tif,.ico,.pdf,application/pdf,video/*,.mp4,.webm,.mov,audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac,.epub,.rtf,.docx,.ttf,.otf,.woff,.zip" multiple>
+      <input type="file" id="smart-file-input" accept="image/*,.heic,.heif,.avif,.svg,.bmp,.gif,.tiff,.tif,.ico,.pdf,application/pdf,video/*,.mp4,.webm,.mov,.avi,.mkv,audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac,.epub,.rtf,.docx,.ttf,.otf,.woff,.zip" multiple>
     </div>
     <div id="route-panel" class="route-panel" style="display:none"></div>
 
@@ -214,7 +214,17 @@
             <a href="/compress" class="tool-link">Compress</a>
           </div>
         </div>
-        <div class="convert-group">PDF & Video</div>
+        <div class="convert-group">Image Tools</div>
+        <div class="convert-row">
+          <span class="convert-source">Image</span>
+          <span class="convert-arrow">→</span>
+          <div class="convert-targets">
+            <a href="/resize-image" class="tool-link">Resize</a>
+            <a href="/strip-exif" class="tool-link">Strip EXIF</a>
+            <a href="/compress" class="tool-link">Compress</a>
+          </div>
+        </div>
+        <div class="convert-group">PDF</div>
         <div class="convert-row">
           <span class="convert-source">PDF</span>
           <span class="convert-arrow">→</span>
@@ -222,6 +232,43 @@
             <a href="/pdf-to-jpg" class="tool-link">JPG</a>
             <a href="/pdf-to-png" class="tool-link">PNG</a>
             <a href="/merge-pdf" class="tool-link">Merge</a>
+            <a href="/split-pdf" class="tool-link">Split</a>
+          </div>
+        </div>
+        <div class="convert-group">Video</div>
+        <div class="convert-row">
+          <span class="convert-source">MOV</span>
+          <span class="convert-arrow">→</span>
+          <div class="convert-targets">
+            <a href="/mov-to-mp4" class="tool-link">MP4</a>
+          </div>
+        </div>
+        <div class="convert-row">
+          <span class="convert-source">AVI</span>
+          <span class="convert-arrow">→</span>
+          <div class="convert-targets">
+            <a href="/avi-to-mp4" class="tool-link">MP4</a>
+          </div>
+        </div>
+        <div class="convert-row">
+          <span class="convert-source">MKV</span>
+          <span class="convert-arrow">→</span>
+          <div class="convert-targets">
+            <a href="/mkv-to-mp4" class="tool-link">MP4</a>
+          </div>
+        </div>
+        <div class="convert-row">
+          <span class="convert-source">WebM</span>
+          <span class="convert-arrow">→</span>
+          <div class="convert-targets">
+            <a href="/webm-to-mp4" class="tool-link">MP4</a>
+          </div>
+        </div>
+        <div class="convert-row">
+          <span class="convert-source">MP4</span>
+          <span class="convert-arrow">→</span>
+          <div class="convert-targets">
+            <a href="/mp4-to-webm" class="tool-link">WebM</a>
           </div>
         </div>
         <div class="convert-row">

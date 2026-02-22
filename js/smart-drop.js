@@ -38,9 +38,12 @@ const ROUTES = {
   'image/tiff':  [{ label: 'Convert to JPG', href: '/tiff-to-jpg' }, { label: 'Convert to PNG', href: '/tiff-to-png' }, { label: 'Convert to WebP', href: '/tiff-to-webp' }, { label: 'Compress', href: '/compress' }],
   'image/x-icon': [{ label: 'Convert to JPG', href: '/ico-to-jpg' }, { label: 'Convert to PNG', href: '/ico-to-png' }, { label: 'Convert to WebP', href: '/ico-to-webp' }, { label: 'Compress', href: '/compress' }],
   'image/svg+xml': [{ label: 'Convert to JPG', href: '/svg-to-jpg' }, { label: 'Convert to PNG', href: '/svg-to-png' }, { label: 'Convert to WebP', href: '/svg-to-webp' }, { label: 'Compress', href: '/compress' }],
-  'application/pdf': [{ label: 'Convert to JPG', href: '/pdf-to-jpg' }, { label: 'Convert to PNG', href: '/pdf-to-png' }, { label: 'Merge PDFs', href: '/merge-pdf' }],
-  'video/mp4':  [{ label: 'Convert to GIF', href: '/video-to-gif' }],
-  'video/webm': [{ label: 'Convert to GIF', href: '/video-to-gif' }],
+  'application/pdf': [{ label: 'Convert to JPG', href: '/pdf-to-jpg' }, { label: 'Convert to PNG', href: '/pdf-to-png' }, { label: 'Merge PDFs', href: '/merge-pdf' }, { label: 'Split PDF', href: '/split-pdf' }],
+  'video/mp4':       [{ label: 'Convert to WebM', href: '/mp4-to-webm' }, { label: 'Convert to GIF', href: '/video-to-gif' }],
+  'video/webm':      [{ label: 'Convert to MP4', href: '/webm-to-mp4' }, { label: 'Convert to GIF', href: '/video-to-gif' }],
+  'video/quicktime': [{ label: 'Convert to MP4', href: '/mov-to-mp4' }, { label: 'Convert to GIF', href: '/video-to-gif' }],
+  'video/x-msvideo': [{ label: 'Convert to MP4', href: '/avi-to-mp4' }],
+  'video/x-matroska':[{ label: 'Convert to MP4', href: '/mkv-to-mp4' }],
   'audio/mpeg': [{ label: 'Convert to WAV', href: '/mp3-to-wav' }],
   'audio/wav':  [{ label: 'Convert to MP3', href: '/wav-to-mp3' }],
   'audio/ogg':  [{ label: 'Convert to WAV', href: '/ogg-to-wav' }, { label: 'Convert to MP3', href: '/ogg-to-mp3' }],
@@ -89,6 +92,10 @@ async function detect(file) {
   if (ext === 'ttf') return SIGS.find(s => s.mime === 'font/ttf');
   if (ext === 'otf') return SIGS.find(s => s.mime === 'font/otf');
   if (ext === 'woff') return SIGS.find(s => s.mime === 'font/woff');
+  // Video fallbacks
+  if (ext === 'mov') return { mime: 'video/quicktime', ext: 'mov', label: 'MOV' };
+  if (ext === 'avi') return { mime: 'video/x-msvideo', ext: 'avi', label: 'AVI' };
+  if (ext === 'mkv') return { mime: 'video/x-matroska', ext: 'mkv', label: 'MKV' };
   // Archive fallback
   if (ext === 'zip') return { mime: 'application/zip', ext: 'zip', label: 'ZIP' };
   return null;
