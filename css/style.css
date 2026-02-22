@@ -152,6 +152,34 @@ body {
   min-width: 3ch;
   text-align: right;
 }
+.resize-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.resize-controls label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.resize-controls select,
+.resize-controls input[type="number"] {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  width: 100px;
+}
+.resize-controls select { width: auto; }
+.lock-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
 .btn {
   display: inline-flex;
   align-items: center;

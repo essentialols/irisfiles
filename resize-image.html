@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resize Images - Free, Private, No Upload | ConvertFast</title>
+  <meta name="description" content="Resize images by dimensions or percentage in your browser. No upload required. Supports JPG, PNG, WebP, and more. Batch processing included.">
+  <meta property="og:title" content="Resize Images - Free, Private, No Upload | ConvertFast">
+  <meta property="og:description" content="Resize images by dimensions or percentage in your browser. No upload required. Supports JPG, PNG, WebP, and more. Batch processing included.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://convertfast.app/resize-image">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Resize Images - Free, Private, No Upload | ConvertFast">
+  <meta name="twitter:description" content="Resize images by dimensions or percentage in your browser. No upload required. Supports JPG, PNG, WebP, and more. Batch processing included.">
+  <meta property="og:image" content="https://convertfast.app/img/og-default.png">
+  <meta name="twitter:image" content="https://convertfast.app/img/og-default.png">
+  <link rel="canonical" href="https://convertfast.app/resize-image">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Resize Images - ConvertFast",
+      "url": "https://convertfast.app/resize-image",
+      "description": "Resize images by exact dimensions or percentage in your browser. No server upload. Private and free.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What image formats can I resize?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "You can resize any image format your browser supports: JPG, PNG, WebP, GIF, BMP, AVIF, ICO, and TIFF. HEIC images are also supported via our built-in decoder."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I maintain the aspect ratio?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. The aspect ratio lock is enabled by default. When you change the width, the height adjusts automatically (and vice versa) to preserve the original proportions. Uncheck the lock to set width and height independently."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is the maximum image size?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "ConvertFast limits output dimensions to 16384x16384 pixels, which is the maximum canvas size in most browsers. Input files up to 100MB are supported. The actual limit depends on your device's available memory."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Are my images uploaded to a server?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. ConvertFast resizes images entirely in your browser using the Canvas API. Your files are never uploaded anywhere. This makes it safe for personal photos, confidential documents, and other sensitive images."
+          }
+        }
+      ]
+    }
+  ]
+  </script>
+</head>
+<body>
+  <header class="header">
+    <div class="container container--wide">
+      <a href="/" class="logo">Convert<span>Fast</span></a>
+      <nav class="nav">
+        <a href="/">All Converters</a>
+        <a href="/about">About</a>
+        <a href="https://buymeacoffee.com/convertfast" class="support-btn" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1.5a2.5 2.5 0 010 5H17"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z" fill="currentColor" stroke="none" opacity=".15"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3" opacity=".6"/></svg> Buy me a coffee</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> All Converters</a>
+    <section class="hero">
+      <h1>Resize Images</h1>
+      <p>Resize images by exact pixel dimensions or percentage. Supports batch processing. All processing happens in your browser.</p>
+    </section>
+
+    <div class="trust-banner">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 1L3 5v4c0 4.4 3 8.5 7 9.9 4-1.4 7-5.5 7-9.9V5l-7-4z" fill="#16a34a" opacity=".15"/><path d="M10 1L3 5v4c0 4.4 3 8.5 7 9.9 4-1.4 7-5.5 7-9.9V5l-7-4z" stroke="#16a34a" stroke-width="1.5" fill="none"/><path d="M7 10l2 2 4-4" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Your files never leave your browser. Zero server uploads. 100% private.
+    </div>
+
+    <div id="drop-zone" class="drop-zone">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
+      <p>Drag & drop images here, or <strong>click to browse</strong></p>
+      <p style="font-size:0.8rem;margin-top:0.5rem">Supports JPG, PNG, WebP, GIF, BMP, and more. Batch processing included.</p>
+      <input type="file" id="file-input" accept="image/*,.heic,.heif,.avif,.bmp,.tiff,.tif,.ico" multiple>
+    </div>
+
+    <div class="controls">
+      <div class="resize-controls">
+        <label for="resize-mode">Mode:</label>
+        <select id="resize-mode">
+          <option value="dimensions">Exact dimensions</option>
+          <option value="percent">Percentage</option>
+        </select>
+      </div>
+      <div id="dimensions-group" class="resize-controls">
+        <label for="resize-width">Width:</label>
+        <input type="number" id="resize-width" min="1" max="16384" placeholder="px">
+        <label for="resize-height">Height:</label>
+        <input type="number" id="resize-height" min="1" max="16384" placeholder="px">
+        <label class="lock-label"><input type="checkbox" id="lock-aspect" checked> Lock aspect ratio</label>
+      </div>
+      <div id="percent-group" class="resize-controls" style="display:none">
+        <label for="resize-percent">Scale:</label>
+        <input type="number" id="resize-percent" min="1" max="1000" value="50" step="1">
+        <span>%</span>
+      </div>
+    </div>
+
+    <div id="file-list" class="file-list"></div>
+
+    <div class="batch-actions">
+      <button id="download-all" class="btn btn--primary" style="display:none">Download All as ZIP</button>
+      <button id="clear-all" class="btn btn--secondary" style="display:none">Clear All</button>
+    </div>
+
+    <div class="related-tools">
+      <h2>Related Tools</h2>
+      <div class="related-tools__links">
+        <a href="/compress">Compress Images</a>
+        <a href="/strip-exif">Strip EXIF Data</a>
+        <a href="/heic-to-jpg">HEIC to JPG</a>
+      </div>
+    </div>
+
+    <section class="faq">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-item">
+        <button class="faq-question">What image formats can I resize?</button>
+        <div class="faq-answer">
+          <p>You can resize any image format your browser supports: JPG, PNG, WebP, GIF, BMP, AVIF, ICO, and TIFF. HEIC images are also supported via our built-in decoder.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Can I maintain the aspect ratio?</button>
+        <div class="faq-answer">
+          <p>Yes. The aspect ratio lock is enabled by default. When you change the width, the height adjusts automatically (and vice versa) to preserve the original proportions. Uncheck the lock to set width and height independently.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">What is the maximum image size?</button>
+        <div class="faq-answer">
+          <p>ConvertFast limits output dimensions to 16384x16384 pixels, which is the maximum canvas size in most browsers. Input files up to 100MB are supported. The actual limit depends on your device's available memory.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Are my images uploaded to a server?</button>
+        <div class="faq-answer">
+          <p>No. ConvertFast resizes images entirely in your browser using the Canvas API. Your files are never uploaded anywhere. This makes it safe for personal photos, confidential documents, and other sensitive images.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="/">All Converters</a>
+        <a href="/compress">Compress Images</a>
+        <a href="/strip-exif">Strip EXIF</a>
+        <a href="/about">About</a>
+      </div>
+      <p>ConvertFast. All processing happens in your browser.</p>
+    </div>
+  </footer>
+
+  <script src="js/fflate.min.js"></script>
+  <script type="module" src="js/resize-boot.js"></script>
+</body>
+</html>

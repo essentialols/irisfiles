@@ -216,6 +216,46 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://convertfast.app/mov-to-mp4</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://convertfast.app/avi-to-mp4</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://convertfast.app/mkv-to-mp4</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://convertfast.app/webm-to-mp4</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://convertfast.app/mp4-to-webm</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://convertfast.app/split-pdf</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://convertfast.app/resize-image</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://convertfast.app/strip-exif</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://convertfast.app/about</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
