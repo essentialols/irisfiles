@@ -417,6 +417,18 @@ body {
   flex-direction: column;
   gap: 0.6rem;
 }
+.convert-group {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-top: 1rem;
+  padding-bottom: 0.2rem;
+}
+.convert-group:first-child {
+  margin-top: 0;
+}
 .convert-row {
   display: flex;
   align-items: center;
