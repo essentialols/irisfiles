@@ -340,7 +340,25 @@ body {
 }
 .footer a { color: var(--text-muted); text-decoration: underline; }
 .footer a:hover { color: var(--text); }
-.footer-links { display: flex; justify-content: center; gap: 1.5rem; margin-bottom: 0.5rem; }
+.footer-links { display: flex; justify-content: center; gap: 1.5rem; margin-bottom: 0.75rem; }
+
+/* Support / Buy Me a Coffee button */
+.support-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.1rem;
+  background: #ffdd00;
+  color: #0a0a0a;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background .15s, transform .1s;
+  margin-top: 0.5rem;
+}
+.support-btn:hover { background: #ffca00; transform: translateY(-1px); color: #0a0a0a; }
+.support-btn svg { width: 18px; height: 18px; }
 
 /* Route panel (smart drop) */
 .route-panel {
