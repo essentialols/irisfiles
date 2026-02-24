@@ -60,7 +60,12 @@ export async function imagesToPdf(files, onProgress) {
     if (first) doc.internal.pageSize.height = h;
     first = false;
 
-    doc.addImage(img, file.mime === 'image/png' ? 'PNG' : 'JPEG', 0, 0, w, h);
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    const dataUrl = canvas.toDataURL(file.mime === 'image/png' ? 'image/png' : 'image/jpeg');
+    doc.addImage(dataUrl, file.mime === 'image/png' ? 'PNG' : 'JPEG', 0, 0, w, h);
     if (onProgress) onProgress(Math.round(((i + 1) / files.length) * 100));
   }
 

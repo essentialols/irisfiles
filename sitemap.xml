@@ -156,6 +156,21 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://irisfiles.com/jpg-to-gif</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://irisfiles.com/png-to-gif</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://irisfiles.com/webp-to-gif</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://irisfiles.com/avif-to-jpg</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
