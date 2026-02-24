@@ -582,14 +582,14 @@ body {
 }
 .route-filmstrip {
   display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
+  gap: 3px;
   width: 100%;
+  justify-content: center;
 }
 .route-frame {
-  height: 60px;
   border-radius: 3px;
   display: block;
+  flex-shrink: 0;
 }
 
 /* Back link on converter pages */
