@@ -41,7 +41,7 @@ async function requireLib(name) {
 
 // --- Image to PDF (jsPDF) ---
 
-export async function imagesToPdf(files, onProgress) {
+export async function imagesToPdf(files, onProgress, quality = 0.92) {
   const { jsPDF } = await requireLib('jspdf');
   const doc = new jsPDF({ unit: 'px', hotfixes: ['px_scaling'] });
   let first = true;
@@ -64,8 +64,9 @@ export async function imagesToPdf(files, onProgress) {
     canvas.width = w;
     canvas.height = h;
     canvas.getContext('2d').drawImage(img, 0, 0);
-    const dataUrl = canvas.toDataURL(file.mime === 'image/png' ? 'image/png' : 'image/jpeg');
-    doc.addImage(dataUrl, file.mime === 'image/png' ? 'PNG' : 'JPEG', 0, 0, w, h);
+    const isPng = file.mime === 'image/png';
+    const dataUrl = canvas.toDataURL(isPng ? 'image/png' : 'image/jpeg', isPng ? undefined : quality);
+    doc.addImage(dataUrl, isPng ? 'PNG' : 'JPEG', 0, 0, w, h);
     if (onProgress) onProgress(Math.round(((i + 1) / files.length) * 100));
   }
 

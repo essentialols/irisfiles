@@ -51,7 +51,28 @@ const FORMATS = {
  * @param {function} onStatus - Status message callback (string)
  * @returns {Promise<Blob>}
  */
-export async function convertVideo(file, targetFormat, onProgress, onStatus) {
+// CRF offsets for quality levels (added to format default)
+const QUALITY_OFFSET = { high: 0, medium: 5, low: 12 };
+
+function applyQualityToArgs(args, quality) {
+  if (!quality || quality === 'high') return args;
+  const out = [...args];
+  const offset = QUALITY_OFFSET[quality] || 0;
+  const crfIdx = out.indexOf('-crf');
+  if (crfIdx >= 0) out[crfIdx + 1] = String(parseInt(out[crfIdx + 1]) + offset);
+  const qvIdx = out.indexOf('-q:v');
+  if (qvIdx >= 0) out[qvIdx + 1] = String(parseInt(out[qvIdx + 1]) + offset);
+  // For webm, also scale the bitrate cap
+  const bvIdx = out.indexOf('-b:v');
+  if (bvIdx >= 0) {
+    const base = parseInt(out[bvIdx + 1]);
+    const scale = quality === 'medium' ? 0.6 : 0.35;
+    out[bvIdx + 1] = Math.round(base * scale) + (out[bvIdx + 1].includes('M') ? 'M' : 'k');
+  }
+  return out;
+}
+
+export async function convertVideo(file, targetFormat, onProgress, onStatus, opts = {}) {
   if (file.size > MAX_VIDEO_SIZE) {
     throw new Error(`File too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum is 100MB.`);
   }
@@ -81,9 +102,10 @@ export async function convertVideo(file, targetFormat, onProgress, onStatus) {
   };
   ffmpeg.on('progress', progressHandler);
 
+  const args = applyQualityToArgs(fmt.args, opts.quality);
   let exitCode;
   try {
-    exitCode = await ffmpeg.exec(['-i', inputName, ...fmt.args, '-y', outputName]);
+    exitCode = await ffmpeg.exec(['-i', inputName, ...args, '-y', outputName]);
   } finally {
     ffmpeg.off('progress', progressHandler);
   }
@@ -114,7 +136,7 @@ export async function convertVideo(file, targetFormat, onProgress, onStatus) {
  * @param {function} onStatus - Status message callback (string)
  * @returns {Promise<Blob>}
  */
-export async function gifToVideo(file, targetFormat, onProgress, onStatus) {
+export async function gifToVideo(file, targetFormat, onProgress, onStatus, opts = {}) {
   if (file.size > MAX_VIDEO_SIZE) {
     throw new Error(`File too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum is 100MB.`);
   }
@@ -143,9 +165,10 @@ export async function gifToVideo(file, targetFormat, onProgress, onStatus) {
   };
   ffmpeg.on('progress', progressHandler);
 
+  const args = applyQualityToArgs(fmt.args, opts.quality);
   let exitCode;
   try {
-    exitCode = await ffmpeg.exec(['-i', inputName, ...fmt.args, '-y', outputName]);
+    exitCode = await ffmpeg.exec(['-i', inputName, ...args, '-y', outputName]);
   } finally {
     ffmpeg.off('progress', progressHandler);
   }

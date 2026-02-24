@@ -33,7 +33,7 @@ function loadLame() {
  * @param {function} onProgress - Progress callback (0-100)
  * @returns {Promise<Blob>}
  */
-export async function convertAudio(file, targetFormat, onProgress = () => {}) {
+export async function convertAudio(file, targetFormat, onProgress = () => {}, opts = {}) {
   onProgress(0);
 
   // Read file into ArrayBuffer
@@ -61,7 +61,7 @@ export async function convertAudio(file, targetFormat, onProgress = () => {}) {
   if (targetFormat === 'mp3') {
     await loadLame();
     onProgress(40);
-    const blob = await encodeMp3(audioBuffer, onProgress);
+    const blob = await encodeMp3(audioBuffer, onProgress, opts.bitrate || 128);
     onProgress(100);
     return blob;
   }
@@ -84,7 +84,7 @@ const AUDIO_FORMATS = {
  * @param {function} onProgress - Progress callback (0-100)
  * @returns {Promise<Blob>}
  */
-export async function convertAudioFFmpeg(file, targetFormat, onProgress = () => {}) {
+export async function convertAudioFFmpeg(file, targetFormat, onProgress = () => {}, opts = {}) {
   const fmt = AUDIO_FORMATS[targetFormat];
   if (!fmt) throw new Error(`Unsupported FFmpeg audio format: ${targetFormat}`);
 
@@ -108,9 +108,21 @@ export async function convertAudioFFmpeg(file, targetFormat, onProgress = () => 
   };
   ffmpeg.on('progress', progressHandler);
 
+  // Build args, applying bitrate override for lossy formats
+  let args = [...fmt.args];
+  if (opts.bitrate && targetFormat !== 'flac') {
+    const baIdx = args.indexOf('-b:a');
+    if (baIdx >= 0) {
+      args[baIdx + 1] = opts.bitrate + 'k';
+    } else {
+      const qaIdx = args.indexOf('-q:a');
+      if (qaIdx >= 0) args.splice(qaIdx, 2, '-b:a', opts.bitrate + 'k');
+    }
+  }
+
   let exitCode;
   try {
-    exitCode = await ffmpeg.exec(['-i', inputName, ...fmt.args, '-y', outputName]);
+    exitCode = await ffmpeg.exec(['-i', inputName, ...args, '-y', outputName]);
   } finally {
     ffmpeg.off('progress', progressHandler);
   }
@@ -191,10 +203,9 @@ function encodeWav(audioBuffer, onProgress) {
  * @param {function} onProgress
  * @returns {Promise<Blob>}
  */
-async function encodeMp3(audioBuffer, onProgress) {
+async function encodeMp3(audioBuffer, onProgress, kbps = 128) {
   const numChannels = Math.min(audioBuffer.numberOfChannels, 2); // lamejs supports mono/stereo
   const sampleRate = audioBuffer.sampleRate;
-  const kbps = 128;
   const encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, kbps);
   const chunkSize = 1152;
   const mp3Chunks = [];
