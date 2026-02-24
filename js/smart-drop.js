@@ -343,25 +343,55 @@ function inlineOutputName(name, ext) {
   return name.replace(/\.[^.]+$/, '') + '.' + ext;
 }
 
-async function executeConversion(file, sourceMime, resolved, onProgress, onStatus) {
+function getConversionSettings(resolved) {
+  const settings = [];
+  const lossy = resolved.targetMime === 'image/jpeg' || resolved.targetMime === 'image/webp';
+
+  if ((resolved.type === 'image' || resolved.type === 'heic' || resolved.type === 'pdf-to-img') && lossy) {
+    const saved = parseInt(localStorage.getItem('cf-quality'), 10);
+    settings.push({
+      key: 'quality', label: 'Quality', type: 'range',
+      min: 10, max: 100, step: 1,
+      default: (saved >= 10 && saved <= 100) ? saved : 92,
+      unit: '%',
+    });
+  }
+
+  if (resolved.type === 'vid-to-gif') {
+    settings.push({
+      key: 'maxWidth', label: 'Max width', type: 'range',
+      min: 160, max: 800, step: 10, default: 480, unit: 'px',
+    });
+    settings.push({
+      key: 'fps', label: 'Frame rate', type: 'range',
+      min: 4, max: 20, step: 1, default: 10, unit: ' fps',
+    });
+  }
+
+  return settings;
+}
+
+async function executeConversion(file, sourceMime, resolved, settings, onProgress, onStatus) {
+  const quality = (settings.quality || 92) / 100;
+
   switch (resolved.type) {
     case 'image': {
       onProgress(20);
       const { convertWithCanvas } = await import('./converter.js');
       onProgress(50);
-      const blob = await convertWithCanvas(file, resolved.targetMime, 0.92);
+      const blob = await convertWithCanvas(file, resolved.targetMime, quality);
       return { blob, name: inlineOutputName(file.name, resolved.targetExt) };
     }
     case 'heic': {
       const { convertHeic } = await import('./converter.js');
-      const blob = await convertHeic(file, resolved.targetMime, 0.92, onProgress);
+      const blob = await convertHeic(file, resolved.targetMime, quality, onProgress);
       return { blob, name: inlineOutputName(file.name, resolved.targetExt) };
     }
     case 'img-to-pdf': {
       let imgBlob = file, imgMime = sourceMime;
       if (sourceMime === 'image/heic') {
         const { convertHeic } = await import('./converter.js');
-        imgBlob = await convertHeic(file, 'image/jpeg', 0.92, p => onProgress(Math.round(p * 0.5)));
+        imgBlob = await convertHeic(file, 'image/jpeg', quality, p => onProgress(Math.round(p * 0.5)));
         imgMime = 'image/jpeg';
       }
       const { imagesToPdf } = await import('./pdf-engine.js');
@@ -373,7 +403,7 @@ async function executeConversion(file, sourceMime, resolved, onProgress, onStatu
     }
     case 'pdf-to-img': {
       const { pdfToImages } = await import('./pdf-engine.js');
-      const pages = await pdfToImages(file, resolved.targetMime, 0.92, onProgress);
+      const pages = await pdfToImages(file, resolved.targetMime, quality, onProgress);
       if (pages.length === 1) return { blob: pages[0].blob, name: pages[0].name };
       return { pages };
     }
@@ -390,6 +420,8 @@ async function executeConversion(file, sourceMime, resolved, onProgress, onStatu
       }
       const { videoToGif } = await import('./gif-engine.js');
       const blob = await videoToGif(file, {
+        maxWidth: settings.maxWidth || 480,
+        fps: settings.fps || 10,
         onProgress: (pct, msg) => { onProgress(pct); if (msg) onStatus(msg); },
       });
       return { blob, name: inlineOutputName(file.name, 'gif') };
@@ -449,11 +481,11 @@ async function runInlineConversion(file, sourceMime, resolved, routePanel, onDis
 
   const wrap = document.createElement('div');
   wrap.className = 'route-inline-convert';
+  routePanel.appendChild(wrap);
 
-  const statusEl = document.createElement('div');
-  statusEl.className = 'route-convert-status';
-  statusEl.textContent = 'Converting to ' + resolved.targetExt.toUpperCase() + '\u2026';
-  wrap.appendChild(statusEl);
+  // --- Phase 1: Settings ---
+  const descriptors = getConversionSettings(resolved);
+  const settingValues = {};
 
   if (resolved.notice) {
     const noticeEl = document.createElement('div');
@@ -461,6 +493,87 @@ async function runInlineConversion(file, sourceMime, resolved, routePanel, onDis
     noticeEl.textContent = resolved.notice;
     wrap.appendChild(noticeEl);
   }
+
+  if (descriptors.length > 0) {
+    const settingsWrap = document.createElement('div');
+    settingsWrap.className = 'route-convert-settings';
+
+    for (const desc of descriptors) {
+      settingValues[desc.key] = desc.default;
+
+      const row = document.createElement('div');
+      row.className = 'route-convert-setting';
+
+      const labelEl = document.createElement('label');
+      labelEl.className = 'route-convert-setting-label';
+      labelEl.textContent = desc.label;
+      row.appendChild(labelEl);
+
+      const rangeWrap = document.createElement('div');
+      rangeWrap.className = 'route-convert-setting-range-wrap';
+
+      const range = document.createElement('input');
+      range.type = 'range';
+      range.className = 'route-convert-setting-range';
+      range.min = desc.min;
+      range.max = desc.max;
+      range.step = desc.step;
+      range.value = desc.default;
+      rangeWrap.appendChild(range);
+
+      const valueEl = document.createElement('span');
+      valueEl.className = 'route-convert-setting-value';
+      valueEl.textContent = desc.default + desc.unit;
+      rangeWrap.appendChild(valueEl);
+
+      range.addEventListener('input', () => {
+        settingValues[desc.key] = parseInt(range.value, 10);
+        valueEl.textContent = range.value + desc.unit;
+      });
+
+      row.appendChild(rangeWrap);
+      settingsWrap.appendChild(row);
+    }
+
+    wrap.appendChild(settingsWrap);
+  }
+
+  const btnRow = document.createElement('div');
+  btnRow.className = 'route-convert-actions';
+  const convertBtn = document.createElement('button');
+  convertBtn.className = 'btn btn--primary';
+  convertBtn.textContent = 'Convert to ' + resolved.targetExt.toUpperCase();
+  btnRow.appendChild(convertBtn);
+  const backBtn = document.createElement('button');
+  backBtn.className = 'btn btn--secondary';
+  backBtn.textContent = 'Back';
+  btnRow.appendChild(backBtn);
+  wrap.appendChild(btnRow);
+
+  // Wait for user to click Convert or Back
+  const action = await new Promise(r => {
+    convertBtn.addEventListener('click', () => r('convert'), { once: true });
+    backBtn.addEventListener('click', () => r('back'), { once: true });
+  });
+
+  if (action === 'back') {
+    wrap.remove();
+    routePanel.querySelectorAll('.route-section').forEach(s => s.style.display = '');
+    return;
+  }
+
+  // Persist quality preference
+  if (settingValues.quality !== undefined) {
+    localStorage.setItem('cf-quality', settingValues.quality);
+  }
+
+  // --- Phase 2: Conversion ---
+  wrap.innerHTML = '';
+
+  const statusEl = document.createElement('div');
+  statusEl.className = 'route-convert-status';
+  statusEl.textContent = 'Converting to ' + resolved.targetExt.toUpperCase() + '\u2026';
+  wrap.appendChild(statusEl);
 
   const progressWrap = document.createElement('div');
   progressWrap.className = 'route-convert-progress';
@@ -484,14 +597,13 @@ async function runInlineConversion(file, sourceMime, resolved, routePanel, onDis
   actionsEl.style.display = 'none';
   wrap.appendChild(actionsEl);
 
-  routePanel.appendChild(wrap);
-
   const resultUrls = [];
   const cleanup = () => { resultUrls.forEach(u => URL.revokeObjectURL(u)); resultUrls.length = 0; };
   const onProgress = pct => { bar.style.width = Math.min(100, Math.max(0, pct)) + '%'; };
   const onStatus = msg => { if (msg) statusEl.textContent = msg; };
 
   const showActions = (includeRetry) => {
+    actionsEl.innerHTML = '';
     actionsEl.style.display = '';
     if (includeRetry) {
       const retryBtn = document.createElement('button');
@@ -521,13 +633,12 @@ async function runInlineConversion(file, sourceMime, resolved, routePanel, onDis
   };
 
   try {
-    const result = await executeConversion(file, sourceMime, resolved, onProgress, onStatus);
+    const result = await executeConversion(file, sourceMime, resolved, settingValues, onProgress, onStatus);
     bar.style.width = '100%';
     bar.classList.add('done');
     progressWrap.style.display = 'none';
 
     if (result.pages) {
-      // Multi-page PDF-to-image
       statusEl.textContent = result.pages.length + ' pages converted';
       resultEl.style.display = '';
       resultEl.style.flexDirection = 'column';
@@ -565,9 +676,7 @@ async function runInlineConversion(file, sourceMime, resolved, routePanel, onDis
         resultEl.appendChild(dlBtn);
       }
     } else {
-      // Single blob result
       statusEl.textContent = 'Done!';
-      // Show constrained preview for image results
       if (result.blob.type && result.blob.type.startsWith('image/')) {
         const previewImg = document.createElement('img');
         previewImg.className = 'route-convert-preview';

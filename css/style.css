@@ -622,6 +622,22 @@ body {
   padding: 0.5rem 0.75rem; font-size: 0.8rem; color: #92400e;
   margin-bottom: 0.5rem;
 }
+.route-convert-settings { margin-bottom: 0.75rem; }
+.route-convert-setting { margin-bottom: 0.5rem; }
+.route-convert-setting-label {
+  display: block; font-size: 0.85rem; font-weight: 500;
+  margin-bottom: 0.25rem; color: var(--text);
+}
+.route-convert-setting-range-wrap {
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.route-convert-setting-range {
+  flex: 1; height: 4px; accent-color: var(--primary);
+}
+.route-convert-setting-value {
+  font-size: 0.85rem; font-weight: 500; min-width: 3.5rem;
+  text-align: right; color: var(--text-muted);
+}
 
 /* Back link on converter pages */
 .back-link {
