@@ -615,6 +615,22 @@ body {
 }
 .meta-gps-remove:hover { background: #fef2f2; }
 
+/* Inline metadata panel (converter pages) */
+.inline-meta-panel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 1rem;
+  margin-top: -0.75rem;
+  margin-bottom: 0.75rem;
+}
+.inline-meta-panel .meta-group {
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.inline-meta-panel .meta-group:last-of-type { margin-bottom: 0; }
+
 /* Responsive */
 @media (max-width: 640px) {
   .hero h1 { font-size: 1.6rem; }

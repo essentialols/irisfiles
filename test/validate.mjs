@@ -48,6 +48,7 @@ const PAGES = [
   '/mp3-to-aac', '/wav-to-aac', '/ogg-to-aac', '/flac-to-aac', '/m4a-to-aac',
   // MOBI documents
   '/mobi-to-txt', '/mobi-to-pdf',
+  '/compress-audio',
   '/about', '/privacy'
 ];
 
@@ -189,7 +190,7 @@ async function globalChecks() {
   const urls = [];
   let m;
   while ((m = locRe.exec(sitemap)) !== null) urls.push(m[1]);
-  ok(urls.length === 126, `sitemap.xml: has ${urls.length} URLs (expected 126)`);
+  ok(urls.length === 131, `sitemap.xml: has ${urls.length} URLs (expected 131)`);
 
   // each sitemap URL corresponds to a real page
   for (const url of urls) {
