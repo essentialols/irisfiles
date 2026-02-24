@@ -182,25 +182,30 @@ async function getMediaMeta(file, mime) {
       const date = md.dates?.['Date Taken'];
       if (date) meta.push(date.split(' ')[0].replace(/:/g, '-'));
     } else if (mime.startsWith('video/')) {
-      const info = await new Promise((resolve, reject) => {
+      const info = await new Promise((resolve) => {
         const v = document.createElement('video');
         v.preload = 'metadata';
-        v.onloadedmetadata = () => {
-          resolve({ dur: v.duration, w: v.videoWidth, h: v.videoHeight });
-          URL.revokeObjectURL(v.src);
-        };
-        v.onerror = () => { URL.revokeObjectURL(v.src); reject(); };
-        v.src = URL.createObjectURL(file);
+        let done = false;
+        const url = URL.createObjectURL(file);
+        const finish = (val) => { if (done) return; done = true; clearTimeout(timer); URL.revokeObjectURL(url); resolve(val); };
+        const timer = setTimeout(() => finish({ dur: 0, w: 0, h: 0 }), 10000);
+        v.onloadedmetadata = () => finish({ dur: v.duration, w: v.videoWidth, h: v.videoHeight });
+        v.onerror = () => finish({ dur: 0, w: 0, h: 0 });
+        v.src = url;
       });
       if (info.w && info.h) meta.push(info.w + ' x ' + info.h);
       if (info.dur && isFinite(info.dur)) meta.push(formatDuration(info.dur));
     } else if (mime.startsWith('audio/')) {
-      const dur = await new Promise((resolve, reject) => {
+      const dur = await new Promise((resolve) => {
         const a = document.createElement('audio');
         a.preload = 'metadata';
-        a.onloadedmetadata = () => { resolve(a.duration); URL.revokeObjectURL(a.src); };
-        a.onerror = () => { URL.revokeObjectURL(a.src); reject(); };
-        a.src = URL.createObjectURL(file);
+        let done = false;
+        const url = URL.createObjectURL(file);
+        const finish = (val) => { if (done) return; done = true; clearTimeout(timer); URL.revokeObjectURL(url); resolve(val); };
+        const timer = setTimeout(() => finish(0), 10000);
+        a.onloadedmetadata = () => finish(a.duration);
+        a.onerror = () => finish(0);
+        a.src = url;
       });
       if (dur && isFinite(dur)) meta.push(formatDuration(dur));
     }

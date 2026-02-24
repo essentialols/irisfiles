@@ -257,15 +257,12 @@ export function getVideoDuration(file) {
     const video = document.createElement('video');
     video.preload = 'metadata';
     const url = URL.createObjectURL(file);
+    let done = false;
+    const finish = (val) => { if (done) return; done = true; clearTimeout(timer); URL.revokeObjectURL(url); resolve(val); };
+    const timer = setTimeout(() => finish(0), 10000);
+    video.onloadedmetadata = () => finish(isFinite(video.duration) ? video.duration : 0);
+    video.onerror = () => finish(0);
     video.src = url;
-    video.onloadedmetadata = () => {
-      URL.revokeObjectURL(url);
-      resolve(isFinite(video.duration) ? video.duration : 0);
-    };
-    video.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve(0);
-    };
   });
 }
 
@@ -279,18 +276,16 @@ export function getVideoMetadata(file) {
     const video = document.createElement('video');
     video.preload = 'metadata';
     const url = URL.createObjectURL(file);
+    const fallback = { width: 0, height: 0, duration: 0 };
+    let done = false;
+    const finish = (val) => { if (done) return; done = true; clearTimeout(timer); URL.revokeObjectURL(url); resolve(val); };
+    const timer = setTimeout(() => finish(fallback), 10000);
+    video.onloadedmetadata = () => finish({
+      width: video.videoWidth || 0,
+      height: video.videoHeight || 0,
+      duration: isFinite(video.duration) ? video.duration : 0,
+    });
+    video.onerror = () => finish(fallback);
     video.src = url;
-    video.onloadedmetadata = () => {
-      URL.revokeObjectURL(url);
-      resolve({
-        width: video.videoWidth || 0,
-        height: video.videoHeight || 0,
-        duration: isFinite(video.duration) ? video.duration : 0,
-      });
-    };
-    video.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve({ width: 0, height: 0, duration: 0 });
-    };
   });
 }
