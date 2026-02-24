@@ -246,20 +246,22 @@ async function extractVideoFrames(file, container, count) {
     const v = document.createElement('video');
     v.preload = 'auto';
     v.muted = true;
+    v.crossOrigin = 'anonymous';
+    v.src = url;
     await new Promise((resolve, reject) => {
-      v.onloadedmetadata = resolve;
+      v.onloadeddata = resolve;
       v.onerror = reject;
-      v.src = url;
     });
     const dur = v.duration;
-    if (!dur || !isFinite(dur)) { URL.revokeObjectURL(url); return; }
+    if (!dur || !isFinite(dur) || !v.videoWidth) { URL.revokeObjectURL(url); return; }
     for (let i = 0; i < count; i++) {
       const t = dur * ((i * 2 + 1) / (count * 2));
       v.currentTime = t;
-      await new Promise((resolve, reject) => {
+      await new Promise(resolve => {
         v.onseeked = resolve;
-        v.onerror = reject;
+        setTimeout(resolve, 2000);
       });
+      if (!v.videoWidth) continue;
       const canvas = document.createElement('canvas');
       const aspect = v.videoWidth / v.videoHeight;
       canvas.height = 60;
