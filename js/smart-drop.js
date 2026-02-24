@@ -345,31 +345,142 @@ function inlineOutputName(name, ext) {
   return name.replace(/\.[^.]+$/, '') + '.' + ext;
 }
 
-function loadVideoMeta(file) {
-  return new Promise((resolve, reject) => {
-    const v = document.createElement('video');
-    v.muted = true;
-    v.playsInline = true;
-    const url = URL.createObjectURL(file);
-    v.onloadedmetadata = () => {
-      const meta = { duration: v.duration, width: v.videoWidth, height: v.videoHeight };
-      URL.revokeObjectURL(url);
-      resolve(meta);
-    };
-    v.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Cannot read video')); };
-    v.src = url;
-  });
+async function loadFileMeta(file, mime) {
+  if (mime.startsWith('image/')) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => { URL.revokeObjectURL(url); resolve({ width: img.naturalWidth, height: img.naturalHeight }); };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+  if (mime.startsWith('video/')) {
+    return new Promise((resolve, reject) => {
+      const v = document.createElement('video');
+      v.muted = true;
+      v.playsInline = true;
+      const url = URL.createObjectURL(file);
+      v.onloadedmetadata = () => {
+        resolve({ duration: v.duration, width: v.videoWidth, height: v.videoHeight });
+        URL.revokeObjectURL(url);
+      };
+      v.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Cannot read video')); };
+      v.src = url;
+    });
+  }
+  if (mime.startsWith('audio/')) {
+    return new Promise((resolve) => {
+      const a = new Audio();
+      const url = URL.createObjectURL(file);
+      a.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve({ duration: a.duration }); };
+      a.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      a.src = url;
+    });
+  }
+  if (mime === 'application/pdf') {
+    try {
+      const pdfjs = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.624/build/pdf.min.mjs');
+      const data = new Uint8Array(await file.arrayBuffer());
+      const pdf = await pdfjs.getDocument({ data }).promise;
+      return { pageCount: pdf.numPages };
+    } catch { return null; }
+  }
+  return {};
 }
 
-function estimateGifSize(videoWidth, videoHeight, duration, maxWidth, fps) {
-  const maxDuration = 60;
-  const clip = Math.min(duration, maxDuration);
-  const scale = Math.min(1, maxWidth / videoWidth);
-  const w = Math.round(videoWidth * scale);
-  const h = Math.round(videoHeight * scale);
-  const totalFrames = Math.ceil(clip * fps);
-  // ~0.5 bytes/pixel after LZW, ~80% frames kept after dedup
-  return Math.round(w * h * 0.5 * totalFrames * 0.8);
+function estimateOutputSize(resolved, settings, meta, inputSize) {
+  switch (resolved.type) {
+    case 'image':
+    case 'heic': {
+      if (!meta?.width) return null;
+      const px = meta.width * meta.height;
+      const q = (settings.quality || 92) / 100;
+      if (resolved.targetMime === 'image/jpeg') {
+        const bpp = 0.08 + q * 0.35;
+        return { low: Math.round(px * bpp * 0.5), high: Math.round(px * bpp * 2) };
+      }
+      if (resolved.targetMime === 'image/webp') {
+        const bpp = 0.06 + q * 0.25;
+        return { low: Math.round(px * bpp * 0.5), high: Math.round(px * bpp * 2) };
+      }
+      if (resolved.targetMime === 'image/png') {
+        return { low: Math.round(px * 0.5), high: Math.round(px * 4) };
+      }
+      if (resolved.targetMime === 'image/bmp') {
+        return { estimate: px * 3 + 54 };
+      }
+      return null;
+    }
+    case 'img-to-pdf': {
+      return { estimate: Math.round(inputSize * 1.1) };
+    }
+    case 'pdf-to-img': {
+      if (!meta?.pageCount) return null;
+      const q = (settings.quality || 92) / 100;
+      if (resolved.targetMime === 'image/jpeg') {
+        const perPage = 300000 + q * 800000;
+        return { low: Math.round(meta.pageCount * perPage * 0.5), high: Math.round(meta.pageCount * perPage * 2) };
+      }
+      return { low: Math.round(meta.pageCount * 800000), high: Math.round(meta.pageCount * 4000000) };
+    }
+    case 'vid-to-gif': {
+      if (!meta?.width || !meta?.duration) return null;
+      const clip = Math.min(meta.duration, 60);
+      const mw = settings.maxWidth || 480;
+      const fps = settings.fps || 10;
+      const scale = Math.min(1, mw / meta.width);
+      const w = Math.round(meta.width * scale);
+      const h = Math.round(meta.height * scale);
+      const frames = Math.ceil(clip * fps);
+      const est = Math.round(w * h * 0.5 * frames * 0.8);
+      return { estimate: est };
+    }
+    case 'video':
+    case 'gif-to-video': {
+      return { low: Math.round(inputSize * 0.3), high: Math.round(inputSize * 0.8) };
+    }
+    case 'audio': {
+      if (!meta?.duration) return null;
+      if (resolved.targetFormat === 'wav') {
+        return { estimate: Math.round(meta.duration * 44100 * 2 * 2 + 44) };
+      }
+      if (resolved.targetFormat === 'mp3') {
+        return { estimate: Math.round(meta.duration * 128000 / 8) };
+      }
+      return null;
+    }
+    case 'audio-ff': {
+      if (!meta?.duration) return null;
+      if (resolved.targetFormat === 'ogg') {
+        return { estimate: Math.round(meta.duration * 112000 / 8) };
+      }
+      if (resolved.targetFormat === 'flac') {
+        const wav = meta.duration * 44100 * 2 * 2;
+        return { low: Math.round(wav * 0.4), high: Math.round(wav * 0.7) };
+      }
+      if (resolved.targetFormat === 'm4a' || resolved.targetFormat === 'aac') {
+        return { estimate: Math.round(meta.duration * 128000 / 8) };
+      }
+      return null;
+    }
+    case 'font': {
+      if (resolved.targetFormat === 'woff') {
+        return { low: Math.round(inputSize * 0.4), high: Math.round(inputSize * 0.65) };
+      }
+      return { estimate: Math.round(inputSize * 0.95) };
+    }
+    case 'doc': {
+      if (resolved.tgtFmt === 'txt') {
+        return { low: Math.round(inputSize * 0.15), high: Math.round(inputSize * 0.5) };
+      }
+      if (resolved.tgtFmt === 'pdf') {
+        return { low: Math.round(inputSize * 0.2), high: Math.round(inputSize * 0.6) };
+      }
+      return null;
+    }
+  }
+  return null;
 }
 
 function getConversionSettings(resolved) {
@@ -568,31 +679,37 @@ async function runInlineConversion(file, sourceMime, resolved, routePanel, onDis
     wrap.appendChild(settingsWrap);
   }
 
-  // GIF size estimate (loaded async, updates with sliders)
+  // File size estimate (async metadata load, updates with sliders)
   let updateEstimate = null;
-  if (resolved.type === 'vid-to-gif') {
-    const estimateEl = document.createElement('div');
-    estimateEl.className = 'route-convert-estimate';
-    estimateEl.textContent = 'Estimating file size\u2026';
-    wrap.appendChild(estimateEl);
+  const estimateEl = document.createElement('div');
+  estimateEl.className = 'route-convert-estimate';
+  wrap.appendChild(estimateEl);
 
-    loadVideoMeta(file).then(meta => {
-      updateEstimate = () => {
-        const est = estimateGifSize(meta.width, meta.height, meta.duration, settingValues.maxWidth || 480, settingValues.fps || 10);
-        const label = 'Estimated size: ~' + formatSize(est);
-        if (est > 20 * 1024 * 1024) {
-          estimateEl.className = 'route-convert-estimate route-convert-estimate--warn';
-          estimateEl.textContent = label + ' (large file, consider reducing width or frame rate)';
-        } else {
-          estimateEl.className = 'route-convert-estimate';
-          estimateEl.textContent = label;
-        }
-      };
-      updateEstimate();
-    }).catch(() => {
-      estimateEl.textContent = '';
-    });
-  }
+  let fileMeta = null;
+  loadFileMeta(file, sourceMime).then(m => {
+    fileMeta = m;
+    if (updateEstimate) updateEstimate();
+  }).catch(() => {});
+
+  updateEstimate = () => {
+    const est = estimateOutputSize(resolved, settingValues, fileMeta, file.size);
+    if (!est) { estimateEl.textContent = ''; estimateEl.className = 'route-convert-estimate'; return; }
+    let label;
+    if (est.low != null && est.high != null) {
+      label = 'Estimated size: ' + formatSize(est.low) + ' \u2013 ' + formatSize(est.high);
+    } else {
+      label = 'Estimated size: ~' + formatSize(est.estimate);
+    }
+    const maxEst = est.high || est.estimate;
+    if (maxEst > 20 * 1024 * 1024) {
+      estimateEl.className = 'route-convert-estimate route-convert-estimate--warn';
+      estimateEl.textContent = label + ' (large file)';
+    } else {
+      estimateEl.className = 'route-convert-estimate';
+      estimateEl.textContent = label;
+    }
+  };
+  updateEstimate();
 
   const btnRow = document.createElement('div');
   btnRow.className = 'route-convert-actions';
