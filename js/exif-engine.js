@@ -192,7 +192,8 @@ function fileToDataUrl(file) {
 
 function dataUrlToBlob(dataUrl) {
   const [header, b64] = dataUrl.split(',');
-  const mime = header.match(/:(.*?);/)[1];
+  const match = header.match(/:(.*?);/);
+  const mime = match ? match[1] : 'image/jpeg';
   const bin = atob(b64);
   const arr = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
