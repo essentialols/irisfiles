@@ -163,6 +163,85 @@ function formatSize(bytes) {
 
 function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
+function formatDuration(s) {
+  const min = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return min + ':' + String(sec).padStart(2, '0');
+}
+
+async function getMediaMeta(file, mime) {
+  const meta = [];
+  try {
+    if (mime.startsWith('image/')) {
+      const { readMetadata } = await import('./exif-engine.js');
+      const md = await readMetadata(file);
+      const w = md.basic?.['Width'], h = md.basic?.['Height'];
+      if (w && h) meta.push(w + ' x ' + h);
+      const model = md.camera?.['Model'];
+      if (model) meta.push(model.trim());
+      const date = md.dates?.['Date Taken'];
+      if (date) meta.push(date.split(' ')[0].replace(/:/g, '-'));
+    } else if (mime.startsWith('video/')) {
+      const info = await new Promise((resolve, reject) => {
+        const v = document.createElement('video');
+        v.preload = 'metadata';
+        v.onloadedmetadata = () => {
+          resolve({ dur: v.duration, w: v.videoWidth, h: v.videoHeight });
+          URL.revokeObjectURL(v.src);
+        };
+        v.onerror = () => { URL.revokeObjectURL(v.src); reject(); };
+        v.src = URL.createObjectURL(file);
+      });
+      if (info.w && info.h) meta.push(info.w + ' x ' + info.h);
+      if (info.dur && isFinite(info.dur)) meta.push(formatDuration(info.dur));
+    } else if (mime.startsWith('audio/')) {
+      const dur = await new Promise((resolve, reject) => {
+        const a = document.createElement('audio');
+        a.preload = 'metadata';
+        a.onloadedmetadata = () => { resolve(a.duration); URL.revokeObjectURL(a.src); };
+        a.onerror = () => { URL.revokeObjectURL(a.src); reject(); };
+        a.src = URL.createObjectURL(file);
+      });
+      if (dur && isFinite(dur)) meta.push(formatDuration(dur));
+    }
+  } catch { /* graceful failure */ }
+  return meta;
+}
+
+async function extractVideoFrames(file, container, count) {
+  count = count || 4;
+  try {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement('video');
+    v.preload = 'auto';
+    v.muted = true;
+    await new Promise((resolve, reject) => {
+      v.onloadedmetadata = resolve;
+      v.onerror = reject;
+      v.src = url;
+    });
+    const dur = v.duration;
+    if (!dur || !isFinite(dur)) { URL.revokeObjectURL(url); return; }
+    for (let i = 0; i < count; i++) {
+      const t = dur * ((i * 2 + 1) / (count * 2));
+      v.currentTime = t;
+      await new Promise((resolve, reject) => {
+        v.onseeked = resolve;
+        v.onerror = reject;
+      });
+      const canvas = document.createElement('canvas');
+      const aspect = v.videoWidth / v.videoHeight;
+      canvas.height = 80;
+      canvas.width = Math.round(80 * aspect);
+      canvas.className = 'route-frame';
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+      container.appendChild(canvas);
+    }
+    URL.revokeObjectURL(url);
+  } catch { /* graceful failure: filmstrip stays empty */ }
+}
+
 export function initSmartDrop() {
   const dropZone = document.getElementById('smart-drop');
   const fileInput = document.getElementById('smart-file-input');
@@ -175,9 +254,16 @@ export function initSmartDrop() {
   dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); handleDrop(e.dataTransfer.files); });
   fileInput.addEventListener('change', () => { handleDrop(fileInput.files); fileInput.value = ''; });
 
+  // Track blob URLs for cleanup
+  let prevBlobUrls = [];
+
   async function handleDrop(fileList) {
     const files = Array.from(fileList);
     if (files.length === 0) return;
+
+    // Revoke previous blob URLs
+    for (const u of prevBlobUrls) URL.revokeObjectURL(u);
+    prevBlobUrls = [];
 
     routePanel.innerHTML = '<p class="route-panel__detecting">Detecting file type...</p>';
     routePanel.style.display = '';
@@ -205,46 +291,154 @@ export function initSmartDrop() {
 
     const isSingle = files.length === 1;
     const isImage = dominant.startsWith('image/');
+    const isVideo = dominant.startsWith('video/');
+    const isAudio = dominant.startsWith('audio/');
     const conversions = routes.filter(r => r.label.startsWith('Convert to'));
     const tools = routes.filter(r => !r.label.startsWith('Convert to'));
 
-    let thumbUrl = null;
-    if (isSingle && isImage) {
-      thumbUrl = URL.createObjectURL(files[0]);
-    }
+    // Build DOM
+    routePanel.innerHTML = '';
 
-    let html = '<div class="route-file-info">';
-    if (thumbUrl) {
-      html += `<img class="route-file-thumb" src="${thumbUrl}" />`;
-    }
-    html += '<div class="route-file-details">';
-    if (isSingle) {
-      html += `<div class="route-file-name">${esc(files[0].name)}</div>`;
-      html += `<div class="route-file-meta">${formatSize(files[0].size)} &middot; ${dominantInfo.label}</div>`;
-    } else {
-      const plural = files.length === 1 ? 'file' : 'files';
-      html += `<div class="route-file-name">${files.length} ${dominantInfo.label} ${plural}</div>`;
-    }
-    html += '</div></div>';
+    // Dismiss button
+    const dismissBtn = document.createElement('button');
+    dismissBtn.className = 'route-dismiss';
+    dismissBtn.setAttribute('aria-label', 'Remove file');
+    dismissBtn.innerHTML = '&#215;';
+    dismissBtn.addEventListener('click', () => {
+      for (const u of prevBlobUrls) URL.revokeObjectURL(u);
+      prevBlobUrls = [];
+      routePanel.innerHTML = '';
+      routePanel.style.display = 'none';
+    });
+    routePanel.appendChild(dismissBtn);
 
-    if (conversions.length > 0) {
-      html += '<div class="route-section"><div class="route-section-label">Convert to</div>';
-      for (const r of conversions) {
-        const short = r.label.replace('Convert to ', '');
-        html += `<button class="route-option" data-href="${r.href}">${short}</button>`;
+    // File info section
+    let inlineMetaEl = null;
+
+    if (isSingle && (isImage || isVideo)) {
+      // Preview row: preview left, details right
+      const row = document.createElement('div');
+      row.className = 'route-preview-row';
+
+      const previewDiv = document.createElement('div');
+      previewDiv.className = 'route-preview';
+
+      if (isImage) {
+        const img = document.createElement('img');
+        const blobUrl = URL.createObjectURL(files[0]);
+        prevBlobUrls.push(blobUrl);
+        img.src = blobUrl;
+        img.className = 'route-preview-img';
+        img.alt = files[0].name;
+        previewDiv.appendChild(img);
+      } else if (isVideo) {
+        const filmstrip = document.createElement('div');
+        filmstrip.className = 'route-filmstrip';
+        previewDiv.appendChild(filmstrip);
+        // Extract frames async
+        extractVideoFrames(files[0], filmstrip);
       }
-      html += '</div>';
+
+      row.appendChild(previewDiv);
+
+      const detCol = document.createElement('div');
+      detCol.className = 'route-file-details-col';
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'route-file-name';
+      nameEl.textContent = files[0].name;
+      detCol.appendChild(nameEl);
+
+      const metaEl = document.createElement('div');
+      metaEl.className = 'route-file-meta';
+      metaEl.innerHTML = formatSize(files[0].size) + ' &middot; ' + esc(dominantInfo.label);
+      detCol.appendChild(metaEl);
+
+      inlineMetaEl = document.createElement('div');
+      inlineMetaEl.className = 'route-inline-meta';
+      detCol.appendChild(inlineMetaEl);
+
+      row.appendChild(detCol);
+      routePanel.appendChild(row);
+    } else if (isSingle) {
+      // Audio/PDF/doc/font: no visual preview
+      const info = document.createElement('div');
+      info.className = 'route-file-info';
+
+      const det = document.createElement('div');
+      det.className = 'route-file-details';
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'route-file-name';
+      nameEl.textContent = files[0].name;
+      det.appendChild(nameEl);
+
+      const metaEl = document.createElement('div');
+      metaEl.className = 'route-file-meta';
+      metaEl.innerHTML = formatSize(files[0].size) + ' &middot; ' + esc(dominantInfo.label);
+      det.appendChild(metaEl);
+
+      inlineMetaEl = document.createElement('div');
+      inlineMetaEl.className = 'route-inline-meta';
+      det.appendChild(inlineMetaEl);
+
+      info.appendChild(det);
+      routePanel.appendChild(info);
+    } else {
+      // Multi-file: count + format label
+      const info = document.createElement('div');
+      info.className = 'route-file-info';
+      const det = document.createElement('div');
+      det.className = 'route-file-details';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'route-file-name';
+      nameEl.textContent = files.length + ' ' + dominantInfo.label + ' files';
+      det.appendChild(nameEl);
+      info.appendChild(det);
+      routePanel.appendChild(info);
+    }
+
+    // Async metadata fill-in
+    if (isSingle && inlineMetaEl) {
+      getMediaMeta(files[0], dominant).then(parts => {
+        if (parts.length > 0) inlineMetaEl.textContent = parts.join(' \u00b7 ');
+      });
+    }
+
+    // Route buttons
+    if (conversions.length > 0) {
+      const sec = document.createElement('div');
+      sec.className = 'route-section';
+      const label = document.createElement('div');
+      label.className = 'route-section-label';
+      label.textContent = 'Convert to';
+      sec.appendChild(label);
+      for (const r of conversions) {
+        const btn = document.createElement('button');
+        btn.className = 'route-option';
+        btn.dataset.href = r.href;
+        btn.textContent = r.label.replace('Convert to ', '');
+        sec.appendChild(btn);
+      }
+      routePanel.appendChild(sec);
     }
 
     if (tools.length > 0) {
-      html += '<div class="route-section"><div class="route-section-label">Tools</div>';
+      const sec = document.createElement('div');
+      sec.className = 'route-section';
+      const label = document.createElement('div');
+      label.className = 'route-section-label';
+      label.textContent = 'Tools';
+      sec.appendChild(label);
       for (const r of tools) {
-        html += `<button class="route-option" data-href="${r.href}">${r.label}</button>`;
+        const btn = document.createElement('button');
+        btn.className = 'route-option';
+        btn.dataset.href = r.href;
+        btn.textContent = r.label === 'View Metadata' ? 'View Full Metadata' : r.label;
+        sec.appendChild(btn);
       }
-      html += '</div>';
+      routePanel.appendChild(sec);
     }
-
-    routePanel.innerHTML = html;
 
     routePanel.querySelectorAll('.route-option').forEach(btn => {
       btn.addEventListener('click', async () => {
