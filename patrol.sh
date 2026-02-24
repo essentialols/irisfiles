@@ -1,16 +1,16 @@
 #!/bin/bash
 # patrol.sh - Automated code patrol for IrisFiles
-# Uses Claude Code CLI (Max subscription) to find and fix bugs on branches.
+# Uses Claude Code CLI (Max subscription) to find and fix bugs.
+# Creates PRs on GitHub for each fix.
 #
 # Usage:
-#   bash patrol.sh              # Full patrol: triage + fix
+#   bash patrol.sh              # Full patrol: triage + fix + PR
 #   bash patrol.sh --dry-run    # Triage only, no fixes
-#   bash patrol.sh --cleanup    # Delete all local patrol/* branches
+#   bash patrol.sh --cleanup    # Delete local+remote patrol/* branches, close PRs
 #
-# Review patrol branches:
-#   git branch --list 'patrol/*'
-#   git log --oneline main..patrol/BRANCH
-#   git diff main..patrol/BRANCH
+# Triggers:
+#   - Daily via launchd (com.irisfiles.patrol.plist)
+#   - On push via .git/hooks/post-push
 
 set -euo pipefail
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -18,6 +18,19 @@ cd "$PROJECT_DIR"
 
 # Allow running from inside a Claude Code session
 unset CLAUDECODE 2>/dev/null || true
+
+# Lock file to prevent concurrent patrols
+LOCKFILE="$PROJECT_DIR/.patrol/.lock"
+mkdir -p .patrol
+if [[ -f "$LOCKFILE" ]]; then
+  LOCK_PID=$(cat "$LOCKFILE" 2>/dev/null)
+  if kill -0 "$LOCK_PID" 2>/dev/null; then
+    echo "Patrol already running (PID $LOCK_PID). Exiting."
+    exit 0
+  fi
+fi
+echo $$ > "$LOCKFILE"
+trap 'rm -f "$LOCKFILE"' EXIT
 
 # --- Args ---
 DRY_RUN=false
@@ -31,8 +44,21 @@ done
 
 # --- Cleanup mode ---
 if [[ "$CLEANUP" == true ]]; then
-  echo "Deleting all patrol/* branches..."
-  git branch --list 'patrol/*' | xargs git branch -D 2>/dev/null || echo "No patrol branches found."
+  echo "Cleaning up patrol branches and PRs..."
+  # Close open patrol PRs
+  gh pr list --label "patrol" --state open --json number --jq '.[].number' 2>/dev/null | \
+    while read -r pr; do
+      echo "Closing PR #$pr"
+      gh pr close "$pr" 2>/dev/null || true
+    done
+  # Delete remote patrol branches
+  git branch -r --list 'origin/patrol/*' | sed 's|origin/||' | \
+    while read -r branch; do
+      echo "Deleting remote $branch"
+      git push origin --delete "$branch" 2>/dev/null || true
+    done
+  # Delete local patrol branches
+  git branch --list 'patrol/*' | xargs git branch -D 2>/dev/null || true
   echo "Done."
   exit 0
 fi
@@ -49,8 +75,10 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
+# Pull latest before patrolling
+git pull --ff-only origin main 2>/dev/null || true
+
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-mkdir -p .patrol
 LOG=".patrol/patrol-$TIMESTAMP.log"
 
 echo "=== IrisFiles Patrol $TIMESTAMP ===" | tee "$LOG"
@@ -118,11 +146,11 @@ if [[ "$DRY_RUN" == true ]]; then
   exit 0
 fi
 
-# --- Phase 2: Fix each issue on its own branch ---
+# --- Phase 2: Fix each issue on its own branch, push, create PR ---
 echo "" | tee -a "$LOG"
 echo "Phase 2: Fixing issues..." | tee -a "$LOG"
 
-# Write issues to temp file so we can iterate without a pipeline subshell
+# Write issues to temp file to avoid pipeline subshell
 ISSUES_FILE=$(mktemp)
 echo "$ISSUES" | python3 -c "
 import sys, json
@@ -170,7 +198,32 @@ Steps:
     if node test/validate.mjs > /dev/null 2>&1; then
       git add -A
       git commit -m "patrol: $desc" --no-verify
-      echo "COMMITTED on $FIX_BRANCH" | tee -a "$LOG"
+
+      # Push branch and create PR
+      git push -u origin "$FIX_BRANCH" 2>>"$LOG"
+      PR_URL=$(gh pr create \
+        --base main \
+        --head "$FIX_BRANCH" \
+        --title "patrol: $desc" \
+        --label "patrol" \
+        --body "$(cat <<PREOF
+**Severity:** $severity
+**File:** \`$file\`
+
+**Problem:** $desc
+
+**Fix:** $fix
+
+---
+*Automated patrol fix. Validation passed (all tests green).*
+PREOF
+)" 2>>"$LOG") || true
+
+      if [[ -n "$PR_URL" ]]; then
+        echo "PR created: $PR_URL" | tee -a "$LOG"
+      else
+        echo "COMMITTED + PUSHED on $FIX_BRANCH (PR creation failed, review manually)" | tee -a "$LOG"
+      fi
       FIXED=$((FIXED + 1))
     else
       echo "SKIPPED: validation failed after fix" | tee -a "$LOG"
@@ -195,7 +248,4 @@ rm -f "$ISSUES_FILE"
 
 echo "" | tee -a "$LOG"
 echo "=== Patrol complete: $FIXED fixed, $SKIPPED skipped ===" | tee -a "$LOG"
-echo "Review branches: git branch --list 'patrol/*'" | tee -a "$LOG"
-echo "Review a fix:    git diff main..patrol/BRANCH" | tee -a "$LOG"
-echo "Merge a fix:     git merge patrol/BRANCH" | tee -a "$LOG"
-echo "Full log:        $LOG" | tee -a "$LOG"
+echo "Full log: $LOG" | tee -a "$LOG"
