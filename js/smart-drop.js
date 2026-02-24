@@ -39,20 +39,22 @@ const ROUTES = {
   'image/x-icon': [{ label: 'Convert to JPG', href: '/ico-to-jpg' }, { label: 'Convert to PNG', href: '/ico-to-png' }, { label: 'Convert to WebP', href: '/ico-to-webp' }, { label: 'View Metadata', href: '/image-metadata' }, { label: 'Compress', href: '/compress' }],
   'image/svg+xml': [{ label: 'Convert to JPG', href: '/svg-to-jpg' }, { label: 'Convert to PNG', href: '/svg-to-png' }, { label: 'Convert to WebP', href: '/svg-to-webp' }, { label: 'View Metadata', href: '/image-metadata' }, { label: 'Compress', href: '/compress' }],
   'application/pdf': [{ label: 'Convert to JPG', href: '/pdf-to-jpg' }, { label: 'Convert to PNG', href: '/pdf-to-png' }, { label: 'Merge PDFs', href: '/merge-pdf' }, { label: 'Split PDF', href: '/split-pdf' }],
-  'video/mp4':       [{ label: 'Convert to WebM', href: '/mp4-to-webm' }, { label: 'Convert to GIF', href: '/video-to-gif' }, { label: 'Compress', href: '/compress-video' }],
-  'video/webm':      [{ label: 'Convert to MP4', href: '/webm-to-mp4' }, { label: 'Convert to GIF', href: '/video-to-gif' }, { label: 'Compress', href: '/compress-video' }],
-  'video/quicktime': [{ label: 'Convert to MP4', href: '/mov-to-mp4' }, { label: 'Convert to GIF', href: '/video-to-gif' }, { label: 'Compress', href: '/compress-video' }],
-  'video/x-msvideo': [{ label: 'Convert to MP4', href: '/avi-to-mp4' }, { label: 'Compress', href: '/compress-video' }],
-  'video/x-matroska':[{ label: 'Convert to MP4', href: '/mkv-to-mp4' }, { label: 'Compress', href: '/compress-video' }],
-  'audio/mpeg': [{ label: 'Convert to WAV', href: '/mp3-to-wav' }],
-  'audio/wav':  [{ label: 'Convert to MP3', href: '/wav-to-mp3' }],
-  'audio/ogg':  [{ label: 'Convert to WAV', href: '/ogg-to-wav' }, { label: 'Convert to MP3', href: '/ogg-to-mp3' }],
-  'audio/flac': [{ label: 'Convert to WAV', href: '/flac-to-wav' }, { label: 'Convert to MP3', href: '/flac-to-mp3' }],
-  'audio/mp4':  [{ label: 'Convert to WAV', href: '/m4a-to-wav' }, { label: 'Convert to MP3', href: '/m4a-to-mp3' }],
-  'audio/aac':  [{ label: 'Convert to WAV', href: '/aac-to-wav' }, { label: 'Convert to MP3', href: '/aac-to-mp3' }],
+  'video/mp4':       [{ label: 'Convert to WebM', href: '/mp4-to-webm' }, { label: 'Convert to MOV', href: '/mp4-to-mov' }, { label: 'Convert to AVI', href: '/mp4-to-avi' }, { label: 'Convert to MKV', href: '/mp4-to-mkv' }, { label: 'Convert to GIF', href: '/mp4-to-gif' }, { label: 'Compress', href: '/compress-video' }],
+  'video/webm':      [{ label: 'Convert to MP4', href: '/webm-to-mp4' }, { label: 'Convert to MOV', href: '/webm-to-mov' }, { label: 'Convert to AVI', href: '/webm-to-avi' }, { label: 'Convert to MKV', href: '/webm-to-mkv' }, { label: 'Convert to GIF', href: '/webm-to-gif' }, { label: 'Compress', href: '/compress-video' }],
+  'video/quicktime': [{ label: 'Convert to MP4', href: '/mov-to-mp4' }, { label: 'Convert to WebM', href: '/mov-to-webm' }, { label: 'Convert to AVI', href: '/mov-to-avi' }, { label: 'Convert to MKV', href: '/mov-to-mkv' }, { label: 'Convert to GIF', href: '/mov-to-gif' }, { label: 'Compress', href: '/compress-video' }],
+  'video/x-msvideo': [{ label: 'Convert to MP4', href: '/avi-to-mp4' }, { label: 'Convert to WebM', href: '/avi-to-webm' }, { label: 'Convert to MOV', href: '/avi-to-mov' }, { label: 'Convert to MKV', href: '/avi-to-mkv' }, { label: 'Convert to GIF', href: '/avi-to-gif' }, { label: 'Compress', href: '/compress-video' }],
+  'video/x-matroska':[{ label: 'Convert to MP4', href: '/mkv-to-mp4' }, { label: 'Convert to WebM', href: '/mkv-to-webm' }, { label: 'Convert to MOV', href: '/mkv-to-mov' }, { label: 'Convert to AVI', href: '/mkv-to-avi' }, { label: 'Convert to GIF', href: '/mkv-to-gif' }, { label: 'Compress', href: '/compress-video' }],
+  'image/gif-video': [{ label: 'Convert to MP4', href: '/gif-to-mp4' }, { label: 'Convert to WebM', href: '/gif-to-webm' }, { label: 'Convert to MOV', href: '/gif-to-mov' }, { label: 'Convert to AVI', href: '/gif-to-avi' }, { label: 'Convert to MKV', href: '/gif-to-mkv' }],
+  'audio/mpeg': [{ label: 'Convert to WAV', href: '/mp3-to-wav' }, { label: 'Convert to OGG', href: '/mp3-to-ogg' }, { label: 'Convert to FLAC', href: '/mp3-to-flac' }, { label: 'Convert to M4A', href: '/mp3-to-m4a' }, { label: 'Convert to AAC', href: '/mp3-to-aac' }],
+  'audio/wav':  [{ label: 'Convert to MP3', href: '/wav-to-mp3' }, { label: 'Convert to OGG', href: '/wav-to-ogg' }, { label: 'Convert to FLAC', href: '/wav-to-flac' }, { label: 'Convert to M4A', href: '/wav-to-m4a' }, { label: 'Convert to AAC', href: '/wav-to-aac' }],
+  'audio/ogg':  [{ label: 'Convert to WAV', href: '/ogg-to-wav' }, { label: 'Convert to MP3', href: '/ogg-to-mp3' }, { label: 'Convert to FLAC', href: '/ogg-to-flac' }, { label: 'Convert to M4A', href: '/ogg-to-m4a' }, { label: 'Convert to AAC', href: '/ogg-to-aac' }],
+  'audio/flac': [{ label: 'Convert to WAV', href: '/flac-to-wav' }, { label: 'Convert to MP3', href: '/flac-to-mp3' }, { label: 'Convert to OGG', href: '/flac-to-ogg' }, { label: 'Convert to M4A', href: '/flac-to-m4a' }, { label: 'Convert to AAC', href: '/flac-to-aac' }],
+  'audio/mp4':  [{ label: 'Convert to WAV', href: '/m4a-to-wav' }, { label: 'Convert to MP3', href: '/m4a-to-mp3' }, { label: 'Convert to OGG', href: '/m4a-to-ogg' }, { label: 'Convert to FLAC', href: '/m4a-to-flac' }, { label: 'Convert to AAC', href: '/m4a-to-aac' }],
+  'audio/aac':  [{ label: 'Convert to WAV', href: '/aac-to-wav' }, { label: 'Convert to MP3', href: '/aac-to-mp3' }, { label: 'Convert to OGG', href: '/aac-to-ogg' }, { label: 'Convert to FLAC', href: '/aac-to-flac' }, { label: 'Convert to M4A', href: '/aac-to-m4a' }],
   'application/epub+zip': [{ label: 'Convert to TXT', href: '/epub-to-txt' }, { label: 'Convert to PDF', href: '/epub-to-pdf' }],
   'application/rtf': [{ label: 'Convert to TXT', href: '/rtf-to-txt' }, { label: 'Convert to PDF', href: '/rtf-to-pdf' }],
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [{ label: 'Convert to TXT', href: '/docx-to-txt' }, { label: 'Convert to PDF', href: '/docx-to-pdf' }],
+  'application/x-mobipocket-ebook': [{ label: 'Convert to TXT', href: '/mobi-to-txt' }, { label: 'Convert to PDF', href: '/mobi-to-pdf' }],
   'font/ttf':  [{ label: 'Convert to OTF', href: '/ttf-to-otf' }, { label: 'Convert to WOFF', href: '/ttf-to-woff' }],
   'font/otf':  [{ label: 'Convert to TTF', href: '/otf-to-ttf' }, { label: 'Convert to WOFF', href: '/otf-to-woff' }],
   'font/woff': [{ label: 'Convert to TTF', href: '/woff-to-ttf' }, { label: 'Convert to OTF', href: '/woff-to-otf' }],
@@ -88,6 +90,7 @@ async function detect(file) {
   if (ext === 'epub') return { mime: 'application/epub+zip', ext: 'epub', label: 'EPUB' };
   if (ext === 'docx') return { mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ext: 'docx', label: 'DOCX' };
   if (ext === 'rtf') return { mime: 'application/rtf', ext: 'rtf', label: 'RTF' };
+  if (ext === 'mobi' || ext === 'prc') return { mime: 'application/x-mobipocket-ebook', ext: 'mobi', label: 'MOBI' };
   // Font fallbacks
   if (ext === 'ttf') return SIGS.find(s => s.mime === 'font/ttf');
   if (ext === 'otf') return SIGS.find(s => s.mime === 'font/otf');

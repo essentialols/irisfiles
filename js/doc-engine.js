@@ -418,6 +418,171 @@ async function extractDocxText(file, onProgress) {
   return lines.join('\n');
 }
 
+// --------------- MOBI ---------------
+
+/**
+ * PalmDOC LZ77 decompression.
+ * Each record is compressed with a PalmDOC variant of LZ77.
+ */
+function palmDocDecompress(data) {
+  const out = [];
+  let i = 0;
+  while (i < data.length) {
+    const byte = data[i++];
+    if (byte === 0) {
+      // Literal null
+      out.push(0);
+    } else if (byte >= 1 && byte <= 8) {
+      // Copy next 1-8 bytes literally
+      for (let j = 0; j < byte && i < data.length; j++) {
+        out.push(data[i++]);
+      }
+    } else if (byte >= 0x80) {
+      // LZ77 back-reference: 2-byte token
+      if (i >= data.length) break;
+      const next = data[i++];
+      const dist = ((byte << 8 | next) >> 3) & 0x7FF;
+      const len = (next & 0x07) + 3;
+      const pos = out.length;
+      for (let j = 0; j < len; j++) {
+        out.push(out[pos - dist + j] || 0);
+      }
+    } else if (byte >= 0x09 && byte <= 0x7F) {
+      // Literal byte
+      out.push(byte);
+    } else {
+      // byte === 0x01..0x08 handled above; space + char encoding
+      // 0xC0..0xFF: space + (byte XOR 0x80)
+      out.push(0x20);
+      out.push(byte ^ 0x80);
+    }
+  }
+  return new Uint8Array(out);
+}
+
+/**
+ * Parse a MOBI/PRC file and extract text content.
+ * Handles uncompressed (1) and PalmDOC-compressed (2) records.
+ * DRM-protected files will throw an error.
+ */
+async function extractMobiText(file, onProgress) {
+  if (onProgress) onProgress(5);
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const view = new DataView(buf.buffer);
+
+  // PDB header: 78 bytes
+  // name: 0-31 (32 bytes, null-padded)
+  // numRecords: offset 76, 2 bytes big-endian
+  if (buf.length < 78) throw new Error('File too small to be a valid MOBI file.');
+
+  const numRecords = view.getUint16(76, false);
+  if (numRecords < 2) throw new Error('Invalid MOBI file: not enough records.');
+
+  // Record info list starts at offset 78, each entry is 8 bytes (offset: 4, attributes: 1, uniqueID: 3)
+  const recordOffsets = [];
+  for (let r = 0; r < numRecords; r++) {
+    const recInfoOffset = 78 + r * 8;
+    if (recInfoOffset + 8 > buf.length) break;
+    recordOffsets.push(view.getUint32(recInfoOffset, false));
+  }
+
+  if (onProgress) onProgress(10);
+
+  // Record 0 contains the MOBI header
+  const rec0Start = recordOffsets[0];
+  const rec0End = recordOffsets.length > 1 ? recordOffsets[1] : buf.length;
+  if (rec0Start >= buf.length) throw new Error('Invalid MOBI file: record 0 out of bounds.');
+
+  // PalmDOC header (first 16 bytes of record 0)
+  const compression = view.getUint16(rec0Start, false);
+  const textLength = view.getUint32(rec0Start + 4, false);
+  const recordCount = view.getUint16(rec0Start + 8, false);
+
+  // Check for DRM: MOBI header starts at rec0Start + 16
+  // encryption type at offset 12 in PalmDOC header
+  const encryption = view.getUint16(rec0Start + 12, false);
+  if (encryption !== 0) {
+    throw new Error('This MOBI file is DRM-protected and cannot be converted. Only unprotected .mobi/.prc files are supported.');
+  }
+
+  if (compression !== 1 && compression !== 2) {
+    throw new Error('Unsupported MOBI compression type. Only uncompressed and PalmDOC-compressed files are supported.');
+  }
+
+  if (onProgress) onProgress(20);
+
+  // Extract text from records 1..recordCount
+  const textParts = [];
+  const startRec = 1;
+  const endRec = Math.min(startRec + recordCount, recordOffsets.length);
+
+  for (let r = startRec; r < endRec; r++) {
+    const start = recordOffsets[r];
+    const end = r + 1 < recordOffsets.length ? recordOffsets[r + 1] : buf.length;
+    const recordData = buf.slice(start, end);
+
+    let decoded;
+    if (compression === 1) {
+      // Uncompressed
+      decoded = recordData;
+    } else {
+      // PalmDOC compression
+      decoded = palmDocDecompress(recordData);
+    }
+    textParts.push(decoded);
+
+    if (onProgress) onProgress(20 + Math.round(((r - startRec) / (endRec - startRec)) * 40));
+  }
+
+  // Concatenate all decoded text
+  const totalLen = textParts.reduce((s, p) => s + p.length, 0);
+  const combined = new Uint8Array(Math.min(totalLen, textLength));
+  let offset = 0;
+  for (const part of textParts) {
+    const copyLen = Math.min(part.length, combined.length - offset);
+    if (copyLen <= 0) break;
+    combined.set(part.subarray(0, copyLen), offset);
+    offset += copyLen;
+  }
+
+  if (onProgress) onProgress(65);
+
+  // Decode as UTF-8 (most MOBI files use UTF-8 or CP1252)
+  let text;
+  try {
+    text = new TextDecoder('utf-8').decode(combined);
+  } catch {
+    text = new TextDecoder('windows-1252').decode(combined);
+  }
+
+  // If text contains HTML, strip tags
+  if (text.includes('<html') || text.includes('<body') || text.includes('<p>') || text.includes('<p ')) {
+    const doc = new DOMParser().parseFromString(text, 'text/html');
+    text = (doc.body || doc.documentElement).textContent || '';
+  }
+
+  if (onProgress) onProgress(80);
+
+  // Clean up whitespace
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+
+  return text;
+}
+
+export async function mobiToText(file, onProgress) {
+  const text = await extractMobiText(file, onProgress);
+  if (onProgress) onProgress(100);
+  return new Blob([text], { type: 'text/plain' });
+}
+
+export async function mobiToPdf(file, onProgress) {
+  const text = await extractMobiText(file, onProgress);
+  if (onProgress) onProgress(50);
+  const blob = await textToPdfBlob(text, onProgress);
+  if (onProgress) onProgress(100);
+  return blob;
+}
+
 export async function docxToText(file, onProgress) {
   const text = await extractDocxText(file, onProgress);
   if (onProgress) onProgress(100);

@@ -1,7 +1,10 @@
 /**
  * IrisFiles - Audio conversion engine
  * Decodes audio via Web Audio API, encodes to WAV (native) or MP3 (lamejs, lazy-loaded).
+ * For OGG/FLAC/M4A/AAC output, uses FFmpeg.wasm via the shared loader.
  */
+
+import { ensureFFmpeg } from './ffmpeg-shared.js';
 
 const LAMEJS_CDN = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
 let lameReady = null; // Promise that resolves when lamejs is loaded
@@ -24,7 +27,7 @@ function loadLame() {
 }
 
 /**
- * Convert an audio file to the target format.
+ * Convert an audio file to the target format (WAV or MP3 only).
  * @param {File} file - Source audio file (MP3, WAV, OGG, FLAC, M4A, AAC)
  * @param {string} targetFormat - 'wav' or 'mp3'
  * @param {function} onProgress - Progress callback (0-100)
@@ -64,6 +67,69 @@ export async function convertAudio(file, targetFormat, onProgress = () => {}) {
   }
 
   throw new Error(`Unsupported output format: ${targetFormat}`);
+}
+
+// FFmpeg-based audio format definitions
+const AUDIO_FORMATS = {
+  ogg:  { ext: 'ogg',  mime: 'audio/ogg',  args: ['-c:a', 'libvorbis', '-q:a', '4'] },
+  flac: { ext: 'flac', mime: 'audio/flac', args: ['-c:a', 'flac'] },
+  m4a:  { ext: 'm4a',  mime: 'audio/mp4',  args: ['-c:a', 'aac', '-b:a', '128k'] },
+  aac:  { ext: 'aac',  mime: 'audio/aac',  args: ['-c:a', 'aac', '-b:a', '128k', '-f', 'adts'] },
+};
+
+/**
+ * Convert an audio file to OGG, FLAC, M4A, or AAC using FFmpeg.wasm.
+ * @param {File} file - Source audio file
+ * @param {string} targetFormat - 'ogg', 'flac', 'm4a', or 'aac'
+ * @param {function} onProgress - Progress callback (0-100)
+ * @returns {Promise<Blob>}
+ */
+export async function convertAudioFFmpeg(file, targetFormat, onProgress = () => {}) {
+  const fmt = AUDIO_FORMATS[targetFormat];
+  if (!fmt) throw new Error(`Unsupported FFmpeg audio format: ${targetFormat}`);
+
+  onProgress(5);
+
+  const ffmpeg = await ensureFFmpeg(msg => {});
+
+  onProgress(15);
+
+  const inputExt = (file.name.match(/\.(\w+)$/) || [, 'wav'])[1].toLowerCase();
+  const inputName = `input.${inputExt}`;
+  const outputName = `output.${fmt.ext}`;
+
+  await ffmpeg.writeFile(inputName, new Uint8Array(await file.arrayBuffer()));
+
+  onProgress(25);
+
+  const progressHandler = ({ progress }) => {
+    const pct = Math.min(90, 25 + Math.round(progress * 65));
+    onProgress(pct);
+  };
+  ffmpeg.on('progress', progressHandler);
+
+  let exitCode;
+  try {
+    exitCode = await ffmpeg.exec(['-i', inputName, ...fmt.args, '-y', outputName]);
+  } finally {
+    ffmpeg.off('progress', progressHandler);
+  }
+
+  if (exitCode !== 0) {
+    try { await ffmpeg.deleteFile(inputName); } catch {}
+    try { await ffmpeg.deleteFile(outputName); } catch {}
+    throw new Error('Conversion failed. The file may be corrupted or use an unsupported codec.');
+  }
+
+  onProgress(95);
+
+  const data = await ffmpeg.readFile(outputName);
+
+  try { await ffmpeg.deleteFile(inputName); } catch {}
+  try { await ffmpeg.deleteFile(outputName); } catch {}
+
+  onProgress(100);
+  return new Blob([data.buffer], { type: fmt.mime });
 }
 
 /**

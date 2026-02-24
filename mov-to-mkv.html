@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MOV to MKV Converter - Free, Private, No Upload | IrisFiles</title>
+  <meta name="description" content="Convert MOV videos to MKV (Matroska) format in your browser. No upload needed. Your files stay on your device. Experimental feature.">
+  <meta property="og:title" content="MOV to MKV Converter - Free, Private, No Upload | IrisFiles">
+  <meta property="og:description" content="Convert MOV videos to MKV (Matroska) format in your browser. No upload needed. Your files stay on your device. Experimental feature.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://irisfiles.com/mov-to-mkv">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="MOV to MKV Converter - Free, Private, No Upload | IrisFiles">
+  <meta name="twitter:description" content="Convert MOV videos to MKV (Matroska) format in your browser. No upload needed. Your files stay on your device. Experimental feature.">
+  <meta property="og:image" content="https://irisfiles.com/img/og-default.png">
+  <meta name="twitter:image" content="https://irisfiles.com/img/og-default.png">
+  <link rel="canonical" href="https://irisfiles.com/mov-to-mkv">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "MOV to MKV Converter - IrisFiles",
+      "url": "https://irisfiles.com/mov-to-mkv",
+      "description": "Convert MOV videos to MKV (Matroska) format in your browser. No upload needed. Your files stay on your device. Experimental feature.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why convert MOV to MKV?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "MKV (Matroska) is an open-standard container that supports multiple audio tracks, subtitles, and chapter markers. It is widely supported by VLC, Plex, Kodi, and other cross-platform media players, making it a great choice for archiving MOV files outside the Apple ecosystem."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does the conversion happen in the browser?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "IrisFiles uses FFmpeg.wasm, a WebAssembly version of FFmpeg. It reads the QuickTime MOV container, extracts the video and audio streams, and packages them into an MKV file. Everything runs locally in your browser with no server involvement."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Are there size or duration limits?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Files must be under 100MB and 10 minutes long. For larger MOV files (common with iPhone recordings), use a desktop tool like MKVToolNix, HandBrake, or VLC."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does my video leave my device?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. All processing happens in your browser. The FFmpeg.wasm library is downloaded once from a CDN and cached. Your video files remain entirely on your device throughout the conversion."
+          }
+        }
+      ]
+    }
+  ]
+  </script>
+</head>
+<body>
+  <header class="header">
+    <div class="container container--wide">
+      <a href="/" class="logo">Iris<span>Files</span></a>
+      <nav class="nav">
+        <a href="/">All Converters</a>
+        <a href="/about">About</a>
+        <a href="https://ko-fi.com/irisfiles" class="support-btn" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1.5a2.5 2.5 0 010 5H17"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z" fill="currentColor" stroke="none" opacity=".15"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3" opacity=".6"/></svg> Support this project</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> All Converters</a>
+    <section class="hero">
+      <h1>MOV to MKV</h1>
+      <p>Convert Apple QuickTime MOV videos to the versatile MKV (Matroska) container for cross-platform playback and archiving. All processing runs locally in your browser.</p>
+    </section>
+
+    <div class="trust-banner" style="background: #fef3c7; border-color: #f59e0b;">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L1 18h18L10 2z" fill="#f59e0b" opacity=".15"/><path d="M10 2L1 18h18L10 2z" stroke="#f59e0b" stroke-width="1.5" fill="none"/><path d="M10 8v4M10 14v1" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span><strong>Experimental.</strong> Video transcoding runs in your browser via FFmpeg.wasm. Large files may take several minutes. Max 100MB / 10 minutes.</span>
+    </div>
+
+    <div id="drop-zone" class="drop-zone">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
+      <p>Drag & drop a MOV video here, or <strong>click to browse</strong></p>
+      <p style="font-size:0.8rem;margin-top:0.5rem">Max 100MB, 10 minutes. Processing may take a few minutes.</p>
+      <input type="file" id="file-input" accept="video/quicktime,.mov">
+    </div>
+
+    <div id="file-list" class="file-list"></div>
+
+    <div class="batch-actions">
+      <button id="action-btn" class="btn btn--primary" style="display:none">Convert</button>
+      <button id="clear-all" class="btn btn--secondary" style="display:none">Clear</button>
+    </div>
+
+    <div class="related-tools">
+      <h2>Related Tools</h2>
+      <div class="related-tools__links">
+        <a href="/mkv-to-mov">MKV to MOV</a>
+        <a href="/mov-to-mp4">MOV to MP4</a>
+        <a href="/mov-to-webm">MOV to WebM</a>
+      </div>
+    </div>
+
+    <section class="faq">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-item">
+        <button class="faq-question">Why convert MOV to MKV?</button>
+        <div class="faq-answer">
+          <p>MKV (Matroska) is an open-standard container that supports multiple audio tracks, subtitles, and chapter markers. It is widely supported by VLC, Plex, Kodi, and other cross-platform media players, making it a great choice for archiving MOV files outside the Apple ecosystem.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">How does the conversion happen in the browser?</button>
+        <div class="faq-answer">
+          <p>IrisFiles uses FFmpeg.wasm, a WebAssembly version of FFmpeg. It reads the QuickTime MOV container, extracts the video and audio streams, and packages them into an MKV file. Everything runs locally in your browser with no server involvement.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Are there size or duration limits?</button>
+        <div class="faq-answer">
+          <p>Yes. Files must be under 100MB and 10 minutes long. For larger MOV files (common with iPhone recordings), use a desktop tool like MKVToolNix, HandBrake, or VLC.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Does my video leave my device?</button>
+        <div class="faq-answer">
+          <p>No. All processing happens in your browser. The FFmpeg.wasm library is downloaded once from a CDN and cached. Your video files remain entirely on your device throughout the conversion.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="/">All Converters</a>
+        <a href="/mkv-to-mov">MKV to MOV</a>
+        <a href="/mov-to-mp4">MOV to MP4</a>
+        <a href="/about">About</a>
+      </div>
+      <p>IrisFiles. All processing happens in your browser.</p>
+    </div>
+  </footer>
+
+  <div id="converter-config" data-target-format="mkv"></div>
+  <script type="module" src="js/vidconv-boot.js"></script>
+</body>
+</html>

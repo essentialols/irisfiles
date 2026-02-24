@@ -30,6 +30,23 @@ const PAGES = [
   '/mov-to-mp4', '/avi-to-mp4', '/mkv-to-mp4', '/webm-to-mp4', '/mp4-to-webm',
   '/compress-video',
   '/image-metadata',
+  // New video conversions
+  '/mp4-to-avi', '/mp4-to-mkv', '/mp4-to-mov',
+  '/webm-to-avi', '/webm-to-mkv', '/webm-to-mov',
+  '/mov-to-webm', '/mov-to-avi', '/mov-to-mkv',
+  '/avi-to-webm', '/avi-to-mov', '/avi-to-mkv',
+  '/mkv-to-webm', '/mkv-to-avi', '/mkv-to-mov',
+  // Video-to-GIF (format-specific)
+  '/mp4-to-gif', '/webm-to-gif', '/mov-to-gif', '/avi-to-gif', '/mkv-to-gif',
+  // GIF-to-Video
+  '/gif-to-mp4', '/gif-to-webm', '/gif-to-mov', '/gif-to-avi', '/gif-to-mkv',
+  // New audio conversions
+  '/mp3-to-ogg', '/wav-to-ogg', '/flac-to-ogg', '/m4a-to-ogg', '/aac-to-ogg',
+  '/mp3-to-flac', '/wav-to-flac', '/ogg-to-flac', '/m4a-to-flac', '/aac-to-flac',
+  '/mp3-to-m4a', '/wav-to-m4a', '/ogg-to-m4a', '/flac-to-m4a', '/aac-to-m4a',
+  '/mp3-to-aac', '/wav-to-aac', '/ogg-to-aac', '/flac-to-aac', '/m4a-to-aac',
+  // MOBI documents
+  '/mobi-to-txt', '/mobi-to-pdf',
   '/about'
 ];
 
@@ -117,7 +134,7 @@ async function validatePage(path) {
   }
 
   // Favicon
-  ok(html.includes('href="/favicon.svg"'), `${label}: missing favicon link`);
+  ok(html.includes('href="/favicon.png"'), `${label}: missing favicon link`);
 
   // JSON-LD (all pages except /about should have array of 2: WebApplication + FAQPage)
   const ldMatch = html.match(/<script\s+type=["']application\/ld\+json["']>([\s\S]*?)<\/script>/);
@@ -171,7 +188,7 @@ async function globalChecks() {
   const urls = [];
   let m;
   while ((m = locRe.exec(sitemap)) !== null) urls.push(m[1]);
-  ok(urls.length === 78, `sitemap.xml: has ${urls.length} URLs (expected 78)`);
+  ok(urls.length === 125, `sitemap.xml: has ${urls.length} URLs (expected 125)`);
 
   // each sitemap URL corresponds to a real page
   for (const url of urls) {
@@ -200,9 +217,9 @@ async function globalChecks() {
     ok(csp.includes("'unsafe-inline'"), 'vercel.json CSP: missing unsafe-inline in style-src');
   }
 
-  // favicon.svg
-  const { status: fvStatus } = await fetch(`${BASE}/favicon.svg`);
-  ok(fvStatus === 200, 'favicon.svg: not served (status ' + fvStatus + ')');
+  // favicon.png
+  const { status: fvStatus } = await fetch(`${BASE}/favicon.png`);
+  ok(fvStatus === 200, 'favicon.png: not served (status ' + fvStatus + ')');
 
   // og-default.png
   const { status: ogStatus } = await fetch(`${BASE}/img/og-default.png`);

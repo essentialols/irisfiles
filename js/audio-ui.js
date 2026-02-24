@@ -3,9 +3,11 @@
  * Handles drag-drop, file queue, progress bars, batch conversion, ZIP download.
  */
 
-import { convertAudio } from './audio-engine.js';
+import { convertAudio, convertAudioFFmpeg } from './audio-engine.js';
 import { formatSize, downloadBlob, downloadAsZip, outputFilename, validateFile, MAX_BATCH_SIZE } from './converter.js';
 import { loadPendingFiles } from './smart-drop.js';
+
+const FFMPEG_FORMATS = new Set(['ogg', 'flac', 'm4a', 'aac']);
 
 let targetFormat = '';  // 'wav' or 'mp3'
 let targetExt = '';
@@ -122,7 +124,8 @@ async function processQueue() {
     const t0 = performance.now();
     try {
       next.outputName = outputFilename(next.file.name, targetExt);
-      next.outputBlob = await convertAudio(next.file, targetFormat, pct => {
+      const convertFn = FFMPEG_FORMATS.has(targetFormat) ? convertAudioFFmpeg : convertAudio;
+      next.outputBlob = await convertFn(next.file, targetFormat, pct => {
         next.progress = pct;
         updateFileItem(next);
       });

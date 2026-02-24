@@ -8,6 +8,7 @@ import {
   epubToText, epubToPdf,
   rtfToText, rtfToPdf,
   docxToText, docxToPdf,
+  mobiToText, mobiToPdf,
 } from './doc-engine.js';
 import { formatSize, downloadBlob } from './converter.js';
 import { loadPendingFiles } from './smart-drop.js';
@@ -19,6 +20,8 @@ const MODES = {
   'rtf-to-pdf':   { fn: rtfToPdf,   accept: '.rtf',  label: 'RTF',  outExt: 'pdf', outMime: 'application/pdf' },
   'docx-to-txt':  { fn: docxToText, accept: '.docx', label: 'DOCX', outExt: 'txt', outMime: 'text/plain' },
   'docx-to-pdf':  { fn: docxToPdf,  accept: '.docx', label: 'DOCX', outExt: 'pdf', outMime: 'application/pdf' },
+  'mobi-to-txt':  { fn: mobiToText, accept: '.mobi,.prc', label: 'MOBI', outExt: 'txt', outMime: 'text/plain' },
+  'mobi-to-pdf':  { fn: mobiToPdf,  accept: '.mobi,.prc', label: 'MOBI', outExt: 'pdf', outMime: 'application/pdf' },
 };
 
 let mode = null;
