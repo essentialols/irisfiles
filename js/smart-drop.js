@@ -246,7 +246,6 @@ async function extractVideoFrames(file, container, count) {
     const v = document.createElement('video');
     v.preload = 'auto';
     v.muted = true;
-    v.crossOrigin = 'anonymous';
     v.src = url;
     await new Promise((resolve, reject) => {
       v.onloadeddata = resolve;
@@ -254,21 +253,26 @@ async function extractVideoFrames(file, container, count) {
     });
     const dur = v.duration;
     if (!dur || !isFinite(dur) || !v.videoWidth) { URL.revokeObjectURL(url); return; }
+    // Calculate frame size to fill container width
+    const gap = 3;
+    const containerW = container.offsetWidth || 700;
+    const aspect = v.videoWidth / v.videoHeight;
+    const frameW = Math.floor((containerW - gap * (count - 1)) / count);
+    const frameH = Math.round(frameW / aspect);
     for (let i = 0; i < count; i++) {
-      const t = dur * ((i * 2 + 1) / (count * 2));
+      const t = dur * ((i + 1) / (count + 1));
       v.currentTime = t;
-      await new Promise(resolve => {
-        v.onseeked = resolve;
-        setTimeout(resolve, 2000);
+      await new Promise((resolve) => {
+        const onSeeked = () => { v.removeEventListener('seeked', onSeeked); resolve(); };
+        v.addEventListener('seeked', onSeeked);
       });
       if (!v.videoWidth) continue;
       const canvas = document.createElement('canvas');
-      const aspect = v.videoWidth / v.videoHeight;
-      canvas.height = 60;
-      canvas.width = Math.round(60 * aspect);
+      canvas.width = frameW;
+      canvas.height = frameH;
       canvas.className = 'route-frame';
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(v, 0, 0, frameW, frameH);
       container.appendChild(canvas);
     }
     URL.revokeObjectURL(url);

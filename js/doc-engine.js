@@ -485,6 +485,7 @@ async function extractMobiText(file, onProgress) {
     if (recInfoOffset + 8 > buf.length) break;
     recordOffsets.push(view.getUint32(recInfoOffset, false));
   }
+  if (recordOffsets.length === 0) throw new Error('Invalid MOBI file: corrupted record directory.');
 
   if (onProgress) onProgress(10);
 
