@@ -495,6 +495,73 @@ body {
 }
 .route-option:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Dismiss button (smart drop) */
+.route-panel { position: relative; }
+.route-dismiss {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: var(--bg);
+  border-radius: 50%;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, color .15s;
+  z-index: 1;
+}
+.route-dismiss:hover { background: #fee2e2; color: var(--danger); }
+
+/* Rich preview (smart drop) */
+.route-preview-row {
+  display: flex;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.75rem;
+  text-align: left;
+}
+.route-preview {
+  max-width: 200px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--border);
+}
+.route-preview-img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  display: block;
+}
+.route-file-details-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+}
+.route-inline-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+.route-filmstrip {
+  display: flex;
+  gap: 2px;
+}
+.route-frame {
+  height: 80px;
+  border-radius: 3px;
+  display: block;
+}
+
 /* Back link on converter pages */
 .back-link {
   display: inline-flex;
@@ -697,4 +764,6 @@ body {
   .support-btn svg { width: 14px; height: 14px; }
   .meta-row { flex-direction: column; align-items: flex-start; gap: 0.25rem; }
   .meta-label { min-width: 0; }
+  .route-preview-row { flex-direction: column; }
+  .route-preview { max-width: 100%; }
 }
