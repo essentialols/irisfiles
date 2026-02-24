@@ -27,7 +27,7 @@ const PAGES = [
   '/otf-to-ttf', '/woff-to-ttf', '/ttf-to-otf', '/woff-to-otf',
   '/ttf-to-woff', '/otf-to-woff',
   '/extract-zip', '/create-zip',
-  '/split-pdf', '/resize-image', '/strip-exif',
+  '/split-pdf', '/resize-image', '/strip-exif', '/images-to-gif',
   '/mov-to-mp4', '/avi-to-mp4', '/mkv-to-mp4', '/webm-to-mp4', '/mp4-to-webm',
   '/compress-video',
   '/image-metadata',

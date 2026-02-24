@@ -245,7 +245,9 @@ function renderFileItem(entry) {
   const div = document.createElement('div');
   div.className = 'file-item';
   div.id = `file-${entry.id}`;
+  const isImage = entry.file.type && entry.file.type.startsWith('image/');
   div.innerHTML = `
+    ${isImage ? '<div class="file-item__thumb"></div>' : ''}
     <div class="file-item__info">
       <div class="file-item__name">${escapeHtml(entry.file.name)}</div>
       <div class="file-item__meta">${formatSize(entry.file.size)}</div>
@@ -257,6 +259,14 @@ function renderFileItem(entry) {
       <span class="file-item__status">Queued</span>
     </div>
   `;
+  if (isImage) {
+    const thumb = div.querySelector('.file-item__thumb');
+    const url = URL.createObjectURL(entry.file);
+    const img = document.createElement('img');
+    img.src = url;
+    img.onload = () => URL.revokeObjectURL(url);
+    thumb.appendChild(img);
+  }
   fileList.appendChild(div);
   updateBatchActions();
 }
