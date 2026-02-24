@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Images to Animated GIF - Free, Private, No Upload | IrisFiles</title>
+  <meta name="description" content="Create animated GIFs from multiple images. Drag to reorder frames, adjust speed and size. Everything runs in your browser. No upload needed.">
+  <meta property="og:title" content="Images to Animated GIF - Free, Private, No Upload | IrisFiles">
+  <meta property="og:description" content="Create animated GIFs from multiple images. Drag to reorder frames, adjust speed and size. Everything runs in your browser. No upload needed.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://irisfiles.com/images-to-gif">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Images to Animated GIF - Free, Private, No Upload | IrisFiles">
+  <meta name="twitter:description" content="Create animated GIFs from multiple images. Drag to reorder frames, adjust speed and size. Everything runs in your browser. No upload needed.">
+  <meta property="og:image" content="https://irisfiles.com/img/og-default.png">
+  <meta name="twitter:image" content="https://irisfiles.com/img/og-default.png">
+  <link rel="canonical" href="https://irisfiles.com/images-to-gif">
+  <link rel="stylesheet" href="css/style.css?v=2">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Images to Animated GIF - IrisFiles",
+      "url": "https://irisfiles.com/images-to-gif",
+      "description": "Create animated GIFs from multiple images entirely in your browser. No server upload.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What image formats can I use?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "You can use JPG, PNG, WebP, GIF, BMP, AVIF, and most other browser-supported image formats. All images are resized to a uniform width to create a smooth animation."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I control the animation speed?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Use the delay slider to set the time between frames in milliseconds. Lower values (50ms) create faster animations, higher values (500ms) create slower slideshows."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I reorder the frames?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. After adding images, drag and drop the frame thumbnails to rearrange the order before creating your GIF."
+          }
+        }
+      ]
+    }
+  ]
+  </script>
+  <style>
+    .frame-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .frame-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.5rem 0.75rem; background: var(--bg-secondary);
+      border-radius: 8px; border: 1px solid var(--border); cursor: grab;
+    }
+    .frame-item.dragging { opacity: 0.4; }
+    .frame-item.drag-over { border-color: var(--primary); background: #eff6ff; }
+    .frame-item__num { font-weight: 700; color: var(--text-muted); font-size: 0.85rem; min-width: 1.5rem; text-align: center; }
+    .frame-item__thumb { width: 48px; height: 48px; border-radius: 4px; overflow: hidden; flex-shrink: 0; background: var(--border); }
+    .frame-item__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .frame-item__info { flex: 1; min-width: 0; }
+    .frame-item__name { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .frame-item__meta { font-size: 0.75rem; color: var(--text-muted); }
+    .frame-item__remove { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted); padding: 0.25rem; line-height: 1; }
+    .frame-item__remove:hover { color: var(--danger); }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="container container--wide">
+      <a href="/" class="logo">Iris<span>Files</span></a>
+      <nav class="nav">
+        <a href="/">All Converters</a>
+        <a href="/about">About</a>
+        <a href="https://ko-fi.com/irisfiles" class="support-btn" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1.5a2.5 2.5 0 010 5H17"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z" fill="currentColor" stroke="none" opacity=".15"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3" opacity=".6"/></svg> Support this project</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> All Converters</a>
+    <section class="hero">
+      <h1>Images to Animated GIF</h1>
+      <p>Create animated GIFs from multiple images. Drag to reorder frames, adjust speed and size. Everything runs in your browser.</p>
+    </section>
+
+    <div class="trust-banner">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 1L3 5v4c0 4.4 3 8.5 7 9.9 4-1.4 7-5.5 7-9.9V5l-7-4z" fill="#16a34a" opacity=".15"/><path d="M10 1L3 5v4c0 4.4 3 8.5 7 9.9 4-1.4 7-5.5 7-9.9V5l-7-4z" stroke="#16a34a" stroke-width="1.5" fill="none"/><path d="M7 10l2 2 4-4" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Your files never leave your browser. Zero server uploads. 100% private.
+    </div>
+
+    <div class="disclaimer-banner">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 1.5L1.5 17.5h17L10 1.5z" fill="#dc2626" opacity=".15"/><path d="M10 1.5L1.5 17.5h17L10 1.5z" stroke="#dc2626" stroke-width="1.5" fill="none" stroke-linejoin="round"/><path d="M10 7v4" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="14" r=".75" fill="#dc2626"/></svg>
+      This tool is provided as-is with no warranty. We are not responsible for any data loss or issues that may occur. Always keep backups of your original files.
+    </div>
+
+    <div id="drop-zone" class="drop-zone">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
+      <p>Drag & drop images here, or <strong>click to browse</strong></p>
+      <p style="font-size:0.8rem;margin-top:0.5rem">JPG, PNG, WebP, and more. Add 2-50 images to create your animation.</p>
+      <input type="file" id="file-input" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif" multiple>
+    </div>
+
+    <div id="frame-list" class="frame-list"></div>
+
+    <div id="gif-controls" style="display:none">
+      <div class="controls" style="margin-bottom:1rem">
+        <div class="quality-control">
+          <label for="delay-slider">Frame delay:</label>
+          <input type="range" id="delay-slider" min="20" max="1000" step="10" value="100">
+          <span id="delay-value" class="quality-value">100ms</span>
+        </div>
+      </div>
+      <div class="controls" style="margin-bottom:1.5rem">
+        <div class="quality-control">
+          <label for="width-slider">Max width:</label>
+          <input type="range" id="width-slider" min="100" max="800" step="10" value="640">
+          <span id="width-value" class="quality-value">640px</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem">
+        <button id="convert-btn" class="btn btn--primary" style="flex:1;justify-content:center;padding:0.75rem;font-size:1rem" disabled>Need at least 2 images</button>
+        <button id="clear-btn" class="btn btn--secondary" style="display:none;padding:0.75rem">Clear All</button>
+      </div>
+    </div>
+
+    <div id="gif-progress" style="display:none;padding:0.75rem 1rem;border-radius:8px;background:var(--bg-secondary);margin-top:1rem;font-size:0.9rem;font-weight:500;transition:background .3s"></div>
+
+    <div id="gif-result" style="margin-top:1.5rem"></div>
+
+    <div class="related-tools">
+      <h2>Related Tools</h2>
+      <div class="related-tools__links">
+        <a href="/video-to-gif">Video to GIF</a>
+        <a href="/jpg-to-gif">JPG to GIF</a>
+        <a href="/png-to-gif">PNG to GIF</a>
+        <a href="/compress">Compress Images</a>
+      </div>
+    </div>
+
+    <section class="faq">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-item">
+        <button class="faq-question">What image formats can I use?</button>
+        <div class="faq-answer">
+          <p>JPG, PNG, WebP, GIF, BMP, AVIF, and most other browser-supported image formats. All images are resized to a uniform width to create a smooth animation.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">How do I control the animation speed?</button>
+        <div class="faq-answer">
+          <p>Use the delay slider to set the time between frames in milliseconds. Lower values (50ms) create faster animations, higher values (500ms) create slower slideshows.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Can I reorder the frames?</button>
+        <div class="faq-answer">
+          <p>Yes. After adding images, drag and drop the frame thumbnails to rearrange the order before creating your GIF.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Do my files get uploaded anywhere?</button>
+        <div class="faq-answer">
+          <p>No. IrisFiles assembles the GIF entirely in your browser using gifenc. Your images never leave your device.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="/">All Converters</a>
+        <a href="/video-to-gif">Video to GIF</a>
+        <a href="/jpg-to-gif">JPG to GIF</a>
+        <a href="/about">About</a>
+      </div>
+      <p>IrisFiles. All processing happens in your browser.</p>
+    </div>
+  </footer>
+
+  <script src="js/gifenc.min.js"></script>
+  <script src="js/fflate.min.js"></script>
+  <script type="module" src="js/images-gif-boot.js"></script>
+</body>
+</html>

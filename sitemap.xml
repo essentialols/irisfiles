@@ -266,6 +266,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://irisfiles.com/images-to-gif</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://irisfiles.com/strip-exif</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
