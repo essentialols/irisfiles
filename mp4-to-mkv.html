@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MP4 to MKV Converter - Free, Private, No Upload | IrisFiles</title>
+  <meta name="description" content="Convert MP4 videos to MKV format in your browser. No upload needed. Your files stay on your device. Experimental feature.">
+  <meta property="og:title" content="MP4 to MKV Converter - Free, Private, No Upload | IrisFiles">
+  <meta property="og:description" content="Convert MP4 videos to MKV format in your browser. No upload needed. Your files stay on your device. Experimental feature.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://irisfiles.com/mp4-to-mkv">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="MP4 to MKV Converter - Free, Private, No Upload | IrisFiles">
+  <meta name="twitter:description" content="Convert MP4 videos to MKV format in your browser. No upload needed. Your files stay on your device. Experimental feature.">
+  <meta property="og:image" content="https://irisfiles.com/img/og-default.png">
+  <meta name="twitter:image" content="https://irisfiles.com/img/og-default.png">
+  <link rel="canonical" href="https://irisfiles.com/mp4-to-mkv">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "MP4 to MKV Converter - IrisFiles",
+      "url": "https://irisfiles.com/mp4-to-mkv",
+      "description": "Convert MP4 videos to MKV format in your browser. No upload needed. Your files stay on your device. Experimental feature.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why convert MP4 to MKV?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "MKV (Matroska) is an open-standard container that supports virtually unlimited audio, video, and subtitle tracks in a single file. It is the preferred format for archiving video with multiple languages, commentary tracks, or chapter markers."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does the conversion work without uploading?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "IrisFiles runs FFmpeg.wasm, a WebAssembly build of FFmpeg, directly in your browser. It reads the MP4 container and re-muxes the video and audio streams into an MKV container. No data leaves your device."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What are the file size and duration limits?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Files must be under 100MB and 10 minutes long. Browser memory constraints make larger conversions impractical. For bigger files, use a desktop tool like HandBrake, VLC, or MKVToolNix."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Will my video lose quality?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "When the codec is compatible, the conversion re-muxes the streams without re-encoding, preserving original quality. If re-encoding is needed, some quality difference may occur, though it is generally minimal."
+          }
+        }
+      ]
+    }
+  ]
+  </script>
+</head>
+<body>
+  <header class="header">
+    <div class="container container--wide">
+      <a href="/" class="logo">Iris<span>Files</span></a>
+      <nav class="nav">
+        <a href="/">All Converters</a>
+        <a href="/about">About</a>
+        <a href="https://ko-fi.com/irisfiles" class="support-btn" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1.5a2.5 2.5 0 010 5H17"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z" fill="currentColor" stroke="none" opacity=".15"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3" opacity=".6"/></svg> Support this project</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> All Converters</a>
+    <section class="hero">
+      <h1>MP4 to MKV</h1>
+      <p>Convert MP4 videos to the flexible MKV (Matroska) container, ideal for archiving with multiple audio and subtitle tracks. Everything runs in your browser via FFmpeg.wasm.</p>
+    </section>
+
+    <div class="trust-banner" style="background: #fef3c7; border-color: #f59e0b;">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L1 18h18L10 2z" fill="#f59e0b" opacity=".15"/><path d="M10 2L1 18h18L10 2z" stroke="#f59e0b" stroke-width="1.5" fill="none"/><path d="M10 8v4M10 14v1" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span><strong>Experimental.</strong> Video transcoding runs in your browser via FFmpeg.wasm. Large files may take several minutes. Max 100MB / 10 minutes.</span>
+    </div>
+
+    <div id="drop-zone" class="drop-zone">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
+      <p>Drag & drop an MP4 video here, or <strong>click to browse</strong></p>
+      <p style="font-size:0.8rem;margin-top:0.5rem">Max 100MB, 10 minutes. Processing may take a few minutes.</p>
+      <input type="file" id="file-input" accept="video/mp4,.mp4">
+    </div>
+
+    <div id="file-list" class="file-list"></div>
+
+    <div class="batch-actions">
+      <button id="action-btn" class="btn btn--primary" style="display:none">Convert</button>
+      <button id="clear-all" class="btn btn--secondary" style="display:none">Clear</button>
+    </div>
+
+    <div class="related-tools">
+      <h2>Related Tools</h2>
+      <div class="related-tools__links">
+        <a href="/mkv-to-mp4">MKV to MP4</a>
+        <a href="/mp4-to-webm">MP4 to WebM</a>
+        <a href="/mp4-to-avi">MP4 to AVI</a>
+      </div>
+    </div>
+
+    <section class="faq">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-item">
+        <button class="faq-question">Why convert MP4 to MKV?</button>
+        <div class="faq-answer">
+          <p>MKV (Matroska) is an open-standard container that supports virtually unlimited audio, video, and subtitle tracks in a single file. It is the preferred format for archiving video with multiple languages, commentary tracks, or chapter markers.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">How does the conversion work without uploading?</button>
+        <div class="faq-answer">
+          <p>IrisFiles runs FFmpeg.wasm, a WebAssembly build of FFmpeg, directly in your browser. It reads the MP4 container and re-muxes the video and audio streams into an MKV container. No data leaves your device.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">What are the file size and duration limits?</button>
+        <div class="faq-answer">
+          <p>Files must be under 100MB and 10 minutes long. Browser memory constraints make larger conversions impractical. For bigger files, use a desktop tool like HandBrake, VLC, or MKVToolNix.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Will my video lose quality?</button>
+        <div class="faq-answer">
+          <p>When the codec is compatible, the conversion re-muxes the streams without re-encoding, preserving original quality. If re-encoding is needed, some quality difference may occur, though it is generally minimal.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="/">All Converters</a>
+        <a href="/mkv-to-mp4">MKV to MP4</a>
+        <a href="/mp4-to-webm">MP4 to WebM</a>
+        <a href="/about">About</a>
+      </div>
+      <p>IrisFiles. All processing happens in your browser.</p>
+    </div>
+  </footer>
+
+  <div id="converter-config" data-target-format="mkv"></div>
+  <script type="module" src="js/vidconv-boot.js"></script>
+</body>
+</html>

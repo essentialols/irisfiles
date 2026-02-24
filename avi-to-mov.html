@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AVI to MOV Converter - Free, Private, No Upload | IrisFiles</title>
+  <meta name="description" content="Convert AVI videos to Apple MOV format in your browser. No upload needed. Your files stay on your device. Experimental feature.">
+  <meta property="og:title" content="AVI to MOV Converter - Free, Private, No Upload | IrisFiles">
+  <meta property="og:description" content="Convert AVI videos to Apple MOV format in your browser. No upload needed. Your files stay on your device. Experimental feature.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://irisfiles.com/avi-to-mov">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="AVI to MOV Converter - Free, Private, No Upload | IrisFiles">
+  <meta name="twitter:description" content="Convert AVI videos to Apple MOV format in your browser. No upload needed. Your files stay on your device. Experimental feature.">
+  <meta property="og:image" content="https://irisfiles.com/img/og-default.png">
+  <meta name="twitter:image" content="https://irisfiles.com/img/og-default.png">
+  <link rel="canonical" href="https://irisfiles.com/avi-to-mov">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "AVI to MOV Converter - IrisFiles",
+      "url": "https://irisfiles.com/avi-to-mov",
+      "description": "Convert AVI videos to Apple MOV format in your browser. No upload needed. Your files stay on your device. Experimental feature.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why convert AVI to MOV?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "MOV is Apple's native video format, required by Final Cut Pro, iMovie, and other Apple editing tools. If you have AVI files that need to be edited or played on macOS or iOS, converting to MOV ensures seamless compatibility with Apple's ecosystem."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does the conversion work in the browser?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "IrisFiles uses FFmpeg.wasm, a WebAssembly port of FFmpeg. It decodes the video and audio from your AVI file and re-encodes them into a QuickTime MOV container. All processing runs in your browser with no server involvement."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What are the size limits?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Files must be under 100MB and 10 minutes. AVI files are often large due to minimal compression, so check your file size first. For bigger files, use HandBrake or Apple Compressor."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is my video data private?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Your files never leave your device. The FFmpeg.wasm library is downloaded once from a CDN and cached. All conversion happens in your browser's memory."
+          }
+        }
+      ]
+    }
+  ]
+  </script>
+</head>
+<body>
+  <header class="header">
+    <div class="container container--wide">
+      <a href="/" class="logo">Iris<span>Files</span></a>
+      <nav class="nav">
+        <a href="/">All Converters</a>
+        <a href="/about">About</a>
+        <a href="https://ko-fi.com/irisfiles" class="support-btn" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1.5a2.5 2.5 0 010 5H17"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z" fill="currentColor" stroke="none" opacity=".15"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3" opacity=".6"/></svg> Support this project</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> All Converters</a>
+    <section class="hero">
+      <h1>AVI to MOV</h1>
+      <p>Convert AVI videos to Apple QuickTime MOV format for editing in Final Cut Pro, iMovie, and other macOS applications. Everything is processed locally in your browser.</p>
+    </section>
+
+    <div class="trust-banner" style="background: #fef3c7; border-color: #f59e0b;">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L1 18h18L10 2z" fill="#f59e0b" opacity=".15"/><path d="M10 2L1 18h18L10 2z" stroke="#f59e0b" stroke-width="1.5" fill="none"/><path d="M10 8v4M10 14v1" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span><strong>Experimental.</strong> Video transcoding runs in your browser via FFmpeg.wasm. Large files may take several minutes. Max 100MB / 10 minutes.</span>
+    </div>
+
+    <div id="drop-zone" class="drop-zone">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
+      <p>Drag & drop an AVI video here, or <strong>click to browse</strong></p>
+      <p style="font-size:0.8rem;margin-top:0.5rem">Max 100MB, 10 minutes. Processing may take a few minutes.</p>
+      <input type="file" id="file-input" accept="video/x-msvideo,.avi">
+    </div>
+
+    <div id="file-list" class="file-list"></div>
+
+    <div class="batch-actions">
+      <button id="action-btn" class="btn btn--primary" style="display:none">Convert</button>
+      <button id="clear-all" class="btn btn--secondary" style="display:none">Clear</button>
+    </div>
+
+    <div class="related-tools">
+      <h2>Related Tools</h2>
+      <div class="related-tools__links">
+        <a href="/mov-to-avi">MOV to AVI</a>
+        <a href="/avi-to-mp4">AVI to MP4</a>
+        <a href="/avi-to-webm">AVI to WebM</a>
+      </div>
+    </div>
+
+    <section class="faq">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-item">
+        <button class="faq-question">Why convert AVI to MOV?</button>
+        <div class="faq-answer">
+          <p>MOV is Apple's native video format, required by Final Cut Pro, iMovie, and other Apple editing tools. If you have AVI files that need to be edited or played on macOS or iOS, converting to MOV ensures seamless compatibility with Apple's ecosystem.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">How does the conversion work in the browser?</button>
+        <div class="faq-answer">
+          <p>IrisFiles uses FFmpeg.wasm, a WebAssembly port of FFmpeg. It decodes the video and audio from your AVI file and re-encodes them into a QuickTime MOV container. All processing runs in your browser with no server involvement.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">What are the size limits?</button>
+        <div class="faq-answer">
+          <p>Files must be under 100MB and 10 minutes. AVI files are often large due to minimal compression, so check your file size first. For bigger files, use HandBrake or Apple Compressor.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Is my video data private?</button>
+        <div class="faq-answer">
+          <p>Yes. Your files never leave your device. The FFmpeg.wasm library is downloaded once from a CDN and cached. All conversion happens in your browser's memory.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="/">All Converters</a>
+        <a href="/mov-to-avi">MOV to AVI</a>
+        <a href="/avi-to-mp4">AVI to MP4</a>
+        <a href="/about">About</a>
+      </div>
+      <p>IrisFiles. All processing happens in your browser.</p>
+    </div>
+  </footer>
+
+  <div id="converter-config" data-target-format="mov"></div>
+  <script type="module" src="js/vidconv-boot.js"></script>
+</body>
+</html>

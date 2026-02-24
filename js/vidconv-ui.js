@@ -4,11 +4,12 @@
  * Uses FFmpeg.wasm via vidconv-engine.js for client-side transcoding.
  */
 
-import { convertVideo, getVideoDuration, MAX_VIDEO_SIZE, MAX_DURATION } from './vidconv-engine.js';
+import { convertVideo, gifToVideo, getVideoDuration, MAX_VIDEO_SIZE, MAX_DURATION } from './vidconv-engine.js';
 import { formatSize, downloadBlob } from './converter.js';
 import { loadPendingFiles } from './smart-drop.js';
 
 let targetFormat = '';
+let sourceType = '';
 let dropZone, fileInput, fileList, actionBtn, clearAllBtn;
 let currentFile = null;
 let converting = false;
@@ -17,6 +18,7 @@ export function init() {
   const configEl = document.getElementById('converter-config');
   if (!configEl) return;
   targetFormat = configEl.dataset.targetFormat || '';
+  sourceType = configEl.dataset.sourceType || '';
 
   dropZone = document.getElementById('drop-zone');
   fileInput = document.getElementById('file-input');
@@ -107,7 +109,8 @@ async function startConversion() {
   setProgress(0);
 
   try {
-    const blob = await convertVideo(
+    const convertFn = sourceType === 'gif' ? gifToVideo : convertVideo;
+    const blob = await convertFn(
       currentFile,
       targetFormat,
       pct => setProgress(pct),

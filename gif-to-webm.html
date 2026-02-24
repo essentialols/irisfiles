@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GIF to WebM Converter - Free, Private, No Upload | IrisFiles</title>
+  <meta name="description" content="Convert animated GIF images to WebM video format in your browser. No upload required. Files never leave your device.">
+  <meta property="og:title" content="GIF to WebM Converter - Free, Private, No Upload | IrisFiles">
+  <meta property="og:description" content="Convert animated GIF images to WebM video format in your browser. No upload required. Files never leave your device.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://irisfiles.com/gif-to-webm">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="GIF to WebM Converter - Free, Private, No Upload | IrisFiles">
+  <meta name="twitter:description" content="Convert animated GIF images to WebM video format in your browser. No upload required. Files never leave your device.">
+  <meta property="og:image" content="https://irisfiles.com/img/og-default.png">
+  <meta name="twitter:image" content="https://irisfiles.com/img/og-default.png">
+  <link rel="canonical" href="https://irisfiles.com/gif-to-webm">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "GIF to WebM Converter - IrisFiles",
+      "url": "https://irisfiles.com/gif-to-webm",
+      "description": "Convert animated GIF images to WebM video format entirely in your browser using FFmpeg.wasm. No server upload required.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why convert GIF to WebM?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "WebM is an open, royalty-free video format designed for the web. It produces files that are 90-95% smaller than GIFs while supporting transparency (via VP9 alpha channel), full color depth, and native HTML5 video playback in all modern browsers."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does WebM support transparency like GIF?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. WebM with VP9 encoding supports an alpha channel for transparency, making it an excellent replacement for transparent GIFs. The resulting file will be vastly smaller while maintaining transparent areas."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does this conversion work in the browser?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "IrisFiles uses FFmpeg.wasm, a WebAssembly build of FFmpeg, to decode your animated GIF frame by frame and re-encode the frames as VP8 video in a WebM container. The entire process runs locally in your browser with no server involved."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is there a file size limit?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Browser-based conversion supports GIF files up to 100MB. For very large GIFs, the conversion may take a minute or two depending on your device. For files larger than 100MB, consider a desktop tool like FFmpeg or HandBrake."
+          }
+        }
+      ]
+    }
+  ]
+  </script>
+</head>
+<body>
+  <header class="header">
+    <div class="container container--wide">
+      <a href="/" class="logo">Iris<span>Files</span></a>
+      <nav class="nav">
+        <a href="/">All Converters</a>
+        <a href="/about">About</a>
+        <a href="https://ko-fi.com/irisfiles" class="support-btn" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1.5a2.5 2.5 0 010 5H17"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z" fill="currentColor" stroke="none" opacity=".15"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3" opacity=".6"/></svg> Support this project</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> All Converters</a>
+    <section class="hero">
+      <h1>GIF to WebM</h1>
+      <p>Convert animated GIF images to WebM video. WebM is an open, royalty-free web format that delivers 90-95% smaller files than GIF with full color support. All processing happens in your browser using FFmpeg.wasm.</p>
+    </section>
+
+    <div class="trust-banner" style="background: #fef3c7; border-color: #f59e0b;">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L1 18h18L10 2z" fill="#f59e0b" opacity=".15"/><path d="M10 2L1 18h18L10 2z" stroke="#f59e0b" stroke-width="1.5" fill="none"/><path d="M10 8v4M10 14v1" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span><strong>Experimental.</strong> GIF-to-video conversion runs in your browser via FFmpeg.wasm. Large GIFs may take a moment. Max 100MB.</span>
+    </div>
+
+    <div id="drop-zone" class="drop-zone">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
+      <p>Drag & drop a GIF file here, or <strong>click to browse</strong></p>
+      <p style="font-size:0.8rem;margin-top:0.5rem">Animated GIF. Max 100MB.</p>
+      <input type="file" id="file-input" accept="image/gif,.gif">
+    </div>
+
+    <div id="file-list" class="file-list"></div>
+
+    <div class="batch-actions">
+      <button id="action-btn" class="btn btn--primary" style="display:none">Convert</button>
+      <button id="clear-all" class="btn btn--secondary" style="display:none">Clear</button>
+    </div>
+
+    <div class="related-tools">
+      <h2>Related Tools</h2>
+      <div class="related-tools__links">
+        <a href="/webm-to-mp4">WebM to MP4</a>
+        <a href="/video-to-gif">Video to GIF</a>
+        <a href="/gif-to-mp4">GIF to MP4</a>
+        <a href="/gif-to-mov">GIF to MOV</a>
+      </div>
+    </div>
+
+    <section class="faq">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-item">
+        <button class="faq-question">Why convert GIF to WebM?</button>
+        <div class="faq-answer">
+          <p>WebM is an open, royalty-free video format designed for the web. It produces files that are 90-95% smaller than GIFs while supporting transparency (via VP9 alpha channel), full color depth, and native HTML5 video playback in all modern browsers.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Does WebM support transparency like GIF?</button>
+        <div class="faq-answer">
+          <p>Yes. WebM with VP9 encoding supports an alpha channel for transparency, making it an excellent replacement for transparent GIFs. The resulting file will be vastly smaller while maintaining transparent areas.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">How does this conversion work in the browser?</button>
+        <div class="faq-answer">
+          <p>IrisFiles uses FFmpeg.wasm, a WebAssembly build of FFmpeg, to decode your animated GIF frame by frame and re-encode the frames as VP8 video in a WebM container. The entire process runs locally in your browser with no server involved.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Is there a file size limit?</button>
+        <div class="faq-answer">
+          <p>Yes. Browser-based conversion supports GIF files up to 100MB. For very large GIFs, the conversion may take a minute or two depending on your device. For files larger than 100MB, consider a desktop tool like FFmpeg or HandBrake.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="/">All Converters</a>
+        <a href="/gif-to-mp4">GIF to MP4</a>
+        <a href="/video-to-gif">Video to GIF</a>
+        <a href="/about">About</a>
+      </div>
+      <p>IrisFiles. All processing happens in your browser.</p>
+    </div>
+  </footer>
+
+  <div id="converter-config" data-target-format="webm" data-source-type="gif"></div>
+  <script type="module" src="js/vidconv-boot.js"></script>
+</body>
+</html>

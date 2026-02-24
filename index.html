@@ -101,7 +101,7 @@
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
       <p>Drop any file here, or <strong>click to browse</strong></p>
       <p style="font-size:0.8rem;margin-top:0.5rem;color:var(--text-muted)">We'll detect the format and show your options.</p>
-      <input type="file" id="smart-file-input" accept="image/*,.heic,.heif,.avif,.svg,.bmp,.gif,.tiff,.tif,.ico,.pdf,application/pdf,video/*,.mp4,.webm,.mov,.avi,.mkv,audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac,.epub,.rtf,.docx,.ttf,.otf,.woff,.zip" multiple>
+      <input type="file" id="smart-file-input" accept="image/*,.heic,.heif,.avif,.svg,.bmp,.gif,.tiff,.tif,.ico,.pdf,application/pdf,video/*,.mp4,.webm,.mov,.avi,.mkv,audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac,.epub,.rtf,.docx,.mobi,.prc,.ttf,.otf,.woff,.zip" multiple>
     </div>
     <div id="route-panel" class="route-panel" style="display:none"></div>
 
@@ -243,6 +243,10 @@
           <span class="convert-arrow">→</span>
           <div class="convert-targets">
             <a href="/mov-to-mp4" class="tool-link">MP4</a>
+            <a href="/mov-to-webm" class="tool-link">WebM</a>
+            <a href="/mov-to-avi" class="tool-link">AVI</a>
+            <a href="/mov-to-mkv" class="tool-link">MKV</a>
+            <a href="/mov-to-gif" class="tool-link">GIF</a>
             <a href="/compress-video" class="tool-link">Compress</a>
           </div>
         </div>
@@ -251,6 +255,10 @@
           <span class="convert-arrow">→</span>
           <div class="convert-targets">
             <a href="/avi-to-mp4" class="tool-link">MP4</a>
+            <a href="/avi-to-webm" class="tool-link">WebM</a>
+            <a href="/avi-to-mov" class="tool-link">MOV</a>
+            <a href="/avi-to-mkv" class="tool-link">MKV</a>
+            <a href="/avi-to-gif" class="tool-link">GIF</a>
             <a href="/compress-video" class="tool-link">Compress</a>
           </div>
         </div>
@@ -259,6 +267,10 @@
           <span class="convert-arrow">→</span>
           <div class="convert-targets">
             <a href="/mkv-to-mp4" class="tool-link">MP4</a>
+            <a href="/mkv-to-webm" class="tool-link">WebM</a>
+            <a href="/mkv-to-mov" class="tool-link">MOV</a>
+            <a href="/mkv-to-avi" class="tool-link">AVI</a>
+            <a href="/mkv-to-gif" class="tool-link">GIF</a>
             <a href="/compress-video" class="tool-link">Compress</a>
           </div>
         </div>
@@ -267,6 +279,10 @@
           <span class="convert-arrow">→</span>
           <div class="convert-targets">
             <a href="/webm-to-mp4" class="tool-link">MP4</a>
+            <a href="/webm-to-mov" class="tool-link">MOV</a>
+            <a href="/webm-to-avi" class="tool-link">AVI</a>
+            <a href="/webm-to-mkv" class="tool-link">MKV</a>
+            <a href="/webm-to-gif" class="tool-link">GIF</a>
             <a href="/compress-video" class="tool-link">Compress</a>
           </div>
         </div>
@@ -275,7 +291,22 @@
           <span class="convert-arrow">→</span>
           <div class="convert-targets">
             <a href="/mp4-to-webm" class="tool-link">WebM</a>
+            <a href="/mp4-to-mov" class="tool-link">MOV</a>
+            <a href="/mp4-to-avi" class="tool-link">AVI</a>
+            <a href="/mp4-to-mkv" class="tool-link">MKV</a>
+            <a href="/mp4-to-gif" class="tool-link">GIF</a>
             <a href="/compress-video" class="tool-link">Compress</a>
+          </div>
+        </div>
+        <div class="convert-row">
+          <span class="convert-source">GIF</span>
+          <span class="convert-arrow">→</span>
+          <div class="convert-targets">
+            <a href="/gif-to-mp4" class="tool-link">MP4</a>
+            <a href="/gif-to-webm" class="tool-link">WebM</a>
+            <a href="/gif-to-mov" class="tool-link">MOV</a>
+            <a href="/gif-to-avi" class="tool-link">AVI</a>
+            <a href="/gif-to-mkv" class="tool-link">MKV</a>
           </div>
         </div>
         <div class="convert-row">
@@ -292,6 +323,10 @@
           <span class="convert-arrow">→</span>
           <div class="convert-targets">
             <a href="/mp3-to-wav" class="tool-link">WAV</a>
+            <a href="/mp3-to-ogg" class="tool-link">OGG</a>
+            <a href="/mp3-to-flac" class="tool-link">FLAC</a>
+            <a href="/mp3-to-m4a" class="tool-link">M4A</a>
+            <a href="/mp3-to-aac" class="tool-link">AAC</a>
           </div>
         </div>
         <div class="convert-row">
@@ -299,6 +334,10 @@
           <span class="convert-arrow">→</span>
           <div class="convert-targets">
             <a href="/wav-to-mp3" class="tool-link">MP3</a>
+            <a href="/wav-to-ogg" class="tool-link">OGG</a>
+            <a href="/wav-to-flac" class="tool-link">FLAC</a>
+            <a href="/wav-to-m4a" class="tool-link">M4A</a>
+            <a href="/wav-to-aac" class="tool-link">AAC</a>
           </div>
         </div>
         <div class="convert-row">
@@ -307,6 +346,9 @@
           <div class="convert-targets">
             <a href="/ogg-to-wav" class="tool-link">WAV</a>
             <a href="/ogg-to-mp3" class="tool-link">MP3</a>
+            <a href="/ogg-to-flac" class="tool-link">FLAC</a>
+            <a href="/ogg-to-m4a" class="tool-link">M4A</a>
+            <a href="/ogg-to-aac" class="tool-link">AAC</a>
           </div>
         </div>
         <div class="convert-row">
@@ -315,6 +357,9 @@
           <div class="convert-targets">
             <a href="/flac-to-wav" class="tool-link">WAV</a>
             <a href="/flac-to-mp3" class="tool-link">MP3</a>
+            <a href="/flac-to-ogg" class="tool-link">OGG</a>
+            <a href="/flac-to-m4a" class="tool-link">M4A</a>
+            <a href="/flac-to-aac" class="tool-link">AAC</a>
           </div>
         </div>
         <div class="convert-row">
@@ -323,6 +368,9 @@
           <div class="convert-targets">
             <a href="/m4a-to-wav" class="tool-link">WAV</a>
             <a href="/m4a-to-mp3" class="tool-link">MP3</a>
+            <a href="/m4a-to-ogg" class="tool-link">OGG</a>
+            <a href="/m4a-to-flac" class="tool-link">FLAC</a>
+            <a href="/m4a-to-aac" class="tool-link">AAC</a>
           </div>
         </div>
         <div class="convert-row">
@@ -331,6 +379,9 @@
           <div class="convert-targets">
             <a href="/aac-to-wav" class="tool-link">WAV</a>
             <a href="/aac-to-mp3" class="tool-link">MP3</a>
+            <a href="/aac-to-ogg" class="tool-link">OGG</a>
+            <a href="/aac-to-flac" class="tool-link">FLAC</a>
+            <a href="/aac-to-m4a" class="tool-link">M4A</a>
           </div>
         </div>
         <div class="convert-group">Documents</div>
@@ -356,6 +407,14 @@
           <div class="convert-targets">
             <a href="/docx-to-txt" class="tool-link">TXT</a>
             <a href="/docx-to-pdf" class="tool-link">PDF</a>
+          </div>
+        </div>
+        <div class="convert-row">
+          <span class="convert-source">MOBI</span>
+          <span class="convert-arrow">→</span>
+          <div class="convert-targets">
+            <a href="/mobi-to-txt" class="tool-link">TXT</a>
+            <a href="/mobi-to-pdf" class="tool-link">PDF</a>
           </div>
         </div>
         <div class="convert-group">Fonts</div>
@@ -439,22 +498,6 @@
     </div>
   </footer>
 
-  <script type="module">
-    import { initSmartDrop } from './js/smart-drop.js';
-    initSmartDrop();
-    // FAQ accordion
-    document.querySelectorAll('.faq-question').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const item = btn.parentElement;
-        const answer = item.querySelector('.faq-answer');
-        const isOpen = item.classList.contains('open');
-        document.querySelectorAll('.faq-item.open').forEach(el => {
-          el.classList.remove('open');
-          el.querySelector('.faq-answer').style.maxHeight = null;
-        });
-        if (!isOpen) { item.classList.add('open'); answer.style.maxHeight = answer.scrollHeight + 'px'; }
-      });
-    });
-  </script>
+  <script type="module" src="/js/landing-boot.js"></script>
 </body>
 </html>

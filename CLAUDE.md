@@ -4,7 +4,7 @@ Privacy-first client-side file converter. See [README.md](README.md) for project
 
 ## Commands
 - `npx serve . -p 3000` - Dev server
-- `node test/validate.mjs` - Validation suite (78 pages, 9200+ checks)
+- `node test/validate.mjs` - Validation suite (125 pages)
 - `bash build.sh` - Rebuild WASM + fflate (rarely needed)
 - `git push origin main` - Deploy (Vercel auto-deploy)
 
