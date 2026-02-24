@@ -168,3 +168,15 @@ export function formatSize(bytes) {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
+
+/**
+ * Snap a numeric value to the nearest snap point if within threshold.
+ * threshold defaults to ~3% of the total range.
+ */
+export function snapTo(val, snaps, range) {
+  const threshold = range * 0.03;
+  for (const s of snaps) {
+    if (Math.abs(val - s) <= threshold) return s;
+  }
+  return val;
+}

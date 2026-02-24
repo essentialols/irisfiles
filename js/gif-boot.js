@@ -1,5 +1,5 @@
 import { videoToGif, DEFAULT_MAX_WIDTH, DEFAULT_FPS, DEFAULT_MAX_DURATION } from './gif-engine.js';
-import { formatSize, downloadBlob } from './converter.js';
+import { formatSize, downloadBlob, snapTo } from './converter.js';
 
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
@@ -31,8 +31,18 @@ dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover
 dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); loadVideo(e.dataTransfer.files[0]); });
 fileInput.addEventListener('change', () => { loadVideo(fileInput.files[0]); fileInput.value = ''; });
 
-widthSlider.addEventListener('input', () => { widthValue.textContent = widthSlider.value + 'px'; });
-fpsSlider.addEventListener('input', () => { fpsValue.textContent = fpsSlider.value; });
+const widthSnaps = [160, 240, 320, 480, 640, 800];
+const fpsSnaps = [4, 8, 10, 12, 15, 20];
+widthSlider.addEventListener('input', () => {
+  const v = snapTo(parseInt(widthSlider.value, 10), widthSnaps, 640);
+  widthSlider.value = v;
+  widthValue.textContent = v + 'px';
+});
+fpsSlider.addEventListener('input', () => {
+  const v = snapTo(parseInt(fpsSlider.value, 10), fpsSnaps, 16);
+  fpsSlider.value = v;
+  fpsValue.textContent = v;
+});
 
 convertBtn.addEventListener('click', convert);
 

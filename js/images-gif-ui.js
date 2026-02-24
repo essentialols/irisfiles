@@ -4,7 +4,7 @@
  */
 
 import { imagesToGif, DEFAULT_DELAY, DEFAULT_MAX_WIDTH } from './images-gif-engine.js';
-import { formatSize, downloadBlob, validateFile } from './converter.js';
+import { formatSize, downloadBlob, validateFile, snapTo } from './converter.js';
 import { loadPendingFiles } from './smart-drop.js';
 
 const MAX_FILES = 50;
@@ -32,8 +32,18 @@ dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.
 fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
 
 // Controls
-delaySlider.addEventListener('input', () => { delayValue.textContent = delaySlider.value + 'ms'; });
-widthSlider.addEventListener('input', () => { widthValue.textContent = widthSlider.value + 'px'; });
+const delaySnaps = [50, 100, 200, 500, 1000];
+const widthSnaps = [100, 160, 240, 320, 480, 640, 800];
+delaySlider.addEventListener('input', () => {
+  const v = snapTo(parseInt(delaySlider.value, 10), delaySnaps, 980);
+  delaySlider.value = v;
+  delayValue.textContent = v + 'ms';
+});
+widthSlider.addEventListener('input', () => {
+  const v = snapTo(parseInt(widthSlider.value, 10), widthSnaps, 700);
+  widthSlider.value = v;
+  widthValue.textContent = v + 'px';
+});
 convertBtn.addEventListener('click', convert);
 clearBtn.addEventListener('click', clearAll);
 

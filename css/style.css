@@ -461,6 +461,22 @@ body {
 .route-panel__error {
   color: var(--danger);
 }
+
+/* File type info card (unrecognized file identification) */
+.route-file-info-card { text-align: left; }
+.route-file-info-card__header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+.route-file-info-card__category {
+  font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+  background: var(--primary); color: #fff; padding: 0.15rem 0.5rem; border-radius: 4px;
+}
+.route-file-info-card__label { font-size: 1.1rem; font-weight: 600; }
+.route-file-info-card__details { margin-bottom: 0.75rem; }
+.route-file-info-card__row { display: flex; gap: 0.5rem; padding: 0.3rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.route-file-info-card__key { font-weight: 500; min-width: 5.5rem; flex-shrink: 0; color: var(--text-muted); }
+.route-file-info-card__val { flex: 1; word-break: break-all; }
+.route-file-info-card__row:last-child { border-bottom: none; }
+.route-file-info-card__note { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; }
+
 .route-file-info {
   display: flex;
   align-items: center;
