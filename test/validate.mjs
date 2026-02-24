@@ -47,7 +47,7 @@ const PAGES = [
   '/mp3-to-aac', '/wav-to-aac', '/ogg-to-aac', '/flac-to-aac', '/m4a-to-aac',
   // MOBI documents
   '/mobi-to-txt', '/mobi-to-pdf',
-  '/about'
+  '/about', '/privacy'
 ];
 
 let passed = 0;
@@ -138,8 +138,8 @@ async function validatePage(path) {
 
   // JSON-LD (all pages except /about should have array of 2: WebApplication + FAQPage)
   const ldMatch = html.match(/<script\s+type=["']application\/ld\+json["']>([\s\S]*?)<\/script>/);
-  if (path === '/about') {
-    // about page: no JSON-LD required (but ok if present)
+  if (path === '/about' || path === '/privacy') {
+    // about/privacy pages: no JSON-LD required (but ok if present)
   } else {
     ok(ldMatch, `${label}: missing JSON-LD`);
     if (ldMatch) {
@@ -188,7 +188,7 @@ async function globalChecks() {
   const urls = [];
   let m;
   while ((m = locRe.exec(sitemap)) !== null) urls.push(m[1]);
-  ok(urls.length === 125, `sitemap.xml: has ${urls.length} URLs (expected 125)`);
+  ok(urls.length === 126, `sitemap.xml: has ${urls.length} URLs (expected 126)`);
 
   // each sitemap URL corresponds to a real page
   for (const url of urls) {

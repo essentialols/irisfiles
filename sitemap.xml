@@ -261,6 +261,11 @@
     <priority>0.5</priority>
   </url>
   <url>
+    <loc>https://irisfiles.com/privacy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
     <loc>https://irisfiles.com/mp3-to-wav</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

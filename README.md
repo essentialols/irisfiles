@@ -73,7 +73,6 @@ No build step required for day-to-day development. Edit HTML/JS/CSS and refresh.
 IrisFiles is free with no limits, no accounts, and no ads. If you find it useful, you can support development via:
 
 - [Ko-fi](https://ko-fi.com/irisfiles)
-- [GitHub Sponsors](https://github.com/sponsors/ingmarsturm)
 
 ### Principles
 - No ads. No tracking. No data collection. The privacy-first positioning is the product's primary differentiator and should never be compromised for revenue.
