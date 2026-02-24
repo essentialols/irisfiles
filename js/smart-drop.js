@@ -272,12 +272,7 @@ async function extractVideoFrames(file, container, count) {
       container.appendChild(canvas);
     }
     URL.revokeObjectURL(url);
-  } catch (err) {
-    const errEl = document.createElement('div');
-    errEl.style.cssText = 'font-size:0.75rem;color:red;padding:0.25rem';
-    errEl.textContent = 'Filmstrip error: ' + (err?.message || err);
-    container.appendChild(errEl);
-  }
+  } catch { /* graceful failure: filmstrip stays empty */ }
 }
 
 export function initSmartDrop() {
