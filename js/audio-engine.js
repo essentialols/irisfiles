@@ -41,7 +41,9 @@ export async function convertAudio(file, targetFormat, onProgress = () => {}) {
   onProgress(10);
 
   // Decode audio data via Web Audio API
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) throw new Error('Web Audio API is not supported by your browser.');
+  const audioCtx = new AudioCtx();
   let audioBuffer;
   try {
     audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
