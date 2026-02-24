@@ -208,10 +208,14 @@ export function initSmartDrop() {
     const conversions = routes.filter(r => r.label.startsWith('Convert to'));
     const tools = routes.filter(r => !r.label.startsWith('Convert to'));
 
-    let html = '<div class="route-file-info">';
+    let thumbUrl = null;
     if (isSingle && isImage) {
-      const url = URL.createObjectURL(files[0]);
-      html += `<img class="route-file-thumb" src="${url}" onload="URL.revokeObjectURL(this.src)" />`;
+      thumbUrl = URL.createObjectURL(files[0]);
+    }
+
+    let html = '<div class="route-file-info">';
+    if (thumbUrl) {
+      html += `<img class="route-file-thumb" src="${thumbUrl}" />`;
     }
     html += '<div class="route-file-details">';
     if (isSingle) {
