@@ -194,6 +194,8 @@ async function getMediaMeta(file, mime) {
       });
       if (info.w && info.h) meta.push(info.w + ' x ' + info.h);
       if (info.dur && isFinite(info.dur)) meta.push(formatDuration(info.dur));
+      const codec = await detectVideoCodec(file);
+      if (codec) meta.push(codec);
     } else if (mime === 'application/pdf') {
       const pdfjs = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.624/build/pdf.min.mjs');
       pdfjs.GlobalWorkerOptions.workerSrc =
@@ -239,6 +241,20 @@ async function renderPdfPreview(file, container) {
   } catch { /* graceful failure */ }
 }
 
+function detectVideoCodec(file) {
+  return file.slice(0, 64).arrayBuffer().then(ab => {
+    const b = new Uint8Array(ab);
+    const str = String.fromCharCode(...b);
+    // MP4 ftyp brands
+    if (str.includes('avc1') || str.includes('isom')) return 'H.264';
+    if (str.includes('hev1') || str.includes('hvc1')) return 'H.265';
+    if (str.includes('av01')) return 'AV1';
+    // WebM: usually VP8/VP9/AV1 but can't tell from first 64 bytes easily
+    if (str.includes('\x1a\x45\xdf\xa3')) return 'VP8/VP9';
+    return null;
+  }).catch(() => null);
+}
+
 async function extractVideoFrames(file, container, count) {
   count = count || 6;
   try {
@@ -246,7 +262,6 @@ async function extractVideoFrames(file, container, count) {
     const v = document.createElement('video');
     v.preload = 'auto';
     v.muted = true;
-    v.crossOrigin = 'anonymous';
     v.src = url;
     await new Promise((resolve, reject) => {
       v.onloadeddata = resolve;
@@ -254,21 +269,26 @@ async function extractVideoFrames(file, container, count) {
     });
     const dur = v.duration;
     if (!dur || !isFinite(dur) || !v.videoWidth) { URL.revokeObjectURL(url); return; }
+    // Size frames to fill container, works for landscape and portrait
+    const gap = 3;
+    const containerW = container.offsetWidth || 700;
+    const aspect = v.videoWidth / v.videoHeight;
+    const frameW = Math.floor((containerW - gap * (count - 1)) / count);
+    const frameH = Math.round(frameW / aspect);
     for (let i = 0; i < count; i++) {
-      const t = dur * ((i * 2 + 1) / (count * 2));
+      const t = dur * ((i + 1) / (count + 1));
       v.currentTime = t;
-      await new Promise(resolve => {
-        v.onseeked = resolve;
-        setTimeout(resolve, 2000);
+      await new Promise((resolve) => {
+        const onSeeked = () => { v.removeEventListener('seeked', onSeeked); resolve(); };
+        v.addEventListener('seeked', onSeeked);
       });
       if (!v.videoWidth) continue;
       const canvas = document.createElement('canvas');
-      const aspect = v.videoWidth / v.videoHeight;
-      canvas.height = 60;
-      canvas.width = Math.round(60 * aspect);
+      canvas.width = frameW;
+      canvas.height = frameH;
       canvas.className = 'route-frame';
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(v, 0, 0, frameW, frameH);
       container.appendChild(canvas);
     }
     URL.revokeObjectURL(url);
