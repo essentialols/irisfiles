@@ -191,8 +191,10 @@ function fileToDataUrl(file) {
 }
 
 function dataUrlToBlob(dataUrl) {
-  const [header, b64] = dataUrl.split(',');
-  const match = header.match(/:(.*?);/);
+  const parts = dataUrl.split(',');
+  const b64 = parts[1];
+  if (!b64) throw new Error('Invalid data URL');
+  const match = parts[0].match(/:(.*?);/);
   const mime = match ? match[1] : 'image/jpeg';
   const bin = atob(b64);
   const arr = new Uint8Array(bin.length);
