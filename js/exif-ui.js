@@ -6,6 +6,7 @@
 import { readMetadata, isJpeg, editExifFields, stripAllMetadata, stripGpsOnly } from './exif-engine.js';
 import { formatSize, downloadBlob, validateFile } from './converter.js';
 import { loadPendingFiles } from './smart-drop.js';
+import { renderMetadataTable, collectChanges, GROUP_LABELS, EDITABLE_FIELDS, READONLY_ALWAYS } from './meta-panel.js';
 
 let dropZone, fileInput, fileList, metadataPanel;
 let saveBtn, stripGpsBtn, stripAllBtn, clearAllBtn;
@@ -85,7 +86,7 @@ async function handleFile(files) {
 
   try {
     currentMetadata = await readMetadata(file);
-    renderMetadataTable();
+    renderMetadata();
     setStatus('Ready');
     showActions();
   } catch (err) {
@@ -136,118 +137,11 @@ function resetState() {
   if (clearAllBtn) clearAllBtn.style.display = 'none';
 }
 
-const GROUP_LABELS = {
-  basic: 'Basic Info',
-  camera: 'Camera',
-  settings: 'Camera Settings',
-  dates: 'Dates',
-  gps: 'GPS Location',
-  description: 'Description',
-};
-
-// Fields that are editable on JPEG (maps to piexifjs field map keys)
-const EDITABLE_FIELDS = new Set([
-  'Make', 'Model', 'Software', 'Copyright', 'Artist', 'Description',
-  'User Comment', 'Orientation', 'Date Modified', 'Date Taken', 'Date Digitized', 'ISO',
-]);
-
-// Fields that should never be editable (computed/read-only)
-const READONLY_ALWAYS = new Set(['Width', 'Height', 'File Size', 'Format', 'Color Space',
-  'F-Number', 'Exposure Time', 'Focal Length', 'Flash', 'White Balance',
-  'Lens Make', 'Lens Model', 'Latitude', 'Longitude', 'Altitude']);
-
-function renderMetadataTable() {
+function renderMetadata() {
   if (!metadataPanel || !currentMetadata) return;
-  metadataPanel.innerHTML = '';
-
-  if (currentMetadata._empty) {
-    metadataPanel.innerHTML = '<div class="meta-notice">No metadata found in this image.</div>';
-    return;
-  }
-
-  for (const [groupKey, label] of Object.entries(GROUP_LABELS)) {
-    const groupData = currentMetadata[groupKey];
-    if (!groupData || typeof groupData !== 'object') continue;
-
-    const entries = Object.entries(groupData).filter(([, v]) => v !== null && v !== undefined);
-    // For editable JPEG, also show empty editable fields
-    const emptyEditableEntries = [];
-    if (isJpegFile) {
-      for (const [field] of Object.entries(groupData)) {
-        if (groupData[field] === null || groupData[field] === undefined) {
-          if (EDITABLE_FIELDS.has(field)) {
-            emptyEditableEntries.push([field, null]);
-          }
-        }
-      }
-    }
-
-    const allEntries = [...entries, ...emptyEditableEntries];
-    if (allEntries.length === 0) continue;
-
-    const group = document.createElement('div');
-    group.className = 'meta-group';
-
-    const title = document.createElement('div');
-    title.className = 'meta-group__title';
-    title.textContent = label;
-    group.appendChild(title);
-
-    const table = document.createElement('div');
-    table.className = 'meta-table';
-
-    for (const [field, value] of allEntries) {
-      const row = document.createElement('div');
-      row.className = 'meta-row';
-
-      const labelEl = document.createElement('div');
-      labelEl.className = 'meta-label';
-      labelEl.textContent = field;
-      row.appendChild(labelEl);
-
-      const valueEl = document.createElement('div');
-      valueEl.className = 'meta-value';
-
-      if (field === 'File Size') {
-        valueEl.textContent = formatSize(value);
-      } else if (groupKey === 'gps' && (field === 'Latitude' || field === 'Longitude')) {
-        const span = document.createElement('span');
-        span.textContent = value !== null ? String(value) : '(not set)';
-        valueEl.appendChild(span);
-        if (value !== null && isJpegFile) {
-          const removeBtn = document.createElement('button');
-          removeBtn.className = 'meta-gps-remove';
-          removeBtn.textContent = 'Remove GPS';
-          removeBtn.addEventListener('click', handleStripGps);
-          valueEl.appendChild(removeBtn);
-        }
-      } else if (isJpegFile && EDITABLE_FIELDS.has(field) && !READONLY_ALWAYS.has(field)) {
-        const input = document.createElement('input');
-        input.className = 'meta-input';
-        input.type = 'text';
-        input.value = value !== null ? String(value) : '';
-        input.placeholder = '(not set)';
-        input.dataset.field = field;
-        input.dataset.original = value !== null ? String(value) : '';
-        input.addEventListener('input', () => {
-          if (input.value !== input.dataset.original) {
-            input.classList.add('changed');
-          } else {
-            input.classList.remove('changed');
-          }
-        });
-        valueEl.appendChild(input);
-      } else {
-        valueEl.textContent = value !== null ? String(value) : '(not set)';
-      }
-
-      row.appendChild(valueEl);
-      table.appendChild(row);
-    }
-
-    group.appendChild(table);
-    metadataPanel.appendChild(group);
-  }
+  renderMetadataTable(metadataPanel, currentMetadata, isJpegFile, {
+    onStripGps: handleStripGps,
+  });
 
   // Format notice
   const notice = document.createElement('div');
@@ -266,10 +160,7 @@ async function handleSave() {
   saveBtn.disabled = true;
   saveBtn.textContent = 'Saving...';
 
-  const changes = {};
-  metadataPanel.querySelectorAll('.meta-input.changed').forEach(input => {
-    changes[input.dataset.field] = input.value;
-  });
+  const changes = collectChanges(metadataPanel);
 
   if (Object.keys(changes).length === 0) {
     saveBtn.disabled = false;

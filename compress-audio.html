@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebM to MOV Converter - Free, Private, No Upload | IrisFiles</title>
-  <meta name="description" content="Convert WebM videos to Apple MOV format in your browser. No upload required. Your files stay on your device. Experimental feature.">
-  <meta property="og:title" content="WebM to MOV Converter - Free, Private, No Upload | IrisFiles">
-  <meta property="og:description" content="Convert WebM videos to Apple MOV format in your browser. No upload required. Your files stay on your device. Experimental feature.">
+  <title>Compress Audio - Free, Private, No Upload | IrisFiles</title>
+  <meta name="description" content="Compress audio files in your browser. Reduce file size by re-encoding to MP3 with adjustable bitrate. No upload required. Supports MP3, WAV, OGG, FLAC, M4A, AAC.">
+  <meta property="og:title" content="Compress Audio - Free, Private, No Upload | IrisFiles">
+  <meta property="og:description" content="Compress audio files in your browser. Reduce file size by re-encoding to MP3 with adjustable bitrate. No upload required. Supports MP3, WAV, OGG, FLAC, M4A, AAC.">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://irisfiles.com/webm-to-mov">
+  <meta property="og:url" content="https://irisfiles.com/compress-audio">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="WebM to MOV Converter - Free, Private, No Upload | IrisFiles">
-  <meta name="twitter:description" content="Convert WebM videos to Apple MOV format in your browser. No upload required. Your files stay on your device. Experimental feature.">
+  <meta name="twitter:title" content="Compress Audio - Free, Private, No Upload | IrisFiles">
+  <meta name="twitter:description" content="Compress audio files in your browser. Reduce file size by re-encoding to MP3 with adjustable bitrate. No upload required. Supports MP3, WAV, OGG, FLAC, M4A, AAC.">
   <meta property="og:image" content="https://irisfiles.com/img/og-default.png">
   <meta name="twitter:image" content="https://irisfiles.com/img/og-default.png">
-  <link rel="canonical" href="https://irisfiles.com/webm-to-mov">
+  <link rel="canonical" href="https://irisfiles.com/compress-audio">
   <link rel="stylesheet" href="css/style.css?v=2">
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -23,9 +23,9 @@
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      "name": "WebM to MOV Converter - IrisFiles",
-      "url": "https://irisfiles.com/webm-to-mov",
-      "description": "Convert WebM videos to Apple MOV format in your browser. No upload required. Your files stay on your device. Experimental feature.",
+      "name": "Compress Audio - IrisFiles",
+      "url": "https://irisfiles.com/compress-audio",
+      "description": "Compress audio files in your browser by re-encoding to MP3 with adjustable bitrate. No server upload. Private and free.",
       "applicationCategory": "MultimediaApplication",
       "operatingSystem": "Any",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
@@ -36,34 +36,34 @@
       "mainEntity": [
         {
           "@type": "Question",
-          "name": "Why convert WebM to MOV?",
+          "name": "How does audio compression work?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "MOV is the preferred format for Apple's ecosystem, including Final Cut Pro, iMovie, and QuickTime Player. If you have WebM files from web recordings or downloads that you need to edit on a Mac, converting to MOV ensures full compatibility with Apple's tools."
+            "text": "IrisFiles re-encodes your audio to MP3 using FFmpeg.wasm with a configurable bitrate. Lower bitrates produce smaller files with some quality loss. High (192kbps) sounds nearly identical to the original. Medium (128kbps) is a good balance. Low (64kbps) gives maximum compression for voice recordings or podcasts."
           }
         },
         {
           "@type": "Question",
-          "name": "How does the conversion process work?",
+          "name": "Which quality setting should I use?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "IrisFiles uses FFmpeg.wasm, a WebAssembly version of FFmpeg, running entirely in your browser. It decodes the VP8/VP9 video and Vorbis/Opus audio from your WebM file and re-encodes them into a QuickTime MOV container. No server is involved."
+            "text": "High (192kbps) is best for music where quality matters. Medium (128kbps) works well for most uses including sharing online. Low (64kbps) is suitable for voice recordings, podcasts, or when file size is the top priority."
           }
         },
         {
           "@type": "Question",
-          "name": "What are the file limitations?",
+          "name": "What audio formats are supported?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Files must be under 100MB and 10 minutes in duration. Browser-based transcoding is memory-intensive, so large files may be slow. For bigger projects, use HandBrake or Apple Compressor."
+            "text": "You can compress MP3, WAV, OGG, FLAC, M4A, and AAC files. The output is always MP3 for maximum compatibility across devices and platforms."
           }
         },
         {
           "@type": "Question",
-          "name": "Is my video data secure?",
+          "name": "Are my audio files uploaded to a server?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. Your files are processed entirely in your browser and never uploaded to any server. The FFmpeg.wasm library is cached locally after the first download from a CDN."
+            "text": "No. Everything happens in your browser. The FFmpeg.wasm codec is downloaded once from a CDN and cached. Your actual audio files never leave your device."
           }
         }
       ]
@@ -85,8 +85,8 @@
   <main class="container">
     <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> All Converters</a>
     <section class="hero">
-      <h1>WebM to MOV</h1>
-      <p>Convert WebM videos to Apple QuickTime MOV format for editing in Final Cut Pro, iMovie, and other Apple tools. Everything is processed locally in your browser.</p>
+      <h1>Compress Audio</h1>
+      <p>Reduce audio file size by re-encoding to MP3 with adjustable bitrate. Supports MP3, WAV, OGG, FLAC, M4A, and AAC. All processing happens in your browser.</p>
     </section>
 
     <div class="trust-banner">
@@ -96,7 +96,7 @@
 
     <div class="trust-banner" style="background: #fef3c7; border-color: #f59e0b;">
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L1 18h18L10 2z" fill="#f59e0b" opacity=".15"/><path d="M10 2L1 18h18L10 2z" stroke="#f59e0b" stroke-width="1.5" fill="none"/><path d="M10 8v4M10 14v1" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/></svg>
-      <span><strong>Experimental.</strong> Video transcoding runs in your browser via FFmpeg.wasm. Large files may take several minutes. Max 100MB / 10 minutes.</span>
+      <span><strong>Experimental.</strong> Audio compression runs in your browser via FFmpeg.wasm. Large files may take a moment to process. Max 100MB / 60 minutes.</span>
     </div>
 
     <div class="disclaimer-banner">
@@ -106,51 +106,63 @@
 
     <div id="drop-zone" class="drop-zone">
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
-      <p>Drag & drop a WebM video here, or <strong>click to browse</strong></p>
-      <p style="font-size:0.8rem;margin-top:0.5rem">Max 100MB, 10 minutes. Processing may take a few minutes.</p>
-      <input type="file" id="file-input" accept="video/webm,.webm">
+      <p>Drag & drop an audio file here, or <strong>click to browse</strong></p>
+      <p style="font-size:0.8rem;margin-top:0.5rem">MP3, WAV, OGG, FLAC, M4A, AAC. Max 100MB, 60 minutes.</p>
+      <input type="file" id="file-input" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac">
+    </div>
+
+    <div class="controls">
+      <div class="resize-controls">
+        <label for="compress-quality">Quality:</label>
+        <select id="compress-quality">
+          <option value="high">High (192kbps, slight reduction)</option>
+          <option value="medium" selected>Medium (128kbps, recommended)</option>
+          <option value="low">Low (64kbps, max compression)</option>
+        </select>
+      </div>
     </div>
 
     <div id="file-list" class="file-list"></div>
 
     <div class="batch-actions">
-      <button id="action-btn" class="btn btn--primary" style="display:none">Convert</button>
+      <button id="action-btn" class="btn btn--primary" style="display:none">Compress</button>
       <button id="clear-all" class="btn btn--secondary" style="display:none">Clear</button>
     </div>
 
     <div class="related-tools">
       <h2>Related Tools</h2>
       <div class="related-tools__links">
-        <a href="/mov-to-webm">MOV to WebM</a>
-        <a href="/webm-to-mp4">WebM to MP4</a>
-        <a href="/mp4-to-mov">MP4 to MOV</a>
+        <a href="/mp3-to-wav">MP3 to WAV</a>
+        <a href="/wav-to-mp3">WAV to MP3</a>
+        <a href="/compress-video">Compress Video</a>
+        <a href="/compress">Compress Images</a>
       </div>
     </div>
 
     <section class="faq">
       <h2>Frequently Asked Questions</h2>
       <div class="faq-item">
-        <button class="faq-question">Why convert WebM to MOV?</button>
+        <button class="faq-question">How does audio compression work?</button>
         <div class="faq-answer">
-          <p>MOV is the preferred format for Apple's ecosystem, including Final Cut Pro, iMovie, and QuickTime Player. If you have WebM files from web recordings or downloads that you need to edit on a Mac, converting to MOV ensures full compatibility with Apple's tools.</p>
+          <p>IrisFiles re-encodes your audio to MP3 using FFmpeg.wasm with a configurable bitrate. Lower bitrates produce smaller files with some quality loss. High (192kbps) sounds nearly identical to the original. Medium (128kbps) is a good balance. Low (64kbps) gives maximum compression for voice recordings or podcasts.</p>
         </div>
       </div>
       <div class="faq-item">
-        <button class="faq-question">How does the conversion process work?</button>
+        <button class="faq-question">Which quality setting should I use?</button>
         <div class="faq-answer">
-          <p>IrisFiles uses FFmpeg.wasm, a WebAssembly version of FFmpeg, running entirely in your browser. It decodes the VP8/VP9 video and Vorbis/Opus audio from your WebM file and re-encodes them into a QuickTime MOV container. No server is involved.</p>
+          <p>High (192kbps) is best for music where quality matters. Medium (128kbps) works well for most uses including sharing online. Low (64kbps) is suitable for voice recordings, podcasts, or when file size is the top priority.</p>
         </div>
       </div>
       <div class="faq-item">
-        <button class="faq-question">What are the file limitations?</button>
+        <button class="faq-question">What audio formats are supported?</button>
         <div class="faq-answer">
-          <p>Files must be under 100MB and 10 minutes in duration. Browser-based transcoding is memory-intensive, so large files may be slow. For bigger projects, use HandBrake or Apple Compressor.</p>
+          <p>You can compress MP3, WAV, OGG, FLAC, M4A, and AAC files. The output is always MP3 for maximum compatibility across devices and platforms.</p>
         </div>
       </div>
       <div class="faq-item">
-        <button class="faq-question">Is my video data secure?</button>
+        <button class="faq-question">Are my audio files uploaded to a server?</button>
         <div class="faq-answer">
-          <p>Yes. Your files are processed entirely in your browser and never uploaded to any server. The FFmpeg.wasm library is cached locally after the first download from a CDN.</p>
+          <p>No. Everything happens in your browser. The FFmpeg.wasm codec is downloaded once from a CDN and cached. Your actual audio files never leave your device.</p>
         </div>
       </div>
     </section>
@@ -160,15 +172,14 @@
     <div class="container">
       <div class="footer-links">
         <a href="/">All Converters</a>
-        <a href="/mov-to-webm">MOV to WebM</a>
-        <a href="/webm-to-mp4">WebM to MP4</a>
+        <a href="/mp3-to-wav">MP3 to WAV</a>
+        <a href="/compress-video">Compress Video</a>
         <a href="/about">About</a>
       </div>
       <p>IrisFiles. All processing happens in your browser.</p>
     </div>
   </footer>
 
-  <div id="converter-config" data-target-format="mov"></div>
-  <script type="module" src="js/vidconv-boot.js"></script>
+  <script type="module" src="js/compress-audio-boot.js"></script>
 </body>
 </html>

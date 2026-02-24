@@ -73,8 +73,10 @@ export function init() {
   if (qualitySlider && qualityValue) {
     const saved = localStorage.getItem('cf-quality');
     if (saved && saved >= 10 && saved <= 100) {
-      qualitySlider.value = saved;
-      qualityValue.textContent = saved + '%';
+      const snapped = Math.round(saved / 10) * 10;
+      qualitySlider.value = snapped;
+      qualityValue.textContent = snapped + '%';
+      if (String(snapped) !== saved) localStorage.setItem('cf-quality', snapped);
     }
     qualitySlider.addEventListener('input', () => {
       qualityValue.textContent = qualitySlider.value + '%';
@@ -168,7 +170,7 @@ async function addFile(file) {
 }
 
 function getQuality() {
-  return qualitySlider ? parseInt(qualitySlider.value) / 100 : 0.92;
+  return qualitySlider ? parseInt(qualitySlider.value) / 100 : 1.0;
 }
 
 async function processQueue() {
@@ -306,13 +308,19 @@ function updateFileItem(entry) {
       metaParts.push('\u00b7 ' + dur);
     }
     meta.textContent = metaParts.join(' ');
+    const isImage = entry.file.type && entry.file.type.startsWith('image/');
     actions.innerHTML = `
       <button class="btn btn--success btn-download" style="padding:0.4rem 0.8rem;font-size:0.8rem">Download</button>
+      ${isImage ? '<button class="btn btn--secondary btn-details" style="padding:0.4rem 0.8rem;font-size:0.8rem">Details</button>' : ''}
       <button class="btn btn--danger btn-remove">Remove</button>
     `;
     actions.querySelector('.btn-download').addEventListener('click', () => {
       downloadBlob(entry.outputBlob, entry.outputName);
     });
+    const detailsBtn = actions.querySelector('.btn-details');
+    if (detailsBtn) {
+      detailsBtn.addEventListener('click', () => toggleMetaPanel(entry, div, detailsBtn));
+    }
     actions.querySelector('.btn-remove').addEventListener('click', () => {
       removeFile(entry.id);
     });
@@ -329,11 +337,38 @@ function updateFileItem(entry) {
   }
 }
 
+async function toggleMetaPanel(entry, fileDiv, btn) {
+  const existingPanel = fileDiv.nextElementSibling;
+  if (existingPanel && existingPanel.classList.contains('inline-meta-panel')) {
+    const isHidden = existingPanel.style.display === 'none';
+    existingPanel.style.display = isHidden ? '' : 'none';
+    btn.textContent = isHidden ? 'Hide Details' : 'Details';
+    return;
+  }
+  btn.textContent = 'Loading...';
+  btn.disabled = true;
+  try {
+    const { createMetadataPanel } = await import('./meta-panel.js');
+    const { container, promise } = createMetadataPanel(entry.file, { inline: true });
+    fileDiv.after(container);
+    await promise;
+    btn.textContent = 'Hide Details';
+  } catch (err) {
+    console.error('Metadata panel error:', err);
+    btn.textContent = 'Details';
+  }
+  btn.disabled = false;
+}
+
 function removeFile(id) {
   const idx = fileQueue.findIndex(f => f.id === id);
   if (idx !== -1) fileQueue.splice(idx, 1);
   const el = document.getElementById(`file-${id}`);
-  if (el) el.remove();
+  if (el) {
+    const next = el.nextElementSibling;
+    if (next && next.classList.contains('inline-meta-panel')) next.remove();
+    el.remove();
+  }
   updateBatchActions();
 }
 
