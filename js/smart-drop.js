@@ -389,23 +389,37 @@ async function loadFileMeta(file, mime) {
   return {};
 }
 
-function estimateOutputSize(resolved, settings, meta, inputSize) {
+// Input format to "equivalent JPEG at q=0.85" bytes-per-pixel ratio
+const BPP_TO_JPG = {
+  'image/jpeg': 1.0, 'image/png': 0.15, 'image/webp': 1.15,
+  'image/bmp': 0.05, 'image/gif': 0.8, 'image/heic': 1.8,
+  'image/tiff': 0.12, 'image/avif': 2.0, 'image/x-icon': 0.3,
+};
+
+function estimateOutputSize(resolved, settings, meta, inputSize, sourceMime) {
   switch (resolved.type) {
     case 'image':
     case 'heic': {
       if (!meta?.width) return null;
       const px = meta.width * meta.height;
-      const q = (settings.quality || 92) / 100;
+      const inputBpp = inputSize / px;
+      const q = (settings.quality || 90) / 100;
+      // Anchor on input content complexity
+      const ratio = BPP_TO_JPG[sourceMime] || 0.2;
+      const refBpp = Math.max(0.03, inputBpp * ratio);
+      // Quality scaling relative to q=0.85: (0.3q + 0.7q^3) / 0.684
+      const qScale = (0.3 * q + 0.7 * q * q * q) / 0.684;
       if (resolved.targetMime === 'image/jpeg') {
-        const bpp = 0.08 + q * 0.35;
-        return { low: Math.round(px * bpp * 0.5), high: Math.round(px * bpp * 2) };
+        const est = px * refBpp * qScale;
+        return { low: Math.round(est * 0.7), high: Math.round(est * 1.3) };
       }
       if (resolved.targetMime === 'image/webp') {
-        const bpp = 0.06 + q * 0.25;
-        return { low: Math.round(px * bpp * 0.5), high: Math.round(px * bpp * 2) };
+        const est = px * refBpp * qScale * 0.75;
+        return { low: Math.round(est * 0.7), high: Math.round(est * 1.3) };
       }
       if (resolved.targetMime === 'image/png') {
-        return { low: Math.round(px * 0.5), high: Math.round(px * 4) };
+        const est = px * refBpp * 6;
+        return { low: Math.round(est * 0.6), high: Math.round(est * 1.4) };
       }
       if (resolved.targetMime === 'image/bmp') {
         return { estimate: px * 3 + 54 };
@@ -413,16 +427,21 @@ function estimateOutputSize(resolved, settings, meta, inputSize) {
       return null;
     }
     case 'img-to-pdf': {
-      return { estimate: Math.round(inputSize * 1.1) };
+      if (sourceMime === 'image/png') return { estimate: Math.round(inputSize * 1.05) };
+      const q = (settings.quality || 90) / 100;
+      const qScale = (0.3 * q + 0.7 * q * q * q) / 0.684;
+      return { estimate: Math.round(inputSize * qScale * 1.05) };
     }
     case 'pdf-to-img': {
       if (!meta?.pageCount) return null;
-      const q = (settings.quality || 92) / 100;
+      const q = (settings.quality || 90) / 100;
+      const perPageInput = inputSize / meta.pageCount;
       if (resolved.targetMime === 'image/jpeg') {
-        const perPage = 300000 + q * 800000;
-        return { low: Math.round(meta.pageCount * perPage * 0.5), high: Math.round(meta.pageCount * perPage * 2) };
+        const est = perPageInput * (1.5 + q * 2.5) * meta.pageCount;
+        return { low: Math.round(est * 0.5), high: Math.round(est * 1.5) };
       }
-      return { low: Math.round(meta.pageCount * 800000), high: Math.round(meta.pageCount * 4000000) };
+      const est = perPageInput * 6 * meta.pageCount;
+      return { low: Math.round(est * 0.5), high: Math.round(est * 1.5) };
     }
     case 'vid-to-gif': {
       if (!meta?.width || !meta?.duration) return null;
@@ -433,12 +452,29 @@ function estimateOutputSize(resolved, settings, meta, inputSize) {
       const w = Math.round(meta.width * scale);
       const h = Math.round(meta.height * scale);
       const frames = Math.ceil(clip * fps);
-      const est = Math.round(w * h * 0.5 * frames * 0.8);
-      return { estimate: est };
+      return { estimate: Math.round(w * h * 0.5 * frames * 0.8) };
     }
-    case 'video':
+    case 'video': {
+      if (!meta?.duration || !meta?.width) {
+        const qf = settings.videoQuality === 'low' ? 0.25 : settings.videoQuality === 'medium' ? 0.5 : 1.0;
+        return { low: Math.round(inputSize * 0.3 * qf), high: Math.round(inputSize * 0.8 * qf) };
+      }
+      const px = meta.width * meta.height;
+      let bps = px * 2.5; // typical CRF 23 bits per pixel per second
+      if (settings.videoQuality === 'medium') bps *= 0.55;
+      else if (settings.videoQuality === 'low') bps *= 0.3;
+      const est = meta.duration * (bps + 128000) / 8;
+      if (resolved.targetFormat === 'webm') {
+        const capBps = (settings.videoQuality === 'low' ? 350000 : settings.videoQuality === 'medium' ? 600000 : 1000000);
+        const capEst = meta.duration * (capBps + 128000) / 8;
+        const e = Math.min(est, capEst);
+        return { low: Math.round(e * 0.6), high: Math.round(e * 1.4) };
+      }
+      return { low: Math.round(est * 0.6), high: Math.round(est * 1.4) };
+    }
     case 'gif-to-video': {
-      return { low: Math.round(inputSize * 0.3), high: Math.round(inputSize * 0.8) };
+      const qf = settings.videoQuality === 'low' ? 0.15 : settings.videoQuality === 'medium' ? 0.25 : 0.4;
+      return { low: Math.round(inputSize * qf * 0.6), high: Math.round(inputSize * qf * 1.5) };
     }
     case 'audio': {
       if (!meta?.duration) return null;
@@ -446,23 +482,19 @@ function estimateOutputSize(resolved, settings, meta, inputSize) {
         return { estimate: Math.round(meta.duration * 44100 * 2 * 2 + 44) };
       }
       if (resolved.targetFormat === 'mp3') {
-        return { estimate: Math.round(meta.duration * 128000 / 8) };
+        const kbps = settings.bitrate || 128;
+        return { estimate: Math.round(meta.duration * kbps * 1000 / 8) };
       }
       return null;
     }
     case 'audio-ff': {
       if (!meta?.duration) return null;
-      if (resolved.targetFormat === 'ogg') {
-        return { estimate: Math.round(meta.duration * 112000 / 8) };
-      }
       if (resolved.targetFormat === 'flac') {
         const wav = meta.duration * 44100 * 2 * 2;
         return { low: Math.round(wav * 0.4), high: Math.round(wav * 0.7) };
       }
-      if (resolved.targetFormat === 'm4a' || resolved.targetFormat === 'aac') {
-        return { estimate: Math.round(meta.duration * 128000 / 8) };
-      }
-      return null;
+      const kbps = settings.bitrate || 128;
+      return { estimate: Math.round(meta.duration * kbps * 1000 / 8) };
     }
     case 'font': {
       if (resolved.targetFormat === 'woff') {
@@ -483,28 +515,67 @@ function estimateOutputSize(resolved, settings, meta, inputSize) {
   return null;
 }
 
-function getConversionSettings(resolved) {
+function getConversionSettings(resolved, sourceMime) {
   const settings = [];
   const lossy = resolved.targetMime === 'image/jpeg' || resolved.targetMime === 'image/webp';
 
+  // Image/HEIC/PDF → lossy image: quality
   if ((resolved.type === 'image' || resolved.type === 'heic' || resolved.type === 'pdf-to-img') && lossy) {
     const saved = parseInt(localStorage.getItem('cf-quality'), 10);
+    const def = saved >= 10 && saved <= 100 ? Math.round(saved / 10) * 10 : 90;
     settings.push({
       key: 'quality', label: 'Quality', type: 'range',
-      min: 10, max: 100, step: 1,
-      default: (saved >= 10 && saved <= 100) ? saved : 92,
-      unit: '%',
+      min: 10, max: 100, step: 10, default: def, unit: '%',
     });
   }
 
+  // Image → PDF: quality (for embedded JPEG compression, not for PNG sources)
+  if (resolved.type === 'img-to-pdf' && sourceMime !== 'image/png') {
+    settings.push({
+      key: 'quality', label: 'Image quality', type: 'range',
+      min: 10, max: 100, step: 10, default: 90, unit: '%',
+    });
+  }
+
+  // Video → GIF: max width + frame rate
   if (resolved.type === 'vid-to-gif') {
     settings.push({
       key: 'maxWidth', label: 'Max width', type: 'range',
-      min: 160, max: 800, step: 10, default: 480, unit: 'px',
+      min: 0, max: 5, step: 1, default: 3,
+      values: [160, 240, 320, 480, 640, 800], unit: 'px',
     });
     settings.push({
       key: 'fps', label: 'Frame rate', type: 'range',
-      min: 4, max: 20, step: 1, default: 10, unit: ' fps',
+      min: 0, max: 4, step: 1, default: 2,
+      values: [4, 8, 10, 15, 20], unit: ' fps',
+    });
+  }
+
+  // Video → video / GIF → video: quality
+  if (resolved.type === 'video' || resolved.type === 'gif-to-video') {
+    settings.push({
+      key: 'videoQuality', label: 'Quality', type: 'range',
+      min: 0, max: 2, step: 1, default: 2,
+      values: ['low', 'medium', 'high'],
+      labels: ['Small file', 'Balanced', 'High quality'], unit: '',
+    });
+  }
+
+  // Audio → MP3: bitrate
+  if (resolved.type === 'audio' && resolved.targetFormat === 'mp3') {
+    settings.push({
+      key: 'bitrate', label: 'Bitrate', type: 'range',
+      min: 0, max: 5, step: 1, default: 2,
+      values: [64, 96, 128, 192, 256, 320], unit: ' kbps',
+    });
+  }
+
+  // Audio (FFmpeg) → OGG/M4A/AAC: bitrate (FLAC is lossless, no setting)
+  if (resolved.type === 'audio-ff' && resolved.targetFormat !== 'flac') {
+    settings.push({
+      key: 'bitrate', label: 'Bitrate', type: 'range',
+      min: 0, max: 5, step: 1, default: 2,
+      values: [64, 96, 128, 192, 256, 320], unit: ' kbps',
     });
   }
 
@@ -512,7 +583,7 @@ function getConversionSettings(resolved) {
 }
 
 async function executeConversion(file, sourceMime, resolved, settings, onProgress, onStatus) {
-  const quality = (settings.quality || 92) / 100;
+  const quality = (settings.quality || 90) / 100;
 
   switch (resolved.type) {
     case 'image': {
@@ -537,7 +608,8 @@ async function executeConversion(file, sourceMime, resolved, settings, onProgres
       const { imagesToPdf } = await import('./pdf-engine.js');
       const blob = await imagesToPdf(
         [{ blob: imgBlob, mime: imgMime }],
-        p => onProgress(sourceMime === 'image/heic' ? 50 + Math.round(p * 0.5) : p)
+        p => onProgress(sourceMime === 'image/heic' ? 50 + Math.round(p * 0.5) : p),
+        quality
       );
       return { blob, name: inlineOutputName(file.name, 'pdf') };
     }
@@ -568,22 +640,26 @@ async function executeConversion(file, sourceMime, resolved, settings, onProgres
     }
     case 'gif-to-video': {
       const { gifToVideo } = await import('./vidconv-engine.js');
-      const blob = await gifToVideo(file, resolved.targetFormat, onProgress, onStatus);
+      const blob = await gifToVideo(file, resolved.targetFormat, onProgress, onStatus,
+        { quality: settings.videoQuality || 'high' });
       return { blob, name: inlineOutputName(file.name, resolved.targetExt) };
     }
     case 'video': {
       const { convertVideo } = await import('./vidconv-engine.js');
-      const blob = await convertVideo(file, resolved.targetFormat, onProgress, onStatus);
+      const blob = await convertVideo(file, resolved.targetFormat, onProgress, onStatus,
+        { quality: settings.videoQuality || 'high' });
       return { blob, name: inlineOutputName(file.name, resolved.targetExt) };
     }
     case 'audio': {
       const { convertAudio } = await import('./audio-engine.js');
-      const blob = await convertAudio(file, resolved.targetFormat, onProgress);
+      const blob = await convertAudio(file, resolved.targetFormat, onProgress,
+        { bitrate: settings.bitrate || 128 });
       return { blob, name: inlineOutputName(file.name, resolved.targetExt) };
     }
     case 'audio-ff': {
       const { convertAudioFFmpeg } = await import('./audio-engine.js');
-      const blob = await convertAudioFFmpeg(file, resolved.targetFormat, onProgress);
+      const blob = await convertAudioFFmpeg(file, resolved.targetFormat, onProgress,
+        { bitrate: settings.bitrate || 128 });
       return { blob, name: inlineOutputName(file.name, resolved.targetExt) };
     }
     case 'font': {
@@ -624,7 +700,7 @@ async function runInlineConversion(file, sourceMime, resolved, routePanel, onDis
   routePanel.appendChild(wrap);
 
   // --- Phase 1: Settings ---
-  const descriptors = getConversionSettings(resolved);
+  const descriptors = getConversionSettings(resolved, sourceMime);
   const settingValues = {};
 
   if (resolved.notice) {
@@ -639,7 +715,8 @@ async function runInlineConversion(file, sourceMime, resolved, routePanel, onDis
     settingsWrap.className = 'route-convert-settings';
 
     for (const desc of descriptors) {
-      settingValues[desc.key] = desc.default;
+      const isIndexed = !!desc.values;
+      settingValues[desc.key] = isIndexed ? desc.values[desc.default] : desc.default;
 
       const row = document.createElement('div');
       row.className = 'route-convert-setting';
@@ -663,14 +740,27 @@ async function runInlineConversion(file, sourceMime, resolved, routePanel, onDis
 
       const valueEl = document.createElement('span');
       valueEl.className = 'route-convert-setting-value';
-      valueEl.textContent = desc.default + desc.unit;
+      if (isIndexed) {
+        valueEl.textContent = (desc.labels ? desc.labels[desc.default] : desc.values[desc.default]) + desc.unit;
+      } else {
+        valueEl.textContent = desc.default + desc.unit;
+      }
       rangeWrap.appendChild(valueEl);
 
-      range.addEventListener('input', () => {
-        settingValues[desc.key] = parseInt(range.value, 10);
-        valueEl.textContent = range.value + desc.unit;
-        if (updateEstimate) updateEstimate();
-      });
+      if (isIndexed) {
+        range.addEventListener('input', () => {
+          const idx = parseInt(range.value, 10);
+          settingValues[desc.key] = desc.values[idx];
+          valueEl.textContent = (desc.labels ? desc.labels[idx] : desc.values[idx]) + desc.unit;
+          if (updateEstimate) updateEstimate();
+        });
+      } else {
+        range.addEventListener('input', () => {
+          settingValues[desc.key] = parseInt(range.value, 10);
+          valueEl.textContent = range.value + desc.unit;
+          if (updateEstimate) updateEstimate();
+        });
+      }
 
       row.appendChild(rangeWrap);
       settingsWrap.appendChild(row);
@@ -692,7 +782,7 @@ async function runInlineConversion(file, sourceMime, resolved, routePanel, onDis
   }).catch(() => {});
 
   updateEstimate = () => {
-    const est = estimateOutputSize(resolved, settingValues, fileMeta, file.size);
+    const est = estimateOutputSize(resolved, settingValues, fileMeta, file.size, sourceMime);
     if (!est) { estimateEl.textContent = ''; estimateEl.className = 'route-convert-estimate'; return; }
     let label;
     if (est.low != null && est.high != null) {
