@@ -518,6 +518,10 @@ async function extractMobiText(file, onProgress) {
 
   for (let r = startRec; r < endRec; r++) {
     const start = recordOffsets[r];
+    if (start >= buf.length) {
+      if (r === startRec) throw new Error('Invalid MOBI file: text record out of bounds.');
+      continue;
+    }
     const end = r + 1 < recordOffsets.length ? recordOffsets[r + 1] : buf.length;
     const recordData = buf.slice(start, end);
 
