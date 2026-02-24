@@ -27,7 +27,7 @@ const FORMAT_SIGNATURES = [
  * @returns {Promise<{mime: string, ext: string}|null>}
  */
 export async function detectFormat(file) {
-  const buf = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const buf = new Uint8Array(await file.slice(0, 32).arrayBuffer());
   for (const fmt of FORMAT_SIGNATURES) {
     for (const [offset, sig] of fmt.offsets) {
       if (buf.length >= offset + sig.length &&
