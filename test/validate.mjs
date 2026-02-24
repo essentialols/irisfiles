@@ -15,6 +15,7 @@ const PAGES = [
   '/svg-to-jpg', '/svg-to-png', '/svg-to-webp', '/svg-to-pdf',
   '/bmp-to-jpg', '/bmp-to-png', '/bmp-to-webp', '/bmp-to-pdf',
   '/gif-to-jpg', '/gif-to-png', '/gif-to-webp', '/gif-to-pdf',
+  '/jpg-to-gif', '/png-to-gif', '/webp-to-gif',
   '/avif-to-jpg', '/avif-to-png', '/avif-to-webp', '/avif-to-pdf',
   '/ico-to-jpg', '/ico-to-png', '/ico-to-webp', '/ico-to-pdf',
   '/tiff-to-jpg', '/tiff-to-png', '/tiff-to-webp', '/tiff-to-pdf',

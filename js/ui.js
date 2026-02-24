@@ -79,6 +79,13 @@ export function init() {
     qualitySlider.addEventListener('input', () => {
       qualityValue.textContent = qualitySlider.value + '%';
       localStorage.setItem('cf-quality', qualitySlider.value);
+      for (const entry of fileQueue) {
+        if (entry.status === 'done') {
+          entry.outputBlob = null;
+          entry.status = 'queued';
+        }
+      }
+      processQueue();
     });
   }
 
