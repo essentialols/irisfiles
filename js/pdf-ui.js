@@ -5,7 +5,7 @@
  */
 
 import { imagesToPdf, pdfToImages, mergePdfs, splitPdf } from './pdf-engine.js';
-import { formatSize, downloadBlob, downloadAsZip, needsHeicDecoder, convertHeic } from './converter.js';
+import { formatSize, downloadBlob, downloadAsZip, needsHeicDecoder, convertHeic, snapTo } from './converter.js';
 import { loadPendingFiles } from './smart-drop.js';
 
 let mode = '';  // 'img-to-pdf', 'pdf-to-img', 'merge', 'split'
@@ -35,6 +35,7 @@ export function init() {
   dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); addFiles(e.dataTransfer.files); });
   fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
 
+  const qualitySnaps = [10, 25, 50, 75, 80, 90, 100];
   if (qualitySlider && qualityValue) {
     const saved = localStorage.getItem('cf-quality');
     if (saved && saved >= 10 && saved <= 100) {
@@ -42,8 +43,10 @@ export function init() {
       qualityValue.textContent = saved + '%';
     }
     qualitySlider.addEventListener('input', () => {
-      qualityValue.textContent = qualitySlider.value + '%';
-      localStorage.setItem('cf-quality', qualitySlider.value);
+      const v = snapTo(parseInt(qualitySlider.value, 10), qualitySnaps, 90);
+      qualitySlider.value = v;
+      qualityValue.textContent = v + '%';
+      localStorage.setItem('cf-quality', v);
     });
   }
 

@@ -6,7 +6,7 @@
 import {
   detectFormat, needsHeicDecoder, convertWithCanvas, convertHeic,
   outputFilename, downloadBlob, downloadAsZip, formatSize,
-  validateFile, MAX_BATCH_SIZE
+  validateFile, MAX_BATCH_SIZE, snapTo
 } from './converter.js';
 import { loadPendingFiles } from './smart-drop.js';
 
@@ -69,18 +69,19 @@ export function init() {
     fileInput.value = '';
   });
 
-  // Quality slider with localStorage persistence
+  // Quality slider with localStorage persistence + snap points
+  const qualitySnaps = [10, 25, 50, 75, 80, 90, 100];
   if (qualitySlider && qualityValue) {
     const saved = localStorage.getItem('cf-quality');
     if (saved && saved >= 10 && saved <= 100) {
-      const snapped = Math.round(saved / 10) * 10;
-      qualitySlider.value = snapped;
-      qualityValue.textContent = snapped + '%';
-      if (String(snapped) !== saved) localStorage.setItem('cf-quality', snapped);
+      qualitySlider.value = saved;
+      qualityValue.textContent = saved + '%';
     }
     qualitySlider.addEventListener('input', () => {
-      qualityValue.textContent = qualitySlider.value + '%';
-      localStorage.setItem('cf-quality', qualitySlider.value);
+      const v = snapTo(parseInt(qualitySlider.value, 10), qualitySnaps, 90);
+      qualitySlider.value = v;
+      qualityValue.textContent = v + '%';
+      localStorage.setItem('cf-quality', v);
       for (const entry of fileQueue) {
         if (entry.status === 'done') {
           entry.outputBlob = null;

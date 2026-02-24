@@ -104,6 +104,39 @@ async function detect(file) {
   return null;
 }
 
+// Extended file type identification (for files not in SIGS)
+let _fileTypesDB = null;
+
+async function loadFileTypesDB() {
+  if (_fileTypesDB) return _fileTypesDB;
+  const resp = await fetch('/data/file-signatures.json');
+  _fileTypesDB = await resp.json();
+  return _fileTypesDB;
+}
+
+async function identifyFileType(file) {
+  const db = await loadFileTypesDB();
+  const buf = new Uint8Array(await file.slice(0, 32770).arrayBuffer());
+  const hex = [...buf].map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+
+  for (const entry of db) {
+    const sigHex = entry.magic.toUpperCase();
+    const offset = (entry.offset || 0) * 2;
+    if (hex.length >= offset + sigHex.length && hex.substr(offset, sigHex.length) === sigHex) {
+      return entry;
+    }
+  }
+
+  // Extension fallback
+  const ext = (file.name || '').split('.').pop().toLowerCase();
+  if (ext) {
+    const match = db.find(e => e.ext.includes(ext));
+    if (match) return match;
+  }
+
+  return null;
+}
+
 function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open('irisfiles', 1);
@@ -162,6 +195,14 @@ function formatSize(bytes) {
 }
 
 function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function snapTo(val, snaps, range) {
+  const threshold = range * 0.03;
+  for (const s of snaps) {
+    if (Math.abs(val - s) <= threshold) return s;
+  }
+  return val;
+}
 
 function formatDuration(s) {
   const min = Math.floor(s / 60);
@@ -519,7 +560,7 @@ function getConversionSettings(resolved, sourceMime) {
   const settings = [];
   const lossy = resolved.targetMime === 'image/jpeg' || resolved.targetMime === 'image/webp';
 
-  // Image/HEIC/PDF → lossy image: quality (step 1, ticks at 10s)
+  // Image/HEIC/PDF → lossy image: quality (continuous with snaps)
   if ((resolved.type === 'image' || resolved.type === 'heic' || resolved.type === 'pdf-to-img') && lossy) {
     const saved = parseInt(localStorage.getItem('cf-quality'), 10);
     const def = saved >= 10 && saved <= 100 ? saved : 90;
@@ -527,6 +568,7 @@ function getConversionSettings(resolved, sourceMime) {
       key: 'quality', label: 'Quality', type: 'range',
       min: 10, max: 100, step: 1, default: def, unit: '%',
       ticks: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+      snaps: [10, 25, 50, 75, 80, 90, 100], snapRange: 90,
     });
   }
 
@@ -536,20 +578,21 @@ function getConversionSettings(resolved, sourceMime) {
       key: 'quality', label: 'Image quality', type: 'range',
       min: 10, max: 100, step: 1, default: 90, unit: '%',
       ticks: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+      snaps: [10, 25, 50, 75, 80, 90, 100], snapRange: 90,
     });
   }
 
-  // Video → GIF: max width + frame rate
+  // Video → GIF: max width + frame rate (continuous with snaps)
   if (resolved.type === 'vid-to-gif') {
     settings.push({
       key: 'maxWidth', label: 'Max width', type: 'range',
-      min: 0, max: 5, step: 1, default: 3,
-      values: [160, 240, 320, 480, 640, 800], unit: 'px',
+      min: 160, max: 800, step: 1, default: 480, unit: 'px',
+      snaps: [160, 240, 320, 480, 640, 800], snapRange: 640,
     });
     settings.push({
       key: 'fps', label: 'Frame rate', type: 'range',
-      min: 0, max: 4, step: 1, default: 2,
-      values: [4, 8, 10, 15, 20], unit: ' fps',
+      min: 4, max: 20, step: 1, default: 10, unit: ' fps',
+      snaps: [4, 8, 10, 12, 15, 20], snapRange: 16,
     });
   }
 
@@ -764,13 +807,14 @@ async function runInlineConversion(file, sourceMime, resolved, routePanel, onDis
         range.value = desc.default;
 
         // Add tick marks via datalist
-        if (desc.ticks || isIndexed) {
+        if (desc.ticks || desc.snaps || isIndexed) {
           const listId = 'sd-ticks-' + desc.key;
           range.setAttribute('list', listId);
           const datalist = document.createElement('datalist');
           datalist.id = listId;
-          if (desc.ticks) {
-            for (const t of desc.ticks) {
+          const tickValues = desc.ticks || desc.snaps;
+          if (tickValues) {
+            for (const t of tickValues) {
               const opt = document.createElement('option');
               opt.value = t;
               datalist.appendChild(opt);
@@ -805,8 +849,11 @@ async function runInlineConversion(file, sourceMime, resolved, routePanel, onDis
           });
         } else {
           range.addEventListener('input', () => {
-            settingValues[desc.key] = parseInt(range.value, 10);
-            valueEl.textContent = range.value + desc.unit;
+            let v = parseInt(range.value, 10);
+            if (desc.snaps) v = snapTo(v, desc.snaps, desc.snapRange);
+            range.value = v;
+            settingValues[desc.key] = v;
+            valueEl.textContent = v + desc.unit;
             if (updateEstimate) updateEstimate();
           });
         }
@@ -1070,6 +1117,53 @@ export function initSmartDrop() {
   // Track blob URLs for cleanup
   let prevBlobUrls = [];
 
+  function showFileTypeInfo(file, typeInfo) {
+    routePanel.innerHTML = '';
+
+    // Dismiss button
+    const dismissBtn = document.createElement('button');
+    dismissBtn.className = 'route-dismiss';
+    dismissBtn.setAttribute('aria-label', 'Dismiss');
+    dismissBtn.innerHTML = '&#215;';
+    dismissBtn.addEventListener('click', () => {
+      for (const u of prevBlobUrls) URL.revokeObjectURL(u);
+      prevBlobUrls = [];
+      routePanel.innerHTML = '';
+      routePanel.style.display = 'none';
+      dropZone.classList.remove('compact');
+    });
+    routePanel.appendChild(dismissBtn);
+
+    const card = document.createElement('div');
+    card.className = 'route-file-info-card';
+    const extList = typeInfo.ext.length ? '.' + typeInfo.ext.join(', .') : 'N/A';
+    card.innerHTML =
+      '<div class="route-file-info-card__header">' +
+        '<span class="route-file-info-card__category">' + esc(typeInfo.category) + '</span>' +
+        '<span class="route-file-info-card__label">' + esc(typeInfo.label) + '</span>' +
+      '</div>' +
+      '<div class="route-file-info-card__details">' +
+        '<div class="route-file-info-card__row">' +
+          '<span class="route-file-info-card__key">File</span>' +
+          '<span class="route-file-info-card__val">' + esc(file.name) + '</span>' +
+        '</div>' +
+        '<div class="route-file-info-card__row">' +
+          '<span class="route-file-info-card__key">Size</span>' +
+          '<span class="route-file-info-card__val">' + formatSize(file.size) + '</span>' +
+        '</div>' +
+        '<div class="route-file-info-card__row">' +
+          '<span class="route-file-info-card__key">Extension</span>' +
+          '<span class="route-file-info-card__val">' + esc(extList) + '</span>' +
+        '</div>' +
+        '<div class="route-file-info-card__row">' +
+          '<span class="route-file-info-card__key">Description</span>' +
+          '<span class="route-file-info-card__val">' + esc(typeInfo.description) + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<p class="route-file-info-card__note">This file type is not currently supported for conversion.</p>';
+    routePanel.appendChild(card);
+  }
+
   async function handleDrop(fileList) {
     const files = Array.from(fileList);
     if (files.length === 0) return;
@@ -1086,7 +1180,12 @@ export function initSmartDrop() {
     const known = detected.filter(Boolean);
 
     if (known.length === 0) {
-      routePanel.innerHTML = '<p class="route-panel__error">Could not recognize file format. Try dropping your files on a specific converter below.</p>';
+      const typeInfo = await identifyFileType(files[0]);
+      if (typeInfo) {
+        showFileTypeInfo(files[0], typeInfo);
+      } else {
+        routePanel.innerHTML = '<p class="route-panel__error">Could not identify this file type. Try dropping your files on a specific converter below.</p>';
+      }
       return;
     }
 
@@ -1099,7 +1198,12 @@ export function initSmartDrop() {
     const routes = ROUTES[dominant];
 
     if (!routes) {
-      routePanel.innerHTML = '<p class="route-panel__error">Unsupported format. Try a specific converter below.</p>';
+      const typeInfo = await identifyFileType(files[0]);
+      if (typeInfo) {
+        showFileTypeInfo(files[0], typeInfo);
+      } else {
+        routePanel.innerHTML = '<p class="route-panel__error">Unsupported format. Try a specific converter below.</p>';
+      }
       return;
     }
 
