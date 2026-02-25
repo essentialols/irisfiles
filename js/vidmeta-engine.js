@@ -124,6 +124,9 @@ export async function readVideoMetadata(file) {
   });
   result._empty = !hasData;
 
+  // Attach raw tracks for callers that want full detail
+  result._tracks = { general: gen, video: vid, audio: aud };
+
   return result;
 }
 

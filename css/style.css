@@ -605,6 +605,30 @@ body {
   color: var(--text-muted);
   margin-top: 0.25rem;
 }
+.route-inline-meta--expandable {
+  cursor: pointer;
+}
+.route-inline-meta--expandable:hover {
+  color: var(--text);
+}
+.route-meta-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.4rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  font-size: 0.7rem;
+  vertical-align: middle;
+  background: var(--border);
+  border-radius: 50%;
+  color: var(--text-muted);
+  transition: background 0.15s ease;
+}
+.route-inline-meta--expandable:hover .route-meta-chevron {
+  background: var(--primary);
+  color: #fff;
+}
 .route-filmstrip {
   display: flex;
   gap: 3px;
@@ -879,6 +903,42 @@ body {
   margin-bottom: 0.5rem;
 }
 .inline-meta-panel .meta-group:last-of-type { margin-bottom: 0; }
+
+/* Inline metadata panel (route panel on landing page) */
+.route-inline-meta-panel {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  text-align: left;
+}
+.route-meta-compact-group {
+  margin-bottom: 0.5rem;
+}
+.route-meta-compact-group:last-child {
+  margin-bottom: 0;
+}
+.route-meta-compact-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+.route-meta-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.1rem 1.25rem;
+}
+.route-meta-compact-cell {
+  padding: 0.1rem 0;
+}
+.route-meta-compact-key {
+  color: var(--text-muted);
+}
+.route-meta-compact-val {
+  color: var(--text);
+  font-weight: 500;
+}
 
 /* Responsive */
 @media (max-width: 640px) {
