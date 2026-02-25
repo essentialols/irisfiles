@@ -40,6 +40,7 @@ export async function extractZip(file, onProgress) {
  * @returns {Promise<Blob>}
  */
 export async function createZip(files, onProgress) {
+  if (typeof fflate === 'undefined') throw new Error('ZIP library not loaded. Please reload the page.');
   const zipInput = {};
 
   for (let i = 0; i < files.length; i++) {
@@ -63,6 +64,7 @@ export async function createZip(files, onProgress) {
  * @returns {Promise<Array<{name: string, compressedSize: number, uncompressedSize: number}>>}
  */
 export async function zipToFileList(file) {
+  if (typeof fflate === 'undefined') throw new Error('ZIP library not loaded. Please reload the page.');
   const buffer = await file.arrayBuffer();
   const raw = new Uint8Array(buffer);
   const unzipped = fflate.unzipSync(raw);
