@@ -17,7 +17,7 @@ let origW = 0;
 let origH = 0;
 let aspectRatio = 0; // origW / origH
 
-let dropZone, fileInput, fileList, downloadAllBtn, clearAllBtn;
+let dropZone, fileInput, fileList, downloadAllBtn, clearAllBtn, resizeBtn;
 let widthInput, heightInput, percentInput, resizeMode, lockAspect;
 
 export function init() {
@@ -26,6 +26,7 @@ export function init() {
   fileList       = document.getElementById('file-list');
   downloadAllBtn = document.getElementById('download-all');
   clearAllBtn    = document.getElementById('clear-all');
+  resizeBtn      = document.getElementById('resize-btn');
   widthInput     = document.getElementById('resize-width');
   heightInput    = document.getElementById('resize-height');
   percentInput   = document.getElementById('resize-percent');
@@ -59,7 +60,6 @@ export function init() {
   }
 
   // Aspect ratio lock: when width changes, recalculate height and vice versa
-  // Also re-queue done items so changing dimensions re-processes them
   if (widthInput) {
     widthInput.addEventListener('input', () => {
       if (lockAspect && lockAspect.checked && aspectRatio > 0) {
@@ -68,7 +68,6 @@ export function init() {
           heightInput.value = Math.round(w / aspectRatio);
         }
       }
-      requeueDoneItems();
     });
   }
   if (heightInput) {
@@ -79,14 +78,23 @@ export function init() {
           widthInput.value = Math.round(h * aspectRatio);
         }
       }
-      requeueDoneItems();
     });
   }
-  if (percentInput) {
-    percentInput.addEventListener('input', () => requeueDoneItems());
-  }
-  if (resizeMode) {
-    resizeMode.addEventListener('change', () => requeueDoneItems());
+
+  // Resize button: process pending files or re-process done files with current settings
+  if (resizeBtn) {
+    resizeBtn.addEventListener('click', () => {
+      for (const entry of fileQueue) {
+        if (entry.status === 'pending' || entry.status === 'done' || entry.status === 'error') {
+          entry.outputBlob = null;
+          entry.outputName = null;
+          entry.status = 'queued';
+          entry.progress = 0;
+          updateFileItem(entry);
+        }
+      }
+      processQueue();
+    });
   }
 
   // FAQ accordion
@@ -175,6 +183,7 @@ function handleFiles(files) {
   for (const file of toAdd) {
     addFile(file);
   }
+  if (dropZone && fileQueue.length > 0) dropZone.classList.add('compact');
   if (isFirst && toAdd.length > 0) {
     getImageDimensions(toAdd[0]).then(({ width, height }) => {
       origW = width;
@@ -190,7 +199,7 @@ function addFile(file) {
   const entry = {
     id: crypto.randomUUID(),
     file,
-    status: 'queued',
+    status: 'pending',
     progress: 0,
     outputBlob: null,
     outputName: null,
@@ -211,26 +220,7 @@ function addFile(file) {
 
   fileQueue.push(entry);
   renderFileItem(entry);
-  processQueue();
-}
-
-let _requeueTimer = null;
-function requeueDoneItems() {
-  clearTimeout(_requeueTimer);
-  _requeueTimer = setTimeout(() => {
-    let changed = false;
-    for (const entry of fileQueue) {
-      if (entry.status === 'done') {
-        entry.outputBlob = null;
-        entry.outputName = null;
-        entry.status = 'queued';
-        entry.progress = 0;
-        updateFileItem(entry);
-        changed = true;
-      }
-    }
-    if (changed) processQueue();
-  }, 400);
+  updateBatchActions();
 }
 
 async function processQueue() {
@@ -289,7 +279,7 @@ function renderFileItem(entry) {
       <div class="file-item__progress-bar" style="width: 0%"></div>
     </div>
     <div class="file-item__actions">
-      <span class="file-item__status">Queued</span>
+      <span class="file-item__status">Ready</span>
     </div>
   `;
   if (isImage) {
@@ -367,12 +357,17 @@ function removeFile(id) {
     origW = 0;
     origH = 0;
     aspectRatio = 0;
+    if (dropZone) dropZone.classList.remove('compact');
   }
   updateBatchActions();
 }
 
 function updateBatchActions() {
   const doneFiles = fileQueue.filter(f => f.status === 'done');
+  const actionable = fileQueue.filter(f => f.status === 'pending' || f.status === 'done');
+  if (resizeBtn) {
+    resizeBtn.style.display = actionable.length > 0 ? '' : 'none';
+  }
   if (downloadAllBtn) {
     downloadAllBtn.style.display = doneFiles.length >= 2 ? '' : 'none';
   }
@@ -405,6 +400,7 @@ function handleClearAll() {
   origW = 0;
   origH = 0;
   aspectRatio = 0;
+  if (dropZone) dropZone.classList.remove('compact');
   updateBatchActions();
 }
 

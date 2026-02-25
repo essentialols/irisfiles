@@ -264,9 +264,9 @@ body {
   border: 1px solid var(--border);
 }
 .file-item__thumb {
-  width: 40px;
-  height: 40px;
-  border-radius: 4px;
+  width: 64px;
+  height: 64px;
+  border-radius: 6px;
   overflow: hidden;
   flex-shrink: 0;
   background: var(--border);
@@ -274,7 +274,7 @@ body {
 .file-item__thumb img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 .file-item__info { flex: 1; min-width: 0; }

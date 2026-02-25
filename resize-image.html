@@ -60,6 +60,14 @@
         },
         {
           "@type": "Question",
+          "name": "How does upscaling work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "When you set dimensions larger than the original, IrisFiles upscales using your browser's high-quality bicubic interpolation. This produces smooth results for moderate increases (up to ~150%), but larger upscales will look soft or blurry since no new detail can be created. For best results, start with the highest-resolution source you have."
+          }
+        },
+        {
+          "@type": "Question",
           "name": "Are my images uploaded to a server?",
           "acceptedAnswer": {
             "@type": "Answer",
@@ -118,6 +126,7 @@
     <div id="file-list" class="file-list"></div>
 
     <div class="batch-actions">
+      <button id="resize-btn" class="btn btn--primary" style="display:none">Resize</button>
       <button id="download-all" class="btn btn--primary" style="display:none">Download All as ZIP</button>
       <button id="clear-all" class="btn btn--secondary" style="display:none">Clear All</button>
     </div>
@@ -149,6 +158,12 @@
         <button class="faq-question">What is the maximum image size?</button>
         <div class="faq-answer">
           <p>IrisFiles limits output dimensions to 16384x16384 pixels, which is the maximum canvas size in most browsers. Input files up to 100MB are supported. The actual limit depends on your device's available memory.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">How does upscaling work?</button>
+        <div class="faq-answer">
+          <p>When you set dimensions larger than the original, IrisFiles upscales using your browser's high-quality bicubic interpolation. This produces smooth results for moderate increases (up to ~150%), but larger upscales will look soft or blurry since no new detail can be created. For best results, start with the highest-resolution source you have.</p>
         </div>
       </div>
       <div class="faq-item">

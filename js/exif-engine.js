@@ -53,6 +53,7 @@ function dmsToDecimal(dmsArr, ref) {
   const d = typeof dmsArr[0] === 'object' ? dmsArr[0].value || dmsArr[0] : dmsArr[0];
   const m = typeof dmsArr[1] === 'object' ? dmsArr[1].value || dmsArr[1] : dmsArr[1];
   const s = typeof dmsArr[2] === 'object' ? dmsArr[2].value || dmsArr[2] : dmsArr[2];
+  if (isNaN(d) || isNaN(m) || isNaN(s)) return null;
   let dec = Math.abs(d) + Math.abs(m) / 60 + Math.abs(s) / 3600;
   if (ref === 'S' || ref === 'W') dec = -dec;
   return Math.round(dec * 1000000) / 1000000;
