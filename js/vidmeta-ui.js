@@ -18,6 +18,7 @@ let dropZone, fileInput, fileList, metadataPanel;
 let stripAllBtn, clearAllBtn;
 let currentFile = null;
 let processing = false;
+let previewUrl = null;
 
 export function init() {
   dropZone = document.getElementById('drop-zone');
@@ -81,6 +82,7 @@ async function handleFile(files) {
   }
 
   dropZone.classList.add('compact');
+  renderVideoPreview(file);
   showFileItem(file, null);
   setStatus('Loading metadata library...');
 

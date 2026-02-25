@@ -24,9 +24,14 @@ export async function imagesToGif(files, opts = {}) {
   // Step 1: Load all images and determine uniform canvas size
   onProgress(0, 'Loading images...');
   const images = [];
-  for (let i = 0; i < files.length; i++) {
-    const bmp = await createImageBitmap(files[i], { imageOrientation: 'from-image' });
-    images.push(bmp);
+  try {
+    for (let i = 0; i < files.length; i++) {
+      const bmp = await createImageBitmap(files[i], { imageOrientation: 'from-image' });
+      images.push(bmp);
+    }
+  } catch (e) {
+    for (const img of images) img.close();
+    throw e;
   }
 
   // Use first image's aspect ratio, scale to maxWidth
