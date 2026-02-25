@@ -81,6 +81,7 @@ async function handleFile(files) {
   }
 
   isJpegFile = await isJpeg(file);
+  dropZone.classList.add('compact');
   showFileItem(file, null);
   setStatus('Reading metadata...');
 
@@ -135,6 +136,7 @@ function resetState() {
   if (stripGpsBtn) stripGpsBtn.style.display = 'none';
   if (stripAllBtn) stripAllBtn.style.display = 'none';
   if (clearAllBtn) clearAllBtn.style.display = 'none';
+  if (dropZone) dropZone.classList.remove('compact');
 }
 
 function renderMetadata() {

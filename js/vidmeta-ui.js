@@ -80,6 +80,7 @@ async function handleFile(files) {
     return;
   }
 
+  dropZone.classList.add('compact');
   showFileItem(file, null);
   setStatus('Loading metadata library...');
 
@@ -128,6 +129,7 @@ function resetState() {
   if (metadataPanel) metadataPanel.innerHTML = '';
   if (stripAllBtn) stripAllBtn.style.display = 'none';
   if (clearAllBtn) clearAllBtn.style.display = 'none';
+  if (dropZone) dropZone.classList.remove('compact');
 }
 
 function renderMetadata(metadata) {
