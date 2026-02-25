@@ -232,7 +232,19 @@ async function getMediaMeta(file, mime) {
       if (model) meta.push(model.trim());
       const date = md.dates?.['Date Taken'];
       if (date) meta.push(date.split(' ')[0].replace(/:/g, '-'));
+      const lat = md.gps?.['Latitude'], lon = md.gps?.['Longitude'];
+      if (lat != null && lon != null) {
+        const { nearestCity } = await import('./cities-geo.js');
+        const loc = nearestCity(lat, lon);
+        if (loc) {
+          const place = loc.region
+            ? loc.city + ', ' + loc.region + ', ' + loc.country
+            : loc.city + ', ' + loc.country;
+          meta.push(loc.distance < 10 ? place : 'near ' + place);
+        }
+      }
     } else if (mime.startsWith('video/')) {
+      // Fast path: <video> element for resolution + duration
       const info = await new Promise((resolve, reject) => {
         const v = document.createElement('video');
         v.preload = 'metadata';
@@ -249,6 +261,8 @@ async function getMediaMeta(file, mime) {
       if (info.dur && isFinite(info.dur)) meta.push(formatDuration(info.dur));
       const codec = await detectVideoCodec(file);
       if (codec) meta.push(codec);
+      // _videoFile flag tells the caller to enhance with mediainfo later
+      meta._videoFile = file;
     } else if (mime === 'application/pdf') {
       const pdfjs = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.624/build/pdf.min.mjs');
       pdfjs.GlobalWorkerOptions.workerSrc =
@@ -270,6 +284,7 @@ async function getMediaMeta(file, mime) {
   } catch { /* graceful failure */ }
   return meta;
 }
+
 
 async function renderPdfPreview(file, container) {
   try {
@@ -293,6 +308,48 @@ async function renderPdfPreview(file, container) {
     await page.render({ canvasContext: ctx, viewport }).promise;
     container.appendChild(canvas);
   } catch { /* graceful failure */ }
+}
+
+// Parse GPS from any string value. Tries multiple formats:
+// - Degree notation: "37.7426°N 122.4136°W"
+// - ISO 6709: "+34.4208-119.6982+089.373/"
+// - Decimal pair: "34.4208, -119.6982"
+function parseGpsString(s) {
+  if (!s || typeof s !== 'string') return null;
+  // "37.7426°N 122.4136°W" (with or without degree symbol, N/S/E/W)
+  const dms = s.match(/([\d.]+)\s*°?\s*([NS])[\s,]+([\d.]+)\s*°?\s*([EW])/i);
+  if (dms) {
+    const lat = parseFloat(dms[1]) * (/s/i.test(dms[2]) ? -1 : 1);
+    const lon = parseFloat(dms[3]) * (/w/i.test(dms[4]) ? -1 : 1);
+    if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) return { lat, lon };
+  }
+  // ISO 6709: "+34.4208-119.6982" (two signed decimals back to back)
+  const iso = s.match(/([+-]\d{1,3}\.\d+)([+-]\d{1,4}\.\d+)/);
+  if (iso) {
+    const lat = parseFloat(iso[1]), lon = parseFloat(iso[2]);
+    if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) return { lat, lon };
+  }
+  return null;
+}
+
+// Scan all string values in the raw general track for GPS coordinates.
+// Searches top-level fields and nested extra fields.
+function extractVideoGps(gen) {
+  if (!gen) return null;
+  const strings = [];
+  for (const [, v] of Object.entries(gen)) {
+    if (typeof v === 'string') strings.push(v);
+    else if (v && typeof v === 'object') {
+      for (const [, sv] of Object.entries(v)) {
+        if (typeof sv === 'string') strings.push(sv);
+      }
+    }
+  }
+  for (const s of strings) {
+    const result = parseGpsString(s);
+    if (result) return result;
+  }
+  return null;
 }
 
 function detectVideoCodec(file) {
@@ -1138,6 +1195,219 @@ async function runInlineConversion(file, sourceMime, resolved, routePanel, onDis
   }
 }
 
+async function runInlineMetadata(file, mime, metaEl, chevron) {
+  const existing = metaEl.nextElementSibling;
+  if (existing && existing.classList.contains('route-inline-meta-panel')) {
+    const visible = existing.style.display !== 'none';
+    existing.style.display = visible ? 'none' : '';
+    chevron.textContent = visible ? '\u25b8' : '\u25be';
+    return;
+  }
+
+  chevron.textContent = '\u00b7\u00b7\u00b7';
+
+  const panel = document.createElement('div');
+  panel.className = 'route-inline-meta-panel';
+  metaEl.parentNode.insertBefore(panel, metaEl.nextSibling);
+
+  try {
+    if (mime.startsWith('video/')) {
+      await renderInlineVideoMeta(file, panel);
+    } else {
+      await renderInlineImageMeta(file, panel);
+    }
+    chevron.textContent = '\u25be';
+  } catch (err) {
+    panel.innerHTML = '<div class="meta-notice">Failed to load metadata: ' + esc(err.message) + '</div>';
+    chevron.textContent = '\u25b8';
+  }
+}
+
+async function renderInlineVideoMeta(file, container) {
+  const { readVideoMetadata } = await import('./vidmeta-engine.js');
+  container.innerHTML = '<div class="meta-notice">Loading metadata library...</div>';
+  const metadata = await readVideoMetadata(file);
+  container.innerHTML = '';
+
+  if (metadata._empty) {
+    container.innerHTML = '<div class="meta-notice">No metadata found in this video.</div>';
+    return;
+  }
+
+  const raw = metadata._tracks || {};
+  const gen = raw.general || {};
+  const vid = raw.video || {};
+  const aud = raw.audio || {};
+
+  // Skip internal/redundant keys and fields already in summary
+  const skipKeys = new Set([
+    '@type', '@typeorder', 'DataSize', 'FooterSize', 'HeaderSize',
+    'StreamSize', 'FileSize', 'StreamOrder', 'ID', 'UniqueID',
+    'extra', 'Proportion', 'Sampled_Width', 'Sampled_Height',
+    'Stored_Width', 'Stored_Height', 'Source',
+    // Already in summary line:
+    'Duration', 'Width', 'Height',
+  ]);
+
+  const friendlyName = (key) => key
+    .replace(/_/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\bString\b/g, '').replace(/\bNum\b/, '#')
+    .replace(/\s+/g, ' ').trim();
+
+  const friendlyValue = (key, val) => {
+    if (val === undefined || val === null || val === '') return null;
+    if (typeof val === 'object') return null;
+    const s = String(val);
+    // Format large numbers that look like bitrates
+    if (/BitRate|OverallBitRate/.test(key) && /^\d+$/.test(s)) {
+      const n = Number(s);
+      if (n >= 1e6) return (n / 1e6).toFixed(1) + ' Mbps';
+      if (n >= 1e3) return Math.round(n / 1e3) + ' kbps';
+    }
+    // Format sampling rate
+    if (/SamplingRate/.test(key) && /^\d+$/.test(s)) {
+      return (Number(s) / 1000).toFixed(1) + ' kHz';
+    }
+    // Format frame rate
+    if (/FrameRate/.test(key) && !isNaN(s)) {
+      return Number(s).toFixed(3).replace(/0+$/, '').replace(/\.$/, '') + ' fps';
+    }
+    return s;
+  };
+
+  // Resolve GPS location from raw general track
+  const gps = extractVideoGps(gen);
+  const locationEntries = [];
+  if (gps) {
+    locationEntries.push(['Coordinates', gps.lat.toFixed(4) + ', ' + gps.lon.toFixed(4)]);
+    try {
+      const { nearestCity } = await import('./cities-geo.js');
+      const loc = nearestCity(gps.lat, gps.lon);
+      if (loc) {
+        const place = loc.region
+          ? loc.city + ', ' + loc.region + ', ' + loc.country
+          : loc.city + ', ' + loc.country;
+        locationEntries.push(['Location', loc.distance < 10 ? place : '~' + loc.distance + ' km from ' + place]);
+      }
+    } catch { /* non-fatal */ }
+  }
+
+  const sections = [
+    { label: 'General', data: gen },
+    { label: 'Video', data: vid },
+    { label: 'Audio', data: aud },
+  ];
+
+  for (const sec of sections) {
+    const entries = Object.entries(sec.data)
+      .filter(([k]) => !skipKeys.has(k) && typeof sec.data[k] !== 'object')
+      .map(([k, v]) => [friendlyName(k), friendlyValue(k, v)])
+      .filter(([, v]) => v !== null);
+    if (entries.length === 0) continue;
+
+    const group = document.createElement('div');
+    group.className = 'route-meta-compact-group';
+    const title = document.createElement('div');
+    title.className = 'route-meta-compact-title';
+    title.textContent = sec.label;
+    group.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'route-meta-compact-grid';
+    for (const [label, value] of entries) {
+      const cell = document.createElement('div');
+      cell.className = 'route-meta-compact-cell';
+      cell.innerHTML = '<span class="route-meta-compact-key">' + esc(label) + '</span> ' +
+        '<span class="route-meta-compact-val">' + esc(value) + '</span>';
+      grid.appendChild(cell);
+    }
+    group.appendChild(grid);
+    container.appendChild(group);
+  }
+
+  // Add location section if GPS found
+  if (locationEntries.length > 0) {
+    const group = document.createElement('div');
+    group.className = 'route-meta-compact-group';
+    const title = document.createElement('div');
+    title.className = 'route-meta-compact-title';
+    title.textContent = 'Location';
+    group.appendChild(title);
+    const grid = document.createElement('div');
+    grid.className = 'route-meta-compact-grid';
+    for (const [label, value] of locationEntries) {
+      const cell = document.createElement('div');
+      cell.className = 'route-meta-compact-cell';
+      cell.innerHTML = '<span class="route-meta-compact-key">' + esc(label) + '</span> ' +
+        '<span class="route-meta-compact-val">' + esc(value) + '</span>';
+      grid.appendChild(cell);
+    }
+    group.appendChild(grid);
+    container.appendChild(group);
+  }
+}
+
+async function renderInlineImageMeta(file, container) {
+  const { readMetadata } = await import('./exif-engine.js');
+  container.innerHTML = '<div class="meta-notice">Loading metadata...</div>';
+  const metadata = await readMetadata(file);
+  container.innerHTML = '';
+
+  if (metadata._empty) {
+    container.innerHTML = '<div class="meta-notice">No metadata found in this image.</div>';
+    return;
+  }
+
+  // Resolve GPS to location name
+  const lat = metadata.gps?.['Latitude'], lon = metadata.gps?.['Longitude'];
+  if (lat != null && lon != null) {
+    try {
+      const { nearestCity } = await import('./cities-geo.js');
+      const loc = nearestCity(lat, lon);
+      if (loc) {
+        const place = loc.region
+          ? loc.city + ', ' + loc.region + ', ' + loc.country
+          : loc.city + ', ' + loc.country;
+        metadata.gps['Location'] = loc.distance < 10
+          ? place
+          : '~' + loc.distance + ' km from ' + place;
+      }
+    } catch { /* cities-geo load failure is non-fatal */ }
+  }
+
+  // Fields already in the summary line
+  const skipFields = new Set(['Width', 'Height', 'File Size']);
+  const groupLabels = { basic: 'Basic', camera: 'Camera', settings: 'Settings', dates: 'Dates', gps: 'GPS', description: 'Description' };
+
+  for (const [groupKey, label] of Object.entries(groupLabels)) {
+    const groupData = metadata[groupKey];
+    if (!groupData || typeof groupData !== 'object') continue;
+    const entries = Object.entries(groupData).filter(([k, v]) => v !== null && v !== undefined && !skipFields.has(k));
+    if (entries.length === 0) continue;
+
+    const group = document.createElement('div');
+    group.className = 'route-meta-compact-group';
+    const title = document.createElement('div');
+    title.className = 'route-meta-compact-title';
+    title.textContent = label;
+    group.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'route-meta-compact-grid';
+    for (const [field, value] of entries) {
+      const cell = document.createElement('div');
+      cell.className = 'route-meta-compact-cell';
+      const displayVal = field === 'File Size' ? formatSize(value) : String(value);
+      cell.innerHTML = '<span class="route-meta-compact-key">' + esc(field) + '</span> ' +
+        '<span class="route-meta-compact-val">' + esc(displayVal) + '</span>';
+      grid.appendChild(cell);
+    }
+    group.appendChild(grid);
+    container.appendChild(group);
+  }
+}
+
 export function initSmartDrop() {
   const dropZone = document.getElementById('smart-drop');
   const fileInput = document.getElementById('smart-file-input');
@@ -1385,10 +1655,51 @@ export function initSmartDrop() {
       routePanel.appendChild(info);
     }
 
-    // Async metadata fill-in
+    // Async metadata fill-in + expandable chevron
     if (isSingle && inlineMetaEl) {
-      getMediaMeta(files[0], dominant).then(parts => {
-        if (parts.length > 0) inlineMetaEl.textContent = parts.join(' \u00b7 ');
+      const metaFile = files[0], metaMime = dominant;
+      const chevron = document.createElement('span');
+      chevron.className = 'route-meta-chevron';
+      chevron.textContent = '\u25b8';
+
+      const displayParts = [];
+      const refreshLine = () => {
+        inlineMetaEl.textContent = displayParts.join(' \u00b7 ');
+        inlineMetaEl.appendChild(chevron);
+        if (!inlineMetaEl.classList.contains('route-inline-meta--expandable')) {
+          inlineMetaEl.classList.add('route-inline-meta--expandable');
+          inlineMetaEl.addEventListener('click', () => {
+            runInlineMetadata(metaFile, metaMime, inlineMetaEl, chevron);
+          });
+        }
+      };
+
+      getMediaMeta(metaFile, metaMime).then(async (parts) => {
+        if (parts.length === 0) return;
+        displayParts.push(...parts.filter(p => typeof p === 'string'));
+        refreshLine();
+
+        // For video: enhance with FPS + GPS from mediainfo (slower, WASM)
+        if (parts._videoFile) {
+          try {
+            const { readVideoMetadata } = await import('./vidmeta-engine.js');
+            const md = await readVideoMetadata(parts._videoFile);
+            const fps = md.video?.['Frame Rate'];
+            if (fps) { displayParts.push(fps); refreshLine(); }
+            const gps = extractVideoGps(md._tracks?.general);
+            if (gps) {
+              const { nearestCity } = await import('./cities-geo.js');
+              const loc = nearestCity(gps.lat, gps.lon);
+              if (loc) {
+                const place = loc.region
+                  ? loc.city + ', ' + loc.region + ', ' + loc.country
+                  : loc.city + ', ' + loc.country;
+                displayParts.push(loc.distance < 10 ? place : 'near ' + place);
+                refreshLine();
+              }
+            }
+          } catch { /* mediainfo enhancement is non-fatal */ }
+        }
       });
     }
 
@@ -1418,14 +1729,17 @@ export function initSmartDrop() {
       routePanel.appendChild(sec);
     }
 
-    if (tools.length > 0) {
+    const filteredTools = isSingle
+      ? tools.filter(r => r.href !== '/video-metadata' && r.href !== '/image-metadata')
+      : tools;
+    if (filteredTools.length > 0) {
       const sec = document.createElement('div');
       sec.className = 'route-section';
       const label = document.createElement('div');
       label.className = 'route-section-label';
       label.textContent = 'Tools';
       sec.appendChild(label);
-      for (const r of tools) {
+      for (const r of filteredTools) {
         const btn = document.createElement('button');
         btn.className = 'route-option';
         btn.dataset.href = r.href;
