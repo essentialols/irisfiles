@@ -27,9 +27,9 @@ export async function remuxMovToMp4(file, onProgress) {
   // Find ftyp box (almost always the very first box)
   let found = false;
   let pos = 0;
-  while (pos + 8 <= bytes.length && pos < 4096) {
+  while (pos + 8 <= bytes.length) {
     const size = view.getUint32(pos);
-    if (size < 8) break;
+    if (size < 8 || size > bytes.length) break;
     const type = chr4(bytes, pos + 4);
 
     if (type === 'ftyp') {
