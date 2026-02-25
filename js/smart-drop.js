@@ -306,7 +306,7 @@ function detectVideoCodec(file) {
     // WebM: usually VP8/VP9/AV1 but can't tell from first 64 bytes easily
     if (str.includes('\x1a\x45\xdf\xa3')) return 'VP8/VP9';
     return null;
-  }).catch(() => null);
+  }).catch(err => { console.warn('Codec detection failed:', err); return null; });
 }
 
 async function extractVideoFrames(file, container, count) {
