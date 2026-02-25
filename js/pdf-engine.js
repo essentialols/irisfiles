@@ -63,7 +63,9 @@ export async function imagesToPdf(files, onProgress, quality = 0.92) {
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;
-    canvas.getContext('2d').drawImage(img, 0, 0);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get canvas context');
+    ctx.drawImage(img, 0, 0);
     const isPng = file.mime === 'image/png';
     const dataUrl = canvas.toDataURL(isPng ? 'image/png' : 'image/jpeg', isPng ? undefined : quality);
     doc.addImage(dataUrl, isPng ? 'PNG' : 'JPEG', 0, 0, w, h);

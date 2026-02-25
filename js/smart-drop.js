@@ -315,6 +315,7 @@ async function renderPdfPreview(file, container) {
     canvas.className = 'route-preview-img';
     canvas.style.background = '#fff';
     const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get canvas context');
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     await page.render({ canvasContext: ctx, viewport }).promise;
@@ -412,6 +413,7 @@ async function extractVideoFrames(file, container, count) {
       canvas.height = frameH;
       canvas.className = 'route-frame';
       const ctx = canvas.getContext('2d');
+      if (!ctx) continue;
       ctx.drawImage(v, 0, 0, frameW, frameH);
       container.appendChild(canvas);
     }
