@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF OCR - Extract Text from Scanned PDFs | IrisFiles</title>
+  <meta name="description" content="Extract text from scanned PDFs using OCR, entirely in your browser. Supports 15 languages. No upload required. Private and free.">
+  <meta property="og:title" content="PDF OCR - Extract Text from Scanned PDFs | IrisFiles">
+  <meta property="og:description" content="Extract text from scanned PDFs using OCR, entirely in your browser. Supports 15 languages. No upload required. Private and free.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://irisfiles.com/pdf-ocr">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="PDF OCR - Extract Text from Scanned PDFs | IrisFiles">
+  <meta name="twitter:description" content="Extract text from scanned PDFs using OCR, entirely in your browser. Supports 15 languages. No upload required. Private and free.">
+  <meta property="og:image" content="https://irisfiles.com/img/og-default.png">
+  <meta name="twitter:image" content="https://irisfiles.com/img/og-default.png">
+  <link rel="canonical" href="https://irisfiles.com/pdf-ocr">
+  <link rel="stylesheet" href="css/style.css?v=2">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "PDF OCR - IrisFiles",
+      "url": "https://irisfiles.com/pdf-ocr",
+      "description": "Extract text from scanned PDF documents using OCR entirely in your browser. Supports 15 languages. No server upload required.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How does PDF OCR work in the browser?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "IrisFiles first tries to extract embedded text from your PDF using PDF.js. For pages that contain only scanned images, it renders them at 200 DPI, preprocesses them for clarity, and runs Tesseract OCR entirely in your browser using WebAssembly. No data is ever sent to a server."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What languages are supported for OCR?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "IrisFiles supports 15 languages for OCR: English, German, French, Spanish, Italian, Portuguese, Dutch, Polish, Russian, Japanese, Chinese (Simplified and Traditional), Korean, Arabic, and Hindi. Language models are downloaded on first use and cached for future sessions."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is my PDF uploaded to any server?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. IrisFiles processes everything in your browser using WebAssembly. Your PDF files never leave your device. This makes it safe even for confidential or sensitive documents."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does the first OCR take longer?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The first time you use OCR, IrisFiles downloads the language model (typically 2-5 MB). This is cached in your browser, so subsequent OCR runs start much faster. The OCR engine itself also needs to initialize its WebAssembly runtime on first use."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What if my PDF already has selectable text?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "IrisFiles automatically detects pages with embedded text and extracts it directly, without running OCR. Only pages that lack text content (scanned images) go through the OCR pipeline. This hybrid approach is faster and more accurate."
+          }
+        }
+      ]
+    }
+  ]
+  </script>
+</head>
+<body>
+  <header class="header">
+    <div class="container container--wide">
+      <a href="/" class="logo">Iris<span>Files</span></a>
+      <nav class="nav">
+        <a href="/about">About</a>
+        <a href="https://ko-fi.com/irisfiles" class="support-btn" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1.5a2.5 2.5 0 010 5H17"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z" fill="currentColor" stroke="none" opacity=".15"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3" opacity=".6"/></svg> Support this project</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> Back</a>
+    <div id="drop-zone" class="drop-zone">
+      <h1 class="drop-zone__title">PDF OCR privately.</h1>
+      <p class="drop-zone__subtitle">Extract text from scanned PDFs. Everything runs in your browser.</p>
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M16 24h16M16 30h10"/></svg>
+      <p>Drop a PDF file here, or <strong>click to browse</strong></p>
+      <p class="drop-zone__disclaimer">Provided as-is with no warranty. Always keep backups of your original files.</p>
+      <input type="file" id="file-input" accept=".pdf,application/pdf">
+    </div>
+
+    <div class="controls">
+      <div class="ocr-lang-picker">
+        <label for="ocr-lang">Language:</label>
+        <select id="ocr-lang"></select>
+      </div>
+    </div>
+
+    <div id="file-list" class="file-list"></div>
+
+    <div class="batch-actions">
+      <button id="action-btn" class="btn btn--primary" style="display:none">Extract Text</button>
+      <button id="clear-all" class="btn btn--secondary" style="display:none">Clear</button>
+    </div>
+
+    <div id="ocr-progress" class="ocr-progress" style="display:none">
+      <div id="ocr-progress-status" class="ocr-progress-status">Preparing...</div>
+      <div class="route-convert-progress">
+        <div id="ocr-progress-bar" class="route-convert-bar"></div>
+      </div>
+    </div>
+
+    <div id="ocr-results" class="ocr-results" style="display:none">
+      <div id="ocr-summary" class="ocr-summary"></div>
+      <textarea id="ocr-results-text" class="ocr-results-textarea" readonly rows="16"></textarea>
+      <div class="ocr-results-actions">
+        <button id="ocr-copy" class="btn btn--primary">Copy to Clipboard</button>
+        <button id="ocr-download" class="btn btn--secondary">Download as TXT</button>
+      </div>
+    </div>
+
+    <div class="related-tools">
+      <h2>Related Tools</h2>
+      <div class="related-tools__links">
+        <a href="/pdf-to-jpg">PDF to JPG</a>
+        <a href="/pdf-to-png">PDF to PNG</a>
+        <a href="/split-pdf">Split PDF</a>
+      </div>
+    </div>
+
+    <section class="faq">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-item">
+        <button class="faq-question">How does PDF OCR work in the browser?</button>
+        <div class="faq-answer">
+          <p>IrisFiles first tries to extract embedded text from your PDF using PDF.js. For pages that contain only scanned images, it renders them at 200 DPI, preprocesses them for clarity, and runs Tesseract OCR entirely in your browser using WebAssembly. No data is ever sent to a server.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">What languages are supported for OCR?</button>
+        <div class="faq-answer">
+          <p>IrisFiles supports 15 languages: English, German, French, Spanish, Italian, Portuguese, Dutch, Polish, Russian, Japanese, Chinese (Simplified and Traditional), Korean, Arabic, and Hindi. Language models are downloaded on first use and cached for future sessions.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Is my PDF uploaded to any server?</button>
+        <div class="faq-answer">
+          <p>No. IrisFiles processes everything in your browser using WebAssembly. Your PDF files never leave your device. This makes it safe even for confidential or sensitive documents.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Why does the first OCR take longer?</button>
+        <div class="faq-answer">
+          <p>The first time you use OCR, IrisFiles downloads the language model (typically 2-5 MB). This is cached in your browser, so subsequent OCR runs start much faster. The OCR engine itself also needs to initialize its WebAssembly runtime on first use.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">What if my PDF already has selectable text?</button>
+        <div class="faq-answer">
+          <p>IrisFiles automatically detects pages with embedded text and extracts it directly, without running OCR. Only pages that lack text content (scanned images) go through the OCR pipeline. This hybrid approach is faster and more accurate.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="/">All Converters</a>
+        <a href="/pdf-to-jpg">PDF to JPG</a>
+        <a href="/pdf-to-png">PDF to PNG</a>
+        <a href="/merge-pdf">Merge PDF</a>
+        <a href="/about">About</a>
+      </div>
+      <p>IrisFiles. All processing happens in your browser.</p>
+    </div>
+  </footer>
+
+  <div id="converter-config" data-pdf-mode="ocr"></div>
+  <script type="module" src="js/ocr-boot.js"></script>
+</body>
+</html>
