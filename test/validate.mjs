@@ -50,6 +50,7 @@ const PAGES = [
   '/mobi-to-txt', '/mobi-to-pdf',
   '/compress-audio',
   '/video-metadata',
+  '/pdf-ocr',
   '/about', '/privacy'
 ];
 
@@ -191,7 +192,7 @@ async function globalChecks() {
   const urls = [];
   let m;
   while ((m = locRe.exec(sitemap)) !== null) urls.push(m[1]);
-  ok(urls.length === 132, `sitemap.xml: has ${urls.length} URLs (expected 132)`);
+  ok(urls.length === 133, `sitemap.xml: has ${urls.length} URLs (expected 133)`);
 
   // each sitemap URL corresponds to a real page
   for (const url of urls) {

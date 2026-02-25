@@ -38,7 +38,7 @@ const ROUTES = {
   'image/tiff':  [{ label: 'Convert to JPG', href: '/tiff-to-jpg' }, { label: 'Convert to PNG', href: '/tiff-to-png' }, { label: 'Convert to WebP', href: '/tiff-to-webp' }, { label: 'Convert to PDF', href: '/tiff-to-pdf' }, { label: 'View Metadata', href: '/image-metadata' }, { label: 'Compress', href: '/compress' }, { label: 'Resize', href: '/resize-image' }, { label: 'Strip EXIF', href: '/strip-exif' }],
   'image/x-icon': [{ label: 'Convert to JPG', href: '/ico-to-jpg' }, { label: 'Convert to PNG', href: '/ico-to-png' }, { label: 'Convert to WebP', href: '/ico-to-webp' }, { label: 'Convert to PDF', href: '/ico-to-pdf' }, { label: 'View Metadata', href: '/image-metadata' }, { label: 'Compress', href: '/compress' }, { label: 'Resize', href: '/resize-image' }, { label: 'Strip EXIF', href: '/strip-exif' }],
   'image/svg+xml': [{ label: 'Convert to JPG', href: '/svg-to-jpg' }, { label: 'Convert to PNG', href: '/svg-to-png' }, { label: 'Convert to WebP', href: '/svg-to-webp' }, { label: 'Convert to PDF', href: '/svg-to-pdf' }, { label: 'View Metadata', href: '/image-metadata' }, { label: 'Compress', href: '/compress' }, { label: 'Resize', href: '/resize-image' }, { label: 'Strip EXIF', href: '/strip-exif' }],
-  'application/pdf': [{ label: 'Convert to JPG', href: '/pdf-to-jpg' }, { label: 'Convert to PNG', href: '/pdf-to-png' }, { label: 'Merge PDFs', href: '/merge-pdf' }, { label: 'Split PDF', href: '/split-pdf' }],
+  'application/pdf': [{ label: 'Convert to JPG', href: '/pdf-to-jpg' }, { label: 'Convert to PNG', href: '/pdf-to-png' }, { label: 'Merge PDFs', href: '/merge-pdf' }, { label: 'Split PDF', href: '/split-pdf' }, { label: 'Extract Text (OCR)', href: '/pdf-ocr' }],
   'video/mp4':       [{ label: 'Convert to WebM', href: '/mp4-to-webm' }, { label: 'Convert to MOV', href: '/mp4-to-mov' }, { label: 'Convert to AVI', href: '/mp4-to-avi' }, { label: 'Convert to MKV', href: '/mp4-to-mkv' }, { label: 'Convert to GIF', href: '/mp4-to-gif' }, { label: 'View Metadata', href: '/video-metadata' }, { label: 'Compress', href: '/compress-video' }],
   'video/webm':      [{ label: 'Convert to MP4', href: '/webm-to-mp4' }, { label: 'Convert to MOV', href: '/webm-to-mov' }, { label: 'Convert to AVI', href: '/webm-to-avi' }, { label: 'Convert to MKV', href: '/webm-to-mkv' }, { label: 'Convert to GIF', href: '/webm-to-gif' }, { label: 'View Metadata', href: '/video-metadata' }, { label: 'Compress', href: '/compress-video' }],
   'video/quicktime': [{ label: 'Convert to MP4', href: '/mov-to-mp4' }, { label: 'Convert to WebM', href: '/mov-to-webm' }, { label: 'Convert to AVI', href: '/mov-to-avi' }, { label: 'Convert to MKV', href: '/mov-to-mkv' }, { label: 'Convert to GIF', href: '/mov-to-gif' }, { label: 'View Metadata', href: '/video-metadata' }, { label: 'Compress', href: '/compress-video' }],
@@ -1207,6 +1207,171 @@ async function runInlineConversion(file, sourceMime, resolved, routePanel, onDis
   }
 }
 
+async function runInlineOcr(file, routePanel, onDismiss) {
+  routePanel.querySelectorAll('.route-section').forEach(s => s.style.display = 'none');
+  const prev = routePanel.querySelector('.route-inline-ocr');
+  if (prev) prev.remove();
+
+  const wrap = document.createElement('div');
+  wrap.className = 'route-inline-ocr';
+  wrap.style.textAlign = 'left';
+  wrap.style.paddingTop = '0.5rem';
+  routePanel.appendChild(wrap);
+
+  // Settings phase: language picker + extract button
+  const { getAvailableLanguages, getCachedLanguages } = await import('./ocr-engine.js');
+  const languages = getAvailableLanguages();
+  let cached = [];
+  try { cached = await getCachedLanguages(); } catch {}
+
+  const settingsDiv = document.createElement('div');
+  settingsDiv.className = 'ocr-inline-settings';
+
+  const langLabel = document.createElement('label');
+  langLabel.textContent = 'Language: ';
+  langLabel.style.fontSize = '0.85rem';
+  langLabel.style.fontWeight = '500';
+  const langSel = document.createElement('select');
+  langSel.className = 'ocr-lang-select';
+  for (const lang of languages) {
+    const opt = document.createElement('option');
+    opt.value = lang.code;
+    opt.textContent = lang.name + ' (' + lang.size + ')' + (cached.includes(lang.code) ? ' (cached)' : '');
+    langSel.appendChild(opt);
+  }
+  langLabel.appendChild(langSel);
+  settingsDiv.appendChild(langLabel);
+
+  const extractBtn = document.createElement('button');
+  extractBtn.className = 'btn btn--primary';
+  extractBtn.textContent = 'Extract Text';
+  extractBtn.style.marginLeft = '0.75rem';
+  settingsDiv.appendChild(extractBtn);
+  wrap.appendChild(settingsDiv);
+
+  // Progress area (hidden initially)
+  const statusEl = document.createElement('div');
+  statusEl.className = 'ocr-progress-status';
+  statusEl.style.display = 'none';
+  wrap.appendChild(statusEl);
+
+  const progressWrap = document.createElement('div');
+  progressWrap.className = 'route-convert-progress';
+  progressWrap.style.display = 'none';
+  const bar = document.createElement('div');
+  bar.className = 'route-convert-bar';
+  progressWrap.appendChild(bar);
+  wrap.appendChild(progressWrap);
+
+  // Results area (hidden initially)
+  const resultsDiv = document.createElement('div');
+  resultsDiv.style.display = 'none';
+  wrap.appendChild(resultsDiv);
+
+  let worker = null;
+
+  extractBtn.addEventListener('click', async () => {
+    extractBtn.disabled = true;
+    extractBtn.textContent = 'Processing...';
+    statusEl.style.display = '';
+    progressWrap.style.display = '';
+    bar.style.width = '0%';
+    bar.classList.remove('done');
+
+    try {
+      const { ocrPdf } = await import('./ocr-engine.js');
+      const result = await ocrPdf(file, {
+        lang: langSel.value,
+        onPageProgress(pageNum, total, status) {
+          statusEl.textContent = 'Page ' + pageNum + '/' + total + ': ' + status;
+        },
+        onOverallProgress(pct) {
+          bar.style.width = Math.round(pct * 100) + '%';
+        },
+      });
+
+      bar.style.width = '100%';
+      bar.classList.add('done');
+      statusEl.style.display = 'none';
+      progressWrap.style.display = 'none';
+      settingsDiv.style.display = 'none';
+
+      const textPages = result.pages.filter(p => p.method === 'text').length;
+      const ocrPages = result.pages.filter(p => p.method === 'ocr').length;
+
+      const summary = document.createElement('div');
+      summary.className = 'ocr-summary';
+      summary.textContent = result.pages.length + ' pages processed (' + textPages + ' text, ' + ocrPages + ' OCR)';
+      resultsDiv.appendChild(summary);
+
+      const textarea = document.createElement('textarea');
+      textarea.className = 'ocr-results-textarea';
+      textarea.readOnly = true;
+      textarea.rows = 12;
+      textarea.value = result.fullText;
+      resultsDiv.appendChild(textarea);
+
+      const actionsRow = document.createElement('div');
+      actionsRow.className = 'ocr-results-actions';
+
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'btn btn--primary';
+      copyBtn.textContent = 'Copy to Clipboard';
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(textarea.value).then(() => {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => { copyBtn.textContent = 'Copy to Clipboard'; }, 1500);
+        });
+      });
+      actionsRow.appendChild(copyBtn);
+
+      const dlBtn = document.createElement('button');
+      dlBtn.className = 'btn btn--secondary';
+      dlBtn.textContent = 'Download as TXT';
+      dlBtn.addEventListener('click', () => {
+        const blob = new Blob([textarea.value], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (file.name || 'ocr').replace(/\.[^.]+$/, '') + '.txt';
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+      actionsRow.appendChild(dlBtn);
+      resultsDiv.appendChild(actionsRow);
+
+      // Navigation buttons
+      const navRow = document.createElement('div');
+      navRow.className = 'route-convert-actions';
+      navRow.style.marginTop = '0.75rem';
+
+      const anotherBtn = document.createElement('button');
+      anotherBtn.className = 'btn btn--secondary';
+      anotherBtn.textContent = 'Extract another file';
+      anotherBtn.addEventListener('click', () => {
+        wrap.remove();
+        routePanel.querySelectorAll('.route-section').forEach(s => s.style.display = '');
+      });
+      navRow.appendChild(anotherBtn);
+
+      const newBtn = document.createElement('button');
+      newBtn.className = 'btn btn--secondary';
+      newBtn.textContent = 'Drop new file';
+      newBtn.addEventListener('click', onDismiss);
+      navRow.appendChild(newBtn);
+      resultsDiv.appendChild(navRow);
+
+      resultsDiv.style.display = '';
+    } catch (err) {
+      statusEl.textContent = 'Error: ' + (err.message || 'OCR failed');
+      bar.style.width = '100%';
+      bar.style.background = 'var(--danger)';
+      extractBtn.disabled = false;
+      extractBtn.textContent = 'Try Again';
+    }
+  });
+}
+
 async function runInlineMetadata(file, mime, metaEl, chevron) {
   const existing = metaEl.nextElementSibling;
   if (existing && existing.classList.contains('route-inline-meta-panel')) {
@@ -1426,6 +1591,15 @@ async function renderInlineImageMeta(file, container) {
   }
 }
 
+function parsePdfDate(s) {
+  if (!s) return s;
+  const raw = s.replace(/^D:/, '').replace(/'/g, '');
+  const m = raw.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})?/);
+  if (!m) return raw;
+  const [, y, mo, d, h, mi, sec] = m;
+  return y + '-' + mo + '-' + d + ' ' + h + ':' + mi + (sec ? ':' + sec : '');
+}
+
 async function renderInlinePdfMeta(file, container) {
   container.innerHTML = '<div class="meta-notice">Loading PDF metadata...</div>';
   const pdfjs = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.624/build/pdf.min.mjs');
@@ -1443,8 +1617,8 @@ async function renderInlinePdfMeta(file, container) {
   if (info.Subject) entries.push(['Subject', info.Subject]);
   if (info.Creator) entries.push(['Creator', info.Creator]);
   if (info.Producer) entries.push(['Producer', info.Producer]);
-  if (info.CreationDate) entries.push(['Created', info.CreationDate.replace(/^D:/, '').replace(/'/g, '')]);
-  if (info.ModDate) entries.push(['Modified', info.ModDate.replace(/^D:/, '').replace(/'/g, '')]);
+  if (info.CreationDate) entries.push(['Created', parsePdfDate(info.CreationDate)]);
+  if (info.ModDate) entries.push(['Modified', parsePdfDate(info.ModDate)]);
   if (info.Keywords) entries.push(['Keywords', info.Keywords]);
   entries.push(['Pages', String(pdf.numPages)]);
 
@@ -1881,6 +2055,16 @@ export function initSmartDrop() {
 
     routePanel.querySelectorAll('.route-option').forEach(btn => {
       btn.addEventListener('click', async () => {
+        if (isSingle && btn.dataset.href === '/pdf-ocr') {
+          runInlineOcr(files[0], routePanel, () => {
+            for (const u of prevBlobUrls) URL.revokeObjectURL(u);
+            prevBlobUrls = [];
+            routePanel.innerHTML = '';
+            routePanel.style.display = 'none';
+            dropZone.classList.remove('compact');
+          });
+          return;
+        }
         const resolved = isSingle ? resolveEngine(dominant, btn.dataset.href) : null;
         if (resolved) {
           runInlineConversion(files[0], dominant, resolved, routePanel, () => {
