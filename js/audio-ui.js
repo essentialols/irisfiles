@@ -6,6 +6,7 @@
 import { convertAudio, convertAudioFFmpeg } from './audio-engine.js';
 import { formatSize, downloadBlob, downloadAsZip, outputFilename, validateFile, MAX_BATCH_SIZE } from './converter.js';
 import { loadPendingFiles } from './smart-drop.js';
+import { checkWorkload } from './device-tier.js';
 
 const FFMPEG_FORMATS = new Set(['ogg', 'flac', 'm4a', 'aac']);
 
@@ -80,6 +81,10 @@ function handleFiles(files) {
   if (toAdd.length < files.length) {
     showNotice(`Only added ${toAdd.length} of ${files.length} files (batch limit: ${MAX_BATCH_SIZE}).`);
   }
+  const largest = toAdd.reduce((mx, f) => Math.max(mx, f.size), 0);
+  const warn = checkWorkload({ fileSizeMb: largest / 1e6, batchSize: toAdd.length });
+  if (warn) showNotice(warn);
+
   for (const file of toAdd) {
     addFile(file);
   }
@@ -177,13 +182,14 @@ function updateFileItem(entry) {
 
   div.className = 'file-item' + (entry.status === 'done' ? ' done' : '');
   bar.style.width = entry.progress + '%';
-  bar.className = 'file-item__progress-bar';
+  bar.className = 'file-item__progress-bar'
+    + (entry.status === 'done' ? ' done' : '')
+    + (entry.status === 'error' ? ' error' : '');
 
   if (entry.status === 'processing') {
     status.textContent = 'Converting...';
     status.className = 'file-item__status';
   } else if (entry.status === 'done') {
-    bar.classList.add('done');
     let metaParts = [formatSize(entry.file.size)];
     if (entry.outputBlob) {
       metaParts.push('\u2192 ' + formatSize(entry.outputBlob.size));
@@ -206,7 +212,6 @@ function updateFileItem(entry) {
       removeFile(entry.id);
     });
   } else if (entry.status === 'error') {
-    bar.classList.add('error');
     bar.style.width = '100%';
     actions.innerHTML = `
       <span class="file-item__status error">${esc(entry.errorMsg || 'Error')}</span>

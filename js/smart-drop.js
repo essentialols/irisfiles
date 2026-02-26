@@ -1948,15 +1948,43 @@ export function initSmartDrop() {
       info.appendChild(det);
       routePanel.appendChild(info);
     } else {
-      // Multi-file: count + format label
+      // Multi-file: thumbnail grid (images) + count
       const info = document.createElement('div');
       info.className = 'route-file-info';
+      if (isImage) {
+        const grid = document.createElement('div');
+        grid.className = 'route-thumb-grid';
+        const show = Math.min(files.length, 6);
+        for (let i = 0; i < show; i++) {
+          const thumb = document.createElement('div');
+          thumb.className = 'route-thumb';
+          const img = document.createElement('img');
+          const blobUrl = URL.createObjectURL(files[i]);
+          prevBlobUrls.push(blobUrl);
+          img.src = blobUrl;
+          img.alt = files[i].name;
+          thumb.appendChild(img);
+          grid.appendChild(thumb);
+        }
+        if (files.length > 6) {
+          const more = document.createElement('div');
+          more.className = 'route-thumb route-thumb--more';
+          more.textContent = '+' + (files.length - 6);
+          grid.appendChild(more);
+        }
+        info.appendChild(grid);
+      }
       const det = document.createElement('div');
       det.className = 'route-file-details';
       const nameEl = document.createElement('div');
       nameEl.className = 'route-file-name';
       nameEl.textContent = files.length + ' ' + dominantInfo.label + ' files';
       det.appendChild(nameEl);
+      const totalSize = files.reduce((s, f) => s + f.size, 0);
+      const metaEl = document.createElement('div');
+      metaEl.className = 'route-file-meta';
+      metaEl.textContent = formatSize(totalSize) + ' total';
+      det.appendChild(metaEl);
       info.appendChild(det);
       routePanel.appendChild(info);
     }
