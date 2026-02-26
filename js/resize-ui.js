@@ -7,6 +7,7 @@
 import { resizeImage, getImageDimensions } from './resize-engine.js';
 import { formatSize, downloadBlob, downloadAsZip, outputFilename, validateFile, MAX_BATCH_SIZE } from './converter.js';
 import { loadPendingFiles } from './smart-drop.js';
+import { checkWorkload } from './device-tier.js';
 
 const CONCURRENCY = 2;
 const fileQueue = [];
@@ -90,7 +91,18 @@ export function init() {
           entry.outputName = null;
           entry.status = 'queued';
           entry.progress = 0;
-          updateFileItem(entry);
+          // Update queued state immediately in the UI before processing starts
+          const div = document.getElementById(`file-${entry.id}`);
+          if (div) {
+            div.className = 'file-item';
+            const actions = div.querySelector('.file-item__actions');
+            if (actions) actions.innerHTML = '<span class="file-item__status">Queued</span>';
+            const bar = div.querySelector('.file-item__progress-bar');
+            if (bar) {
+              bar.className = 'file-item__progress-bar';
+              bar.style.width = '0%';
+            }
+          }
         }
       }
       processQueue();
@@ -178,6 +190,10 @@ function handleFiles(files) {
   if (toAdd.length < files.length) {
     showNotice(`Only added ${toAdd.length} of ${files.length} files (batch limit: ${MAX_BATCH_SIZE}).`);
   }
+  const largest = toAdd.reduce((mx, f) => Math.max(mx, f.size), 0);
+  const warn = checkWorkload({ fileSizeMb: largest / 1e6, batchSize: toAdd.length });
+  if (warn) showNotice(warn);
+
   // Read dimensions from first file to seed the width/height inputs
   const isFirst = fileQueue.length === 0;
   for (const file of toAdd) {
@@ -306,13 +322,14 @@ function updateFileItem(entry) {
 
   div.className    = 'file-item' + (entry.status === 'done' ? ' done' : '');
   bar.style.width  = entry.progress + '%';
-  bar.className    = 'file-item__progress-bar';
+  bar.className    = 'file-item__progress-bar'
+    + (entry.status === 'done' ? ' done' : '')
+    + (entry.status === 'error' ? ' error' : '');
 
   if (entry.status === 'processing') {
     status.textContent = 'Resizing...';
     status.className   = 'file-item__status';
   } else if (entry.status === 'done') {
-    bar.classList.add('done');
     let metaParts = [formatSize(entry.file.size)];
     if (entry.outputBlob) {
       metaParts.push('\u2192 ' + formatSize(entry.outputBlob.size));
@@ -335,7 +352,6 @@ function updateFileItem(entry) {
       removeFile(entry.id);
     });
   } else if (entry.status === 'error') {
-    bar.classList.add('error');
     bar.style.width = '100%';
     actions.innerHTML = `
       <span class="file-item__status error">${esc(entry.errorMsg || 'Error')}</span>

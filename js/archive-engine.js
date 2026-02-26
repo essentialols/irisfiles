@@ -65,6 +65,7 @@ export async function createZip(files, onProgress) {
 export async function zipToFileList(file) {
   const buffer = await file.arrayBuffer();
   const raw = new Uint8Array(buffer);
+  if (typeof fflate === 'undefined') throw new Error('ZIP library not loaded. Please reload the page.');
   const unzipped = fflate.unzipSync(raw);
 
   const entries = [];

@@ -170,12 +170,13 @@ function updateFileItem(entry) {
 
   div.className = 'file-item' + (entry.status === 'done' ? ' done' : '');
   bar.style.width = entry.progress + '%';
-  bar.className = 'file-item__progress-bar';
+  bar.className = 'file-item__progress-bar'
+    + (entry.status === 'done' ? ' done' : '')
+    + (entry.status === 'error' ? ' error' : '');
 
   if (entry.status === 'processing') {
     actions.innerHTML = '<span class="file-item__status">Remuxing...</span>';
   } else if (entry.status === 'done') {
-    bar.classList.add('done');
     let metaParts = [];
     if (entry.outputBlob) {
       metaParts.push(formatSize(entry.file.size) + ' \u2192 ' + formatSize(entry.outputBlob.size));
@@ -197,7 +198,6 @@ function updateFileItem(entry) {
       handleClear();
     });
   } else if (entry.status === 'error') {
-    bar.classList.add('error');
     bar.style.width = '100%';
     actions.innerHTML = `
       <span class="file-item__status error">${esc(entry.errorMsg || 'Error')}</span>

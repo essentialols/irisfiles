@@ -6,6 +6,7 @@
 import { compressVideo, getVideoMetadata, MAX_VIDEO_SIZE, MAX_DURATION } from './vidconv-engine.js';
 import { formatSize, downloadBlob } from './converter.js';
 import { loadPendingFiles } from './smart-drop.js';
+import { checkWorkload } from './device-tier.js';
 
 let dropZone, fileInput, fileList, actionBtn, clearAllBtn;
 let qualitySelect, resolutionSelect;
@@ -81,6 +82,10 @@ async function handleFile(files) {
   }
 
   showFileItem(file, meta);
+
+  const warn = checkWorkload({ fileSizeMb: file.size / 1e6, isVideo: true });
+  if (warn) showNotice(warn);
+
   setStatus('Ready');
 
   if (actionBtn) { actionBtn.style.display = ''; actionBtn.disabled = false; }
@@ -205,6 +210,21 @@ function setProgress(pct) {
 function setStatus(msg) {
   const s = fileList.querySelector('.file-item__status');
   if (s) { s.textContent = msg; s.className = 'file-item__status'; }
+}
+
+function showNotice(msg) {
+  let notice = document.getElementById('cf-notice');
+  if (!notice) {
+    notice = document.createElement('div');
+    notice.id = 'cf-notice';
+    notice.className = 'notice';
+    const dropZone = document.getElementById('drop-zone');
+    dropZone.parentElement.insertBefore(notice, dropZone.nextSibling);
+  }
+  notice.textContent = msg;
+  notice.style.display = '';
+  clearTimeout(notice._timer);
+  notice._timer = setTimeout(() => { notice.style.display = 'none'; }, 5000);
 }
 
 function resetState() {
