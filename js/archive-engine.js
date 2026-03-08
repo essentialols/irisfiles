@@ -15,7 +15,12 @@ export async function extractZip(file, onProgress) {
   if (onProgress) onProgress(30);
 
   if (typeof fflate === 'undefined') throw new Error('ZIP library not loaded. Please reload the page.');
-  const unzipped = fflate.unzipSync(new Uint8Array(buffer));
+  let unzipped;
+  try {
+    unzipped = fflate.unzipSync(new Uint8Array(buffer));
+  } catch (e) {
+    throw new Error('Failed to extract ZIP: file may be corrupted or not a valid ZIP archive.');
+  }
   if (onProgress) onProgress(80);
 
   const entries = [];
@@ -68,7 +73,12 @@ export async function zipToFileList(file) {
   const buffer = await file.arrayBuffer();
   const raw = new Uint8Array(buffer);
   if (typeof fflate === 'undefined') throw new Error('ZIP library not loaded. Please reload the page.');
-  const unzipped = fflate.unzipSync(raw);
+  let unzipped;
+  try {
+    unzipped = fflate.unzipSync(raw);
+  } catch (e) {
+    throw new Error('Failed to read ZIP: file may be corrupted or not a valid ZIP archive.');
+  }
 
   const entries = [];
   for (const [name, data] of Object.entries(unzipped)) {
