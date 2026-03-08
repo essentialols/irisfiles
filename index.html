@@ -25,7 +25,7 @@
       "@type": "WebApplication",
       "name": "IrisFiles",
       "url": "https://irisfiles.com",
-      "description": "Privacy-first image converter. All conversion happens client-side using WebAssembly. Files never leave your browser.",
+      "description": "Privacy-first file converter. All conversion happens client-side using WebAssembly. Files never leave your browser.",
       "applicationCategory": "MultimediaApplication",
       "operatingSystem": "Any",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -40,7 +40,7 @@
           "name": "How is IrisFiles different from other online converters?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Most online converters upload your files to their servers for processing. IrisFiles runs entirely in your browser using WebAssembly technology. Your images never leave your device, making it the most private way to convert images online. In March 2025, the FBI warned about malicious online file converters that install malware. With IrisFiles, there's nothing to install and no server to trust."
+            "text": "Most online converters upload your files to their servers for processing. IrisFiles runs entirely in your browser using WebAssembly technology. Your files never leave your device, making it the most private way to convert files online. In March 2025, the FBI warned about malicious online file converters that install malware. With IrisFiles, there's nothing to install and no server to trust."
           }
         },
         {
@@ -56,7 +56,7 @@
           "name": "What formats are supported?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "IrisFiles supports images (HEIC, WebP, PNG, JPG, GIF, BMP, SVG, AVIF, TIFF, ICO), audio (MP3, WAV, OGG, FLAC, M4A, AAC), documents (EPUB, RTF, DOCX), fonts (TTF, OTF, WOFF), PDFs, video to GIF, and ZIP archives. All conversions happen in your browser."
+            "text": "IrisFiles supports images (HEIC, WebP, PNG, JPG, GIF, BMP, SVG, AVIF, TIFF, ICO), video (MP4, MOV, WebM, AVI, MKV, GIF), audio (MP3, WAV, OGG, FLAC, M4A, AAC), documents (EPUB, RTF, DOCX, MOBI), fonts (TTF, OTF, WOFF), PDFs, OCR, and ZIP tools. All conversions happen in your browser."
           }
         },
         {
@@ -103,6 +103,11 @@
     <div id="route-panel" class="route-panel" style="display:none"></div>
 
     <section class="tools-section">
+      <div class="tools-search">
+        <label class="tools-search__label" for="tools-filter">Find a conversion or tool</label>
+        <input id="tools-filter" class="tools-search__input" type="search" placeholder="Search by format, extension, or task (e.g. mp4, metadata, compress)">
+        <p id="tools-filter-summary" class="tools-search__summary" aria-live="polite"></p>
+      </div>
       <div class="convert-table">
         <div class="convert-group">Images</div>
         <div class="convert-row">
@@ -238,6 +243,7 @@
             <a href="/mov-to-gif" class="tool-link">GIF</a>
             <a href="/video-metadata" class="tool-link">Metadata</a>
             <a href="/compress-video" class="tool-link">Compress</a>
+            <a href="/video-speed" class="tool-link">Speed</a>
           </div>
         </div>
         <div class="convert-row">
@@ -251,6 +257,7 @@
             <a href="/avi-to-gif" class="tool-link">GIF</a>
             <a href="/video-metadata" class="tool-link">Metadata</a>
             <a href="/compress-video" class="tool-link">Compress</a>
+            <a href="/video-speed" class="tool-link">Speed</a>
           </div>
         </div>
         <div class="convert-row">
@@ -264,6 +271,7 @@
             <a href="/mkv-to-gif" class="tool-link">GIF</a>
             <a href="/video-metadata" class="tool-link">Metadata</a>
             <a href="/compress-video" class="tool-link">Compress</a>
+            <a href="/video-speed" class="tool-link">Speed</a>
           </div>
         </div>
         <div class="convert-row">
@@ -277,6 +285,7 @@
             <a href="/webm-to-gif" class="tool-link">GIF</a>
             <a href="/video-metadata" class="tool-link">Metadata</a>
             <a href="/compress-video" class="tool-link">Compress</a>
+            <a href="/video-speed" class="tool-link">Speed</a>
           </div>
         </div>
         <div class="convert-row">
@@ -290,6 +299,7 @@
             <a href="/mp4-to-gif" class="tool-link">GIF</a>
             <a href="/video-metadata" class="tool-link">Metadata</a>
             <a href="/compress-video" class="tool-link">Compress</a>
+            <a href="/video-speed" class="tool-link">Speed</a>
           </div>
         </div>
         <div class="convert-row">
@@ -462,7 +472,7 @@
       <div class="faq-item">
         <button class="faq-question">How is IrisFiles different from other online converters?</button>
         <div class="faq-answer">
-          <p>Most online converters upload your files to their servers for processing. IrisFiles runs entirely in your browser using WebAssembly technology. Your images never leave your device, making it the most private way to convert images online. In March 2025, the FBI warned about malicious online file converters that install malware. With IrisFiles, there's nothing to install and no server to trust.</p>
+          <p>Most online converters upload your files to their servers for processing. IrisFiles runs entirely in your browser using WebAssembly technology. Your files never leave your device, making it the most private way to convert files online. In March 2025, the FBI warned about malicious online file converters that install malware. With IrisFiles, there's nothing to install and no server to trust.</p>
         </div>
       </div>
       <div class="faq-item">
@@ -474,7 +484,7 @@
       <div class="faq-item">
         <button class="faq-question">What formats are supported?</button>
         <div class="faq-answer">
-          <p>IrisFiles supports images (HEIC, WebP, PNG, JPG, GIF, BMP, SVG, AVIF, TIFF, ICO), audio (MP3, WAV, OGG, FLAC, M4A, AAC), documents (EPUB, RTF, DOCX), fonts (TTF, OTF, WOFF), PDFs, video to GIF, and ZIP archives. All conversions happen in your browser.</p>
+          <p>IrisFiles supports images (HEIC, WebP, PNG, JPG, GIF, BMP, SVG, AVIF, TIFF, ICO), video (MP4, MOV, WebM, AVI, MKV, GIF), audio (MP3, WAV, OGG, FLAC, M4A, AAC), documents (EPUB, RTF, DOCX, MOBI), fonts (TTF, OTF, WOFF), PDFs, OCR, and ZIP tools. All conversions happen in your browser.</p>
         </div>
       </div>
       <div class="faq-item">

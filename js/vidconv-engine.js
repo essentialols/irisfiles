@@ -8,7 +8,7 @@
 import { ensureFFmpeg } from './ffmpeg-shared.js';
 
 // Guardrails
-export const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
+export const WARN_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB soft warning
 export const MAX_DURATION = 600; // 10 minutes
 
 const FORMATS = {
@@ -73,9 +73,6 @@ function applyQualityToArgs(args, quality) {
 }
 
 export async function convertVideo(file, targetFormat, onProgress, onStatus, opts = {}) {
-  if (file.size > MAX_VIDEO_SIZE) {
-    throw new Error(`File too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum is 100MB.`);
-  }
 
   const fmt = FORMATS[targetFormat];
   if (!fmt) throw new Error(`Unsupported target format: ${targetFormat}`);
@@ -137,9 +134,6 @@ export async function convertVideo(file, targetFormat, onProgress, onStatus, opt
  * @returns {Promise<Blob>}
  */
 export async function gifToVideo(file, targetFormat, onProgress, onStatus, opts = {}) {
-  if (file.size > MAX_VIDEO_SIZE) {
-    throw new Error(`File too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum is 100MB.`);
-  }
 
   const fmt = FORMATS[targetFormat];
   if (!fmt) throw new Error(`Unsupported target format: ${targetFormat}`);
@@ -204,9 +198,6 @@ const HEIGHTS = { '1080': 1080, '720': 720, '480': 480 };
  * @returns {Promise<Blob>}
  */
 export async function compressVideo(file, opts, onProgress, onStatus) {
-  if (file.size > MAX_VIDEO_SIZE) {
-    throw new Error(`File too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum is 100MB.`);
-  }
 
   if (onProgress) onProgress(5);
 
