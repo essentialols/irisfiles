@@ -7,6 +7,7 @@ import { convertAudio, convertAudioFFmpeg } from './audio-engine.js';
 import { formatSize, downloadBlob, downloadAsZip, outputFilename, validateFile, MAX_BATCH_SIZE } from './converter.js';
 import { loadPendingFiles } from './smart-drop.js';
 import { checkWorkload } from './device-tier.js';
+import { showPersistentNotice } from './notice-ui.js';
 
 const FFMPEG_FORMATS = new Set(['ogg', 'flac', 'm4a', 'aac']);
 
@@ -288,17 +289,7 @@ function updateBatchSummary() {
 }
 
 function showNotice(msg) {
-  let notice = document.getElementById('cf-notice');
-  if (!notice) {
-    notice = document.createElement('div');
-    notice.id = 'cf-notice';
-    notice.className = 'notice';
-    dropZone.parentElement.insertBefore(notice, dropZone.nextSibling);
-  }
-  notice.textContent = msg;
-  notice.style.display = '';
-  clearTimeout(notice._timer);
-  notice._timer = setTimeout(() => { notice.style.display = 'none'; }, 5000);
+  showPersistentNotice(dropZone, msg, { id: 'cf-notice', kind: 'warning' });
 }
 
 function esc(str) {

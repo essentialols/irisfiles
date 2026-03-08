@@ -3,10 +3,11 @@
  * Single-file, two-step flow with quality and resolution controls.
  */
 
-import { compressVideo, getVideoMetadata, MAX_VIDEO_SIZE, MAX_DURATION } from './vidconv-engine.js';
+import { compressVideo, getVideoMetadata, WARN_VIDEO_SIZE, MAX_DURATION } from './vidconv-engine.js';
 import { formatSize, downloadBlob } from './converter.js';
 import { loadPendingFiles } from './smart-drop.js';
 import { checkWorkload } from './device-tier.js';
+import { showPersistentNotice } from './notice-ui.js';
 
 let dropZone, fileInput, fileList, actionBtn, clearAllBtn;
 let qualitySelect, resolutionSelect;
@@ -67,10 +68,8 @@ async function handleFile(files) {
   resetState();
   currentFile = file;
 
-  if (file.size > MAX_VIDEO_SIZE) {
-    showFileItem(file, null);
-    showError(`File too large (${formatSize(file.size)}). Maximum is ${formatSize(MAX_VIDEO_SIZE)}.`);
-    return;
+  if (file.size > WARN_VIDEO_SIZE) {
+    showNotice(`Large file (${formatSize(file.size)}). This may be slow or crash your browser on low-memory devices.`);
   }
 
   const meta = await getVideoMetadata(file);
@@ -213,18 +212,7 @@ function setStatus(msg) {
 }
 
 function showNotice(msg) {
-  let notice = document.getElementById('cf-notice');
-  if (!notice) {
-    notice = document.createElement('div');
-    notice.id = 'cf-notice';
-    notice.className = 'notice';
-    const dropZone = document.getElementById('drop-zone');
-    dropZone.parentElement.insertBefore(notice, dropZone.nextSibling);
-  }
-  notice.textContent = msg;
-  notice.style.display = '';
-  clearTimeout(notice._timer);
-  notice._timer = setTimeout(() => { notice.style.display = 'none'; }, 5000);
+  showPersistentNotice(dropZone, msg, { id: 'cf-notice', kind: 'warning' });
 }
 
 function resetState() {

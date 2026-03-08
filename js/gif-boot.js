@@ -1,5 +1,6 @@
 import { videoToGif, DEFAULT_MAX_WIDTH, DEFAULT_FPS, DEFAULT_MAX_DURATION } from './gif-engine.js';
 import { formatSize, downloadBlob, snapTo } from './converter.js';
+import { applyPageUX } from './ux-page.js';
 
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
@@ -17,6 +18,7 @@ const progressDiv = document.getElementById('gif-progress');
 const resultDiv = document.getElementById('gif-result');
 
 let currentFile = null;
+applyPageUX();
 
 // Init sliders
 widthSlider.value = DEFAULT_MAX_WIDTH;

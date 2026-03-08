@@ -39,11 +39,11 @@ const ROUTES = {
   'image/x-icon': [{ label: 'Convert to JPG', href: '/ico-to-jpg' }, { label: 'Convert to PNG', href: '/ico-to-png' }, { label: 'Convert to WebP', href: '/ico-to-webp' }, { label: 'Convert to PDF', href: '/ico-to-pdf' }, { label: 'View Metadata', href: '/image-metadata' }, { label: 'Compress', href: '/compress' }, { label: 'Resize', href: '/resize-image' }, { label: 'Strip EXIF', href: '/strip-exif' }],
   'image/svg+xml': [{ label: 'Convert to JPG', href: '/svg-to-jpg' }, { label: 'Convert to PNG', href: '/svg-to-png' }, { label: 'Convert to WebP', href: '/svg-to-webp' }, { label: 'Convert to PDF', href: '/svg-to-pdf' }, { label: 'View Metadata', href: '/image-metadata' }, { label: 'Compress', href: '/compress' }, { label: 'Resize', href: '/resize-image' }, { label: 'Strip EXIF', href: '/strip-exif' }],
   'application/pdf': [{ label: 'Convert to JPG', href: '/pdf-to-jpg' }, { label: 'Convert to PNG', href: '/pdf-to-png' }, { label: 'Merge PDFs', href: '/merge-pdf' }, { label: 'Split PDF', href: '/split-pdf' }, { label: 'Extract Text (OCR)', href: '/pdf-ocr' }],
-  'video/mp4':       [{ label: 'Convert to WebM', href: '/mp4-to-webm' }, { label: 'Convert to MOV', href: '/mp4-to-mov' }, { label: 'Convert to AVI', href: '/mp4-to-avi' }, { label: 'Convert to MKV', href: '/mp4-to-mkv' }, { label: 'Convert to GIF', href: '/mp4-to-gif' }, { label: 'View Metadata', href: '/video-metadata' }, { label: 'Compress', href: '/compress-video' }],
-  'video/webm':      [{ label: 'Convert to MP4', href: '/webm-to-mp4' }, { label: 'Convert to MOV', href: '/webm-to-mov' }, { label: 'Convert to AVI', href: '/webm-to-avi' }, { label: 'Convert to MKV', href: '/webm-to-mkv' }, { label: 'Convert to GIF', href: '/webm-to-gif' }, { label: 'View Metadata', href: '/video-metadata' }, { label: 'Compress', href: '/compress-video' }],
-  'video/quicktime': [{ label: 'Convert to MP4', href: '/mov-to-mp4' }, { label: 'Convert to WebM', href: '/mov-to-webm' }, { label: 'Convert to AVI', href: '/mov-to-avi' }, { label: 'Convert to MKV', href: '/mov-to-mkv' }, { label: 'Convert to GIF', href: '/mov-to-gif' }, { label: 'View Metadata', href: '/video-metadata' }, { label: 'Compress', href: '/compress-video' }],
-  'video/x-msvideo': [{ label: 'Convert to MP4', href: '/avi-to-mp4' }, { label: 'Convert to WebM', href: '/avi-to-webm' }, { label: 'Convert to MOV', href: '/avi-to-mov' }, { label: 'Convert to MKV', href: '/avi-to-mkv' }, { label: 'Convert to GIF', href: '/avi-to-gif' }, { label: 'View Metadata', href: '/video-metadata' }, { label: 'Compress', href: '/compress-video' }],
-  'video/x-matroska':[{ label: 'Convert to MP4', href: '/mkv-to-mp4' }, { label: 'Convert to WebM', href: '/mkv-to-webm' }, { label: 'Convert to MOV', href: '/mkv-to-mov' }, { label: 'Convert to AVI', href: '/mkv-to-avi' }, { label: 'Convert to GIF', href: '/mkv-to-gif' }, { label: 'View Metadata', href: '/video-metadata' }, { label: 'Compress', href: '/compress-video' }],
+  'video/mp4':       [{ label: 'Convert to WebM', href: '/mp4-to-webm' }, { label: 'Convert to MOV', href: '/mp4-to-mov' }, { label: 'Convert to AVI', href: '/mp4-to-avi' }, { label: 'Convert to MKV', href: '/mp4-to-mkv' }, { label: 'Convert to GIF', href: '/mp4-to-gif' }, { label: 'View Metadata', href: '/video-metadata' }, { label: 'Compress', href: '/compress-video' }, { label: 'Time Lapse', href: '/video-speed' }, { label: 'Slow Motion', href: '/video-speed' }],
+  'video/webm':      [{ label: 'Convert to MP4', href: '/webm-to-mp4' }, { label: 'Convert to MOV', href: '/webm-to-mov' }, { label: 'Convert to AVI', href: '/webm-to-avi' }, { label: 'Convert to MKV', href: '/webm-to-mkv' }, { label: 'Convert to GIF', href: '/webm-to-gif' }, { label: 'View Metadata', href: '/video-metadata' }, { label: 'Compress', href: '/compress-video' }, { label: 'Time Lapse', href: '/video-speed' }, { label: 'Slow Motion', href: '/video-speed' }],
+  'video/quicktime': [{ label: 'Convert to MP4', href: '/mov-to-mp4' }, { label: 'Convert to WebM', href: '/mov-to-webm' }, { label: 'Convert to AVI', href: '/mov-to-avi' }, { label: 'Convert to MKV', href: '/mov-to-mkv' }, { label: 'Convert to GIF', href: '/mov-to-gif' }, { label: 'View Metadata', href: '/video-metadata' }, { label: 'Compress', href: '/compress-video' }, { label: 'Time Lapse', href: '/video-speed' }, { label: 'Slow Motion', href: '/video-speed' }],
+  'video/x-msvideo': [{ label: 'Convert to MP4', href: '/avi-to-mp4' }, { label: 'Convert to WebM', href: '/avi-to-webm' }, { label: 'Convert to MOV', href: '/avi-to-mov' }, { label: 'Convert to MKV', href: '/avi-to-mkv' }, { label: 'Convert to GIF', href: '/avi-to-gif' }, { label: 'View Metadata', href: '/video-metadata' }, { label: 'Compress', href: '/compress-video' }, { label: 'Time Lapse', href: '/video-speed' }, { label: 'Slow Motion', href: '/video-speed' }],
+  'video/x-matroska':[{ label: 'Convert to MP4', href: '/mkv-to-mp4' }, { label: 'Convert to WebM', href: '/mkv-to-webm' }, { label: 'Convert to MOV', href: '/mkv-to-mov' }, { label: 'Convert to AVI', href: '/mkv-to-avi' }, { label: 'Convert to GIF', href: '/mkv-to-gif' }, { label: 'View Metadata', href: '/video-metadata' }, { label: 'Compress', href: '/compress-video' }, { label: 'Time Lapse', href: '/video-speed' }, { label: 'Slow Motion', href: '/video-speed' }],
   'image/gif-video': [{ label: 'Convert to MP4', href: '/gif-to-mp4' }, { label: 'Convert to WebM', href: '/gif-to-webm' }, { label: 'Convert to MOV', href: '/gif-to-mov' }, { label: 'Convert to AVI', href: '/gif-to-avi' }, { label: 'Convert to MKV', href: '/gif-to-mkv' }],
   'audio/mpeg': [{ label: 'Convert to WAV', href: '/mp3-to-wav' }, { label: 'Convert to OGG', href: '/mp3-to-ogg' }, { label: 'Convert to FLAC', href: '/mp3-to-flac' }, { label: 'Convert to M4A', href: '/mp3-to-m4a' }, { label: 'Convert to AAC', href: '/mp3-to-aac' }, { label: 'Compress', href: '/compress-audio' }],
   'audio/wav':  [{ label: 'Convert to MP3', href: '/wav-to-mp3' }, { label: 'Convert to OGG', href: '/wav-to-ogg' }, { label: 'Convert to FLAC', href: '/wav-to-flac' }, { label: 'Convert to M4A', href: '/wav-to-m4a' }, { label: 'Convert to AAC', href: '/wav-to-aac' }, { label: 'Compress', href: '/compress-audio' }],
@@ -218,6 +218,53 @@ function formatDuration(s) {
   const min = Math.floor(s / 60);
   const sec = Math.floor(s % 60);
   return min + ':' + String(sec).padStart(2, '0');
+}
+
+function getFileExt(name) {
+  const i = (name || '').lastIndexOf('.');
+  return i > -1 ? name.slice(i + 1).toLowerCase() : '';
+}
+
+function getTypeLabel(mime) {
+  if (!mime) return 'File';
+  if (mime.startsWith('image/')) return 'Image';
+  if (mime.startsWith('video/')) return 'Video';
+  if (mime.startsWith('audio/')) return 'Audio';
+  if (mime.startsWith('font/')) return 'Font';
+  if (mime === 'application/pdf') return 'PDF';
+  if (mime.includes('zip') || mime === 'application/zip') return 'Archive';
+  if (mime.includes('wordprocessingml') || mime.includes('epub') || mime.includes('rtf') || mime.includes('mobipocket')) return 'Document';
+  return 'File';
+}
+
+function formatMetaDate(ms) {
+  if (!ms) return 'Unknown';
+  const d = new Date(ms);
+  if (Number.isNaN(d.getTime())) return 'Unknown';
+  return d.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function makeFileTile(file, mime, className) {
+  const tile = document.createElement('div');
+  tile.className = className;
+
+  const typeEl = document.createElement('span');
+  typeEl.className = className + '__type';
+  typeEl.textContent = getTypeLabel(mime);
+
+  const extEl = document.createElement('span');
+  extEl.className = className + '__ext';
+  extEl.textContent = (getFileExt(file.name) || 'file').toUpperCase();
+
+  tile.appendChild(typeEl);
+  tile.appendChild(extEl);
+  return tile;
 }
 
 async function getMediaMeta(file, mime) {
@@ -1380,6 +1427,7 @@ async function runInlineMetadata(file, mime, metaEl, chevron) {
     const visible = existing.style.display !== 'none';
     existing.style.display = visible ? 'none' : '';
     chevron.textContent = visible ? '\u25b8' : '\u25be';
+    metaEl.setAttribute('aria-expanded', visible ? 'false' : 'true');
     return;
   }
 
@@ -1399,12 +1447,14 @@ async function runInlineMetadata(file, mime, metaEl, chevron) {
     } else if (mime.startsWith('audio/')) {
       await renderInlineAudioMeta(file, panel);
     } else {
-      panel.innerHTML = '<div class="meta-notice">No additional metadata available.</div>';
+      await renderInlineGenericMeta(file, mime, panel);
     }
     chevron.textContent = '\u25be';
+    metaEl.setAttribute('aria-expanded', 'true');
   } catch (err) {
     panel.innerHTML = '<div class="meta-notice">Failed to load metadata: ' + esc(err.message) + '</div>';
     chevron.textContent = '\u25b8';
+    metaEl.setAttribute('aria-expanded', 'false');
   }
 }
 
@@ -1714,6 +1764,38 @@ async function renderInlineAudioMeta(file, container) {
   }
 }
 
+async function renderInlineGenericMeta(file, mime, container) {
+  container.innerHTML = '';
+  const entries = [
+    ['Name', file.name || 'Untitled'],
+    ['Type', mime || 'Unknown'],
+    ['Category', getTypeLabel(mime)],
+    ['Extension', (getFileExt(file.name) || 'none').toUpperCase()],
+    ['Size', formatSize(file.size || 0)],
+    ['Last Modified', formatMetaDate(file.lastModified)],
+  ];
+
+  const group = document.createElement('div');
+  group.className = 'route-meta-compact-group';
+  const title = document.createElement('div');
+  title.className = 'route-meta-compact-title';
+  title.textContent = 'File';
+  group.appendChild(title);
+
+  const grid = document.createElement('div');
+  grid.className = 'route-meta-compact-grid';
+  for (const [label, value] of entries) {
+    const cell = document.createElement('div');
+    cell.className = 'route-meta-compact-cell';
+    cell.innerHTML = '<span class="route-meta-compact-key">' + esc(label) + '</span> ' +
+      '<span class="route-meta-compact-val">' + esc(String(value)) + '</span>';
+    grid.appendChild(cell);
+  }
+
+  group.appendChild(grid);
+  container.appendChild(group);
+}
+
 export function initSmartDrop() {
   const dropZone = document.getElementById('smart-drop');
   const fileInput = document.getElementById('smart-file-input');
@@ -1728,6 +1810,14 @@ export function initSmartDrop() {
 
   // Track blob URLs for cleanup
   let prevBlobUrls = [];
+  function clearDroppedFiles() {
+    for (const u of prevBlobUrls) URL.revokeObjectURL(u);
+    prevBlobUrls = [];
+    routePanel.innerHTML = '';
+    routePanel.style.display = 'none';
+    dropZone.classList.remove('compact');
+    fileInput.value = '';
+  }
 
   function showFileTypeInfo(file, typeInfo) {
     routePanel.innerHTML = '';
@@ -1737,13 +1827,7 @@ export function initSmartDrop() {
     dismissBtn.className = 'route-dismiss';
     dismissBtn.setAttribute('aria-label', 'Dismiss');
     dismissBtn.innerHTML = '&#215;';
-    dismissBtn.addEventListener('click', () => {
-      for (const u of prevBlobUrls) URL.revokeObjectURL(u);
-      prevBlobUrls = [];
-      routePanel.innerHTML = '';
-      routePanel.style.display = 'none';
-      dropZone.classList.remove('compact');
-    });
+    dismissBtn.addEventListener('click', clearDroppedFiles);
     routePanel.appendChild(dismissBtn);
 
     const card = document.createElement('div');
@@ -1822,9 +1906,7 @@ export function initSmartDrop() {
     const isSingle = files.length === 1;
     const isImage = dominant.startsWith('image/');
     const isVideo = dominant.startsWith('video/');
-    const isAudio = dominant.startsWith('audio/');
     const isPdf = dominant === 'application/pdf';
-    const hasPreview = isImage || isVideo || isPdf;
     const conversions = routes.filter(r => r.label.startsWith('Convert to'));
     const tools = routes.filter(r => !r.label.startsWith('Convert to'));
 
@@ -1834,61 +1916,21 @@ export function initSmartDrop() {
     // Dismiss button
     const dismissBtn = document.createElement('button');
     dismissBtn.className = 'route-dismiss';
-    dismissBtn.setAttribute('aria-label', 'Remove file');
+    dismissBtn.setAttribute('aria-label', isSingle ? 'Remove file' : 'Remove all files');
     dismissBtn.innerHTML = '&#215;';
-    dismissBtn.addEventListener('click', () => {
-      for (const u of prevBlobUrls) URL.revokeObjectURL(u);
-      prevBlobUrls = [];
-      routePanel.innerHTML = '';
-      routePanel.style.display = 'none';
-      dropZone.classList.remove('compact');
-    });
+    dismissBtn.addEventListener('click', clearDroppedFiles);
     routePanel.appendChild(dismissBtn);
 
     // File info section
     let inlineMetaEl = null;
 
-    if (isSingle && isVideo) {
-      // Video: full-width filmstrip above file details
-      const wrapper = document.createElement('div');
-      wrapper.className = 'route-video-preview';
-
-      const filmstrip = document.createElement('div');
-      filmstrip.className = 'route-filmstrip';
-      wrapper.appendChild(filmstrip);
-      extractVideoFrames(files[0], filmstrip);
-
-      const det = document.createElement('div');
-      det.className = 'route-file-details';
-      det.style.marginTop = '0.5rem';
-
-      const nameEl = document.createElement('div');
-      nameEl.className = 'route-file-name';
-      nameEl.textContent = files[0].name;
-      det.appendChild(nameEl);
-
-      const metaEl = document.createElement('div');
-      metaEl.className = 'route-file-meta';
-      metaEl.innerHTML = formatSize(files[0].size) + ' &middot; <span class="route-format-badge">' + esc(dominantInfo.label) + '</span>';
-      det.appendChild(metaEl);
-
-      inlineMetaEl = document.createElement('div');
-      inlineMetaEl.className = 'route-inline-meta';
-      det.appendChild(inlineMetaEl);
-
-      wrapper.appendChild(det);
-      wrapper.style.paddingBottom = '0.75rem';
-      wrapper.style.borderBottom = '1px solid var(--border)';
-      wrapper.style.marginBottom = '0.75rem';
-      wrapper.style.textAlign = 'left';
-      routePanel.appendChild(wrapper);
-    } else if (isSingle && (isImage || isPdf)) {
-      // Image/PDF: preview left, details right
+    if (isSingle) {
+      // Shared single-file layout for consistency across all file types
       const row = document.createElement('div');
-      row.className = 'route-preview-row';
+      row.className = 'route-preview-row route-preview-row--single';
 
       const previewDiv = document.createElement('div');
-      previewDiv.className = 'route-preview';
+      previewDiv.className = 'route-preview route-preview--single';
 
       if (isImage) {
         const img = document.createElement('img');
@@ -1898,8 +1940,20 @@ export function initSmartDrop() {
         img.className = 'route-preview-img';
         img.alt = files[0].name;
         previewDiv.appendChild(img);
-      } else {
+      } else if (isVideo) {
+        previewDiv.classList.add('route-preview--video');
+        const filmstrip = document.createElement('div');
+        filmstrip.className = 'route-filmstrip';
+        previewDiv.appendChild(filmstrip);
+        extractVideoFrames(files[0], filmstrip, 4).then(() => {
+          if (filmstrip.childElementCount === 0) {
+            filmstrip.replaceWith(makeFileTile(files[0], dominant, 'route-preview-tile'));
+          }
+        });
+      } else if (isPdf) {
         renderPdfPreview(files[0], previewDiv);
+      } else {
+        previewDiv.appendChild(makeFileTile(files[0], dominant, 'route-preview-tile'));
       }
 
       row.appendChild(previewDiv);
@@ -1923,57 +1977,38 @@ export function initSmartDrop() {
 
       row.appendChild(detCol);
       routePanel.appendChild(row);
-    } else if (isSingle) {
-      // Audio/PDF/doc/font: no visual preview
-      const info = document.createElement('div');
-      info.className = 'route-file-info';
-
-      const det = document.createElement('div');
-      det.className = 'route-file-details';
-
-      const nameEl = document.createElement('div');
-      nameEl.className = 'route-file-name';
-      nameEl.textContent = files[0].name;
-      det.appendChild(nameEl);
-
-      const metaEl = document.createElement('div');
-      metaEl.className = 'route-file-meta';
-      metaEl.innerHTML = formatSize(files[0].size) + ' &middot; <span class="route-format-badge">' + esc(dominantInfo.label) + '</span>';
-      det.appendChild(metaEl);
-
-      inlineMetaEl = document.createElement('div');
-      inlineMetaEl.className = 'route-inline-meta';
-      det.appendChild(inlineMetaEl);
-
-      info.appendChild(det);
-      routePanel.appendChild(info);
     } else {
-      // Multi-file: thumbnail grid (images) + count
+      // Multi-file: always show compact thumbnails/tiles
       const info = document.createElement('div');
       info.className = 'route-file-info';
-      if (isImage) {
-        const grid = document.createElement('div');
-        grid.className = 'route-thumb-grid';
-        const show = Math.min(files.length, 6);
-        for (let i = 0; i < show; i++) {
-          const thumb = document.createElement('div');
-          thumb.className = 'route-thumb';
+
+      const grid = document.createElement('div');
+      grid.className = 'route-thumb-grid';
+      const show = Math.min(files.length, 6);
+      for (let i = 0; i < show; i++) {
+        const thumb = document.createElement('div');
+        thumb.className = 'route-thumb';
+        if (isImage) {
           const img = document.createElement('img');
           const blobUrl = URL.createObjectURL(files[i]);
           prevBlobUrls.push(blobUrl);
           img.src = blobUrl;
           img.alt = files[i].name;
           thumb.appendChild(img);
-          grid.appendChild(thumb);
+        } else {
+          thumb.classList.add('route-thumb--file');
+          thumb.appendChild(makeFileTile(files[i], dominant, 'route-thumb-tile'));
         }
-        if (files.length > 6) {
-          const more = document.createElement('div');
-          more.className = 'route-thumb route-thumb--more';
-          more.textContent = '+' + (files.length - 6);
-          grid.appendChild(more);
-        }
-        info.appendChild(grid);
+        grid.appendChild(thumb);
       }
+      if (files.length > 6) {
+        const more = document.createElement('div');
+        more.className = 'route-thumb route-thumb--more';
+        more.textContent = '+' + (files.length - 6);
+        grid.appendChild(more);
+      }
+      info.appendChild(grid);
+
       const det = document.createElement('div');
       det.className = 'route-file-details';
       const nameEl = document.createElement('div');
@@ -1987,6 +2022,16 @@ export function initSmartDrop() {
       det.appendChild(metaEl);
       info.appendChild(det);
       routePanel.appendChild(info);
+
+      const clearWrap = document.createElement('div');
+      clearWrap.className = 'route-clear-wrap';
+      const clearBtn = document.createElement('button');
+      clearBtn.type = 'button';
+      clearBtn.className = 'btn btn--secondary route-clear-btn';
+      clearBtn.textContent = 'Remove all files';
+      clearBtn.addEventListener('click', clearDroppedFiles);
+      clearWrap.appendChild(clearBtn);
+      routePanel.appendChild(clearWrap);
     }
 
     // Async metadata fill-in + expandable chevron
@@ -1997,29 +2042,41 @@ export function initSmartDrop() {
       chevron.textContent = '\u25b8';
 
       const displayParts = [];
-      const refreshLine = () => {
-        inlineMetaEl.textContent = displayParts.join(' \u00b7 ');
-        inlineMetaEl.appendChild(chevron);
-        if (!inlineMetaEl.classList.contains('route-inline-meta--expandable')) {
-          inlineMetaEl.classList.add('route-inline-meta--expandable');
-          inlineMetaEl.addEventListener('click', () => {
-            runInlineMetadata(metaFile, metaMime, inlineMetaEl, chevron);
-          });
-        }
+      const addPart = (part) => {
+        if (!part || typeof part !== 'string' || displayParts.includes(part)) return;
+        displayParts.push(part);
+        refreshLine();
       };
+      const refreshLine = () => {
+        inlineMetaEl.textContent = displayParts.length > 0
+          ? displayParts.join(' \u00b7 ')
+          : 'Metadata';
+        inlineMetaEl.appendChild(chevron);
+      };
+      inlineMetaEl.classList.add('route-inline-meta--expandable');
+      inlineMetaEl.setAttribute('role', 'button');
+      inlineMetaEl.setAttribute('tabindex', '0');
+      inlineMetaEl.setAttribute('aria-expanded', 'false');
+      inlineMetaEl.addEventListener('click', () => {
+        runInlineMetadata(metaFile, metaMime, inlineMetaEl, chevron);
+      });
+      inlineMetaEl.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        runInlineMetadata(metaFile, metaMime, inlineMetaEl, chevron);
+      });
+      refreshLine();
 
       getMediaMeta(metaFile, metaMime).then(async (parts) => {
-        if (parts.length === 0) return;
-        displayParts.push(...parts.filter(p => typeof p === 'string'));
-        refreshLine();
+        parts.filter(p => typeof p === 'string').forEach(addPart);
 
         // For video: enhance with FPS + GPS from mediainfo (slower, WASM)
         if (parts._videoFile) {
           try {
             const { readVideoMetadata } = await import('./vidmeta-engine.js');
             const md = await readVideoMetadata(parts._videoFile);
-            const fps = md.video?.['Frame Rate'];
-            if (fps) { displayParts.push(fps); refreshLine(); }
+            const fps = md.video?.['Frame Rate'] || md._tracks?.video?.FrameRate_String || md._tracks?.video?.FrameRate;
+            if (fps) addPart(typeof fps === 'string' ? fps : String(fps) + ' fps');
             const gps = extractVideoGps(md._tracks?.general);
             if (gps) {
               const { nearestCity } = await import('./cities-geo.js');
@@ -2028,8 +2085,7 @@ export function initSmartDrop() {
                 const place = loc.region
                   ? loc.city + ', ' + loc.region + ', ' + loc.country
                   : loc.city + ', ' + loc.country;
-                displayParts.push(loc.distance < 10 ? place : 'near ' + place);
-                refreshLine();
+                addPart(loc.distance < 10 ? place : 'near ' + place);
               }
             }
           } catch { /* mediainfo enhancement is non-fatal */ }
@@ -2063,17 +2119,14 @@ export function initSmartDrop() {
       routePanel.appendChild(sec);
     }
 
-    const filteredTools = isSingle
-      ? tools.filter(r => r.href !== '/video-metadata' && r.href !== '/image-metadata')
-      : tools;
-    if (filteredTools.length > 0) {
+    if (tools.length > 0) {
       const sec = document.createElement('div');
       sec.className = 'route-section';
       const label = document.createElement('div');
       label.className = 'route-section-label';
       label.textContent = 'Tools';
       sec.appendChild(label);
-      for (const r of filteredTools) {
+      for (const r of tools) {
         const btn = document.createElement('button');
         btn.className = 'route-option';
         btn.dataset.href = r.href;
@@ -2086,24 +2139,12 @@ export function initSmartDrop() {
     routePanel.querySelectorAll('.route-option').forEach(btn => {
       btn.addEventListener('click', async () => {
         if (isSingle && btn.dataset.href === '/pdf-ocr') {
-          runInlineOcr(files[0], routePanel, () => {
-            for (const u of prevBlobUrls) URL.revokeObjectURL(u);
-            prevBlobUrls = [];
-            routePanel.innerHTML = '';
-            routePanel.style.display = 'none';
-            dropZone.classList.remove('compact');
-          });
+          runInlineOcr(files[0], routePanel, clearDroppedFiles);
           return;
         }
         const resolved = isSingle ? resolveEngine(dominant, btn.dataset.href) : null;
         if (resolved) {
-          runInlineConversion(files[0], dominant, resolved, routePanel, () => {
-            for (const u of prevBlobUrls) URL.revokeObjectURL(u);
-            prevBlobUrls = [];
-            routePanel.innerHTML = '';
-            routePanel.style.display = 'none';
-            dropZone.classList.remove('compact');
-          });
+          runInlineConversion(files[0], dominant, resolved, routePanel, clearDroppedFiles);
         } else {
           btn.textContent = 'Loading...';
           btn.disabled = true;

@@ -6,6 +6,7 @@
 import { ocrPdf, getAvailableLanguages, getCachedLanguages } from './ocr-engine.js';
 import { loadPendingFiles } from './smart-drop.js';
 import { checkWorkload } from './device-tier.js';
+import { showPersistentNotice } from './notice-ui.js';
 
 let dropZone, fileInput, fileList, langSelect, actionBtn, clearBtn;
 let progressArea, progressStatus, progressBar;
@@ -118,17 +119,7 @@ function downloadTxt() {
 }
 
 function showNotice(msg) {
-  let notice = document.getElementById('cf-notice');
-  if (!notice) {
-    notice = document.createElement('div');
-    notice.id = 'cf-notice';
-    notice.className = 'notice';
-    dropZone.parentElement.insertBefore(notice, dropZone.nextSibling);
-  }
-  notice.textContent = msg;
-  notice.style.display = '';
-  clearTimeout(notice._timer);
-  notice._timer = setTimeout(() => { notice.style.display = 'none'; }, 5000);
+  showPersistentNotice(dropZone, msg, { id: 'cf-notice', kind: 'warning' });
 }
 
 function addFiles(fileArray) {

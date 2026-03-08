@@ -4,10 +4,11 @@
  * Uses FFmpeg.wasm via vidconv-engine.js for client-side transcoding.
  */
 
-import { convertVideo, gifToVideo, getVideoDuration, MAX_VIDEO_SIZE, MAX_DURATION } from './vidconv-engine.js';
+import { convertVideo, gifToVideo, getVideoDuration, WARN_VIDEO_SIZE, MAX_DURATION } from './vidconv-engine.js';
 import { formatSize, downloadBlob } from './converter.js';
 import { loadPendingFiles } from './smart-drop.js';
 import { checkWorkload } from './device-tier.js';
+import { showPersistentNotice } from './notice-ui.js';
 
 let targetFormat = '';
 let sourceType = '';
@@ -76,11 +77,9 @@ async function handleFile(files) {
   resetState();
   currentFile = file;
 
-  // Validate size
-  if (file.size > MAX_VIDEO_SIZE) {
-    showFileItem(file, 0);
-    showError(`File too large (${formatSize(file.size)}). Maximum is ${formatSize(MAX_VIDEO_SIZE)}.`);
-    return;
+  // Warn on large files
+  if (file.size > WARN_VIDEO_SIZE) {
+    showNotice(`Large file (${formatSize(file.size)}). This may be slow or crash your browser on low-memory devices.`);
   }
 
   // Get duration and validate
@@ -224,18 +223,7 @@ function setStatus(msg) {
 }
 
 function showNotice(msg) {
-  let notice = document.getElementById('cf-notice');
-  if (!notice) {
-    notice = document.createElement('div');
-    notice.id = 'cf-notice';
-    notice.className = 'notice';
-    const dropZone = document.getElementById('drop-zone');
-    dropZone.parentElement.insertBefore(notice, dropZone.nextSibling);
-  }
-  notice.textContent = msg;
-  notice.style.display = '';
-  clearTimeout(notice._timer);
-  notice._timer = setTimeout(() => { notice.style.display = 'none'; }, 5000);
+  showPersistentNotice(dropZone, msg, { id: 'cf-notice', kind: 'warning' });
 }
 
 function handleClearAll() {

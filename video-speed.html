@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Change Video Speed - Free, Private, No Upload | IrisFiles</title>
+  <meta name="description" content="Create time lapses and slow motion videos in your browser. Speed up or slow down any video file. No upload required. Supports MP4, MOV, WebM, AVI, MKV.">
+  <meta property="og:title" content="Change Video Speed - Free, Private, No Upload | IrisFiles">
+  <meta property="og:description" content="Create time lapses and slow motion videos in your browser. Speed up or slow down any video file. No upload required. Supports MP4, MOV, WebM, AVI, MKV.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://irisfiles.com/video-speed">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Change Video Speed - Free, Private, No Upload | IrisFiles">
+  <meta name="twitter:description" content="Create time lapses and slow motion videos in your browser. Speed up or slow down any video file. No upload required. Supports MP4, MOV, WebM, AVI, MKV.">
+  <meta property="og:image" content="https://irisfiles.com/img/og-default.png">
+  <meta name="twitter:image" content="https://irisfiles.com/img/og-default.png">
+  <link rel="canonical" href="https://irisfiles.com/video-speed">
+  <link rel="stylesheet" href="css/style.css?v=2">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Change Video Speed - IrisFiles",
+      "url": "https://irisfiles.com/video-speed",
+      "description": "Create time lapses and slow motion videos in your browser. Speed up or slow down any video privately, no upload needed.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How does changing video speed work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "IrisFiles uses FFmpeg.wasm to re-encode your video with adjusted frame timing. For slow motion, each frame is displayed longer (e.g., 2x longer for 0.5x speed). For time lapse, frames are displayed faster. The output is always MP4 (H.264) for maximum compatibility."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does changing speed affect video quality?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The video is re-encoded at high quality (CRF 23) so visual quality stays very close to the original. Slowing down video below the original frame rate may appear less smooth since no new frames are generated. For best slow-motion results, start with high frame rate source footage (60fps or higher)."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What happens to the audio?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "For moderate speed changes (0.125x to 4x), audio is pitch-corrected and kept by default. For extreme time lapses (8x and 16x), audio is dropped automatically since it becomes unintelligible. You can also manually choose to drop audio using the checkbox."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Are my videos uploaded to a server?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Everything happens in your browser. The FFmpeg.wasm codec (~10MB compressed) is downloaded once from a CDN and cached. Your actual video files never leave your device."
+          }
+        }
+      ]
+    }
+  ]
+  </script>
+</head>
+<body>
+  <header class="header">
+    <div class="container container--wide">
+      <a href="/" class="logo">Iris<span>Files</span></a>
+      <nav class="nav">
+        <a href="/about">About</a>
+        <a href="https://ko-fi.com/irisfiles" class="support-btn" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1.5a2.5 2.5 0 010 5H17"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z" fill="currentColor" stroke="none" opacity=".15"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3" opacity=".6"/></svg> Support this project</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> Back</a>
+<div id="drop-zone" class="drop-zone">
+      <h1 class="drop-zone__title">Change Video Speed privately.</h1>
+      <p class="drop-zone__subtitle">Create time lapses and slow motion. Everything runs in your browser.</p>
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
+      <p>Drop a video here, or <strong>click to browse</strong></p>
+      <p class="drop-zone__disclaimer">Provided as-is with no warranty. Always keep backups of your original files.</p>
+      <input type="file" id="file-input" accept="video/*,.mp4,.mov,.webm,.avi,.mkv">
+    </div>
+
+    <div class="controls">
+      <div class="resize-controls">
+        <label for="speed-preset">Speed:</label>
+        <select id="speed-preset">
+          <optgroup label="Slow Motion">
+            <option value="0.125">Ultra Slow Mo (0.125x)</option>
+            <option value="0.25">Slow Mo (0.25x)</option>
+            <option value="0.5">Slight Slow Mo (0.5x)</option>
+          </optgroup>
+          <optgroup label="Time Lapse">
+            <option value="2" selected>Time Lapse (2x)</option>
+            <option value="4">Time Lapse (4x)</option>
+            <option value="8">Ultra Time Lapse (8x)</option>
+            <option value="16">Ultra Time Lapse (16x)</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="resize-controls">
+        <label for="keep-audio">
+          <input type="checkbox" id="keep-audio" checked>
+          Keep audio
+        </label>
+      </div>
+    </div>
+
+    <div id="file-list" class="file-list"></div>
+
+    <div class="batch-actions">
+      <button id="action-btn" class="btn btn--primary" style="display:none">Change Speed</button>
+      <button id="clear-all" class="btn btn--secondary" style="display:none">Clear</button>
+    </div>
+
+    <div class="related-tools">
+      <h2>Related Tools</h2>
+      <div class="related-tools__links">
+        <a href="/compress-video">Compress Video</a>
+        <a href="/video-to-gif">Video to GIF</a>
+        <a href="/video-metadata">Video Metadata</a>
+      </div>
+    </div>
+
+    <section class="faq">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-item">
+        <button class="faq-question">How does changing video speed work?</button>
+        <div class="faq-answer">
+          <p>IrisFiles uses FFmpeg.wasm to re-encode your video with adjusted frame timing. For slow motion, each frame is displayed longer (e.g., 2x longer for 0.5x speed). For time lapse, frames are displayed faster. The output is always MP4 (H.264) for maximum compatibility.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Does changing speed affect video quality?</button>
+        <div class="faq-answer">
+          <p>The video is re-encoded at high quality (CRF 23) so visual quality stays very close to the original. Slowing down video below the original frame rate may appear less smooth since no new frames are generated. For best slow-motion results, start with high frame rate source footage (60fps or higher).</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">What happens to the audio?</button>
+        <div class="faq-answer">
+          <p>For moderate speed changes (0.125x to 4x), audio is pitch-corrected and kept by default. For extreme time lapses (8x and 16x), audio is dropped automatically since it becomes unintelligible. You can also manually choose to drop audio using the checkbox.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Are my videos uploaded to a server?</button>
+        <div class="faq-answer">
+          <p>No. Everything happens in your browser. The FFmpeg.wasm codec (~10MB compressed) is downloaded once from a CDN and cached. Your actual video files never leave your device.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="/">All Converters</a>
+        <a href="/compress-video">Compress Video</a>
+        <a href="/video-to-gif">Video to GIF</a>
+        <a href="/about">About</a>
+      </div>
+      <p>IrisFiles. All processing happens in your browser.</p>
+    </div>
+  </footer>
+
+  <script type="module" src="js/vidspeed-boot.js"></script>
+</body>
+</html>
