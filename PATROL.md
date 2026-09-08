@@ -1,6 +1,15 @@
 # Patrol Guidelines
 
-Automated code patrol for IrisFiles. Claude Code reads this file to understand what to scan and what to fix.
+Automated code patrol for IrisFiles. The patrol agent reads this file to understand what to scan and what to fix.
+
+## Models
+
+- **Triage (find bugs):** GPT-6 Astra in the native Codex runtime, read-only sandbox.
+  Finding a real bug across these files is the step that most rewards capability,
+  so it does not run on the cheapest model.
+- **Fix and test-writing:** Claude Sonnet 5 in the Claude Code runtime.
+
+Override with `PATROL_TRIAGE_MODEL`, `PATROL_TRIAGE_RUNNER`, or `PATROL_FIX_MODEL`.
 
 ## Scope
 

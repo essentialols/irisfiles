@@ -19,6 +19,20 @@ cd "$PROJECT_DIR"
 # Allow running from inside a Claude Code session
 unset CLAUDECODE 2>/dev/null || true
 
+# --- Models ---
+# Triage (find the bugs) runs on GPT-6 Astra in the native Codex runtime.
+# Fixing and test-writing run on Claude Sonnet 5 in the Claude Code runtime.
+# Override either from the environment to A/B a different pairing.
+TRIAGE_MODEL="${PATROL_TRIAGE_MODEL:-gpt-6-astra}"
+TRIAGE_RUNNER="${PATROL_TRIAGE_RUNNER:-$HOME/.claude/bin/codex-native-worker}"
+FIX_MODEL="${PATROL_FIX_MODEL:-claude-sonnet-5}"
+
+if [[ ! -x "$TRIAGE_RUNNER" ]]; then
+  echo "ERROR: triage runner not executable: $TRIAGE_RUNNER"
+  echo "Set PATROL_TRIAGE_RUNNER, or patrol cannot triage."
+  exit 1
+fi
+
 # Lock file to prevent concurrent patrols
 LOCKFILE="$PROJECT_DIR/.patrol/.lock"
 mkdir -p .patrol
@@ -97,9 +111,9 @@ LOG=".patrol/patrol-$TIMESTAMP.log"
 echo "=== IrisFiles Patrol $TIMESTAMP ===" | tee "$LOG"
 echo "Project: $PROJECT_DIR" | tee -a "$LOG"
 
-# --- Phase 1: Triage with haiku (cheap, read-only) ---
+# --- Phase 1: Triage (read-only) ---
 echo "" | tee -a "$LOG"
-echo "Phase 1: Triage (haiku, read-only)..." | tee -a "$LOG"
+echo "Phase 1: Triage ($TRIAGE_MODEL via codex runtime, read-only)..." | tee -a "$LOG"
 
 TRIAGE_PROMPT="You are a code patrol bot. Your working directory is $PROJECT_DIR.
 Read PATROL.md for your instructions.
@@ -119,30 +133,43 @@ Rules:
 - Be specific about the line and the actual bug
 - severity: \"high\" = will cause runtime error, \"medium\" = edge case failure, \"low\" = minor issue"
 
-TRIAGE=$(claude --print \
-  --model haiku \
-  --dangerously-skip-permissions \
-  --allowedTools "Read Glob Grep" \
-  -p "$TRIAGE_PROMPT" 2>>"$LOG") || {
+# Triage runs on GPT-6 Astra in the native Codex runtime. Finding a real bug
+# across these files is the step that most rewards model capability, so it does
+# not run on the cheapest model. read-only sandbox: triage must not edit.
+TRIAGE=$("$TRIAGE_RUNNER" \
+  --task "$TRIAGE_PROMPT" \
+  --cwd "$PROJECT_DIR" \
+  --model "$TRIAGE_MODEL" \
+  --sandbox read-only 2>>"$LOG") || {
   echo "ERROR: Triage failed (see $LOG for details)" | tee -a "$LOG"
   exit 1
 }
 
 echo "$TRIAGE" | tee -a "$LOG"
 
-# Extract JSON (handle possible markdown fences)
+# Extract JSON. A first-bracket-to-last-bracket regex cannot be used: runners
+# print bracketed log lines like '[worker] run ...' before the answer, and a
+# greedy span starting there never parses, which silently reports zero issues.
+# Decode at every '[' instead and keep the last well-formed findings array.
 ISSUES=$(echo "$TRIAGE" | python3 -c "
-import sys, json, re
+import sys, json
 text = sys.stdin.read()
-match = re.search(r'\[[\s\S]*\]', text)
-if match:
+dec = json.JSONDecoder()
+best = []
+for i, ch in enumerate(text):
+    if ch != '[':
+        continue
     try:
-        arr = json.loads(match.group())
-        print(json.dumps(arr))
-    except json.JSONDecodeError:
-        print('[]')
-else:
-    print('[]')
+        val, _ = dec.raw_decode(text[i:])
+    except ValueError:
+        continue
+    if not isinstance(val, list):
+        continue
+    if not all(isinstance(x, dict) and 'file' in x for x in val):
+        continue
+    if len(val) >= len(best):
+        best = val
+print(json.dumps(best))
 " 2>/dev/null) || ISSUES="[]"
 
 COUNT=$(echo "$ISSUES" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
@@ -165,7 +192,7 @@ WORKTREE_DIR="$PROJECT_DIR/.patrol/worktree"
 
 if [[ "$COUNT" != "0" ]]; then
 echo "" | tee -a "$LOG"
-echo "Phase 2: Fixing issues (using worktrees for isolation)..." | tee -a "$LOG"
+echo "Phase 2: Fixing issues ($FIX_MODEL, isolated worktrees)..." | tee -a "$LOG"
 
 # Write issues to temp file to avoid pipeline subshell
 ISSUES_FILE=$(mktemp)
@@ -203,6 +230,7 @@ Steps:
 6. If validation passes, output VALIDATION_PASSED"
 
   FIX_OUTPUT=$(claude --print \
+    --model "$FIX_MODEL" \
     --dangerously-skip-permissions \
     --allowedTools "Read Glob Grep Edit Bash" \
     -p "$FIX_PROMPT" 2>>"$LOG") || true
@@ -333,6 +361,7 @@ Steps:
 Output a summary of what tests you added and why."
 
 TEST_DEV_OUTPUT=$(claude --print \
+  --model "$FIX_MODEL" \
   --dangerously-skip-permissions \
   --allowedTools "Read Glob Grep Edit Write Bash" \
   -p "$TEST_DEV_PROMPT" 2>>"$LOG") || true
