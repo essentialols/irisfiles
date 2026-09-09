@@ -51,7 +51,10 @@ export async function imagesToGif(files, opts = {}) {
     const data = ctx.getImageData(0, 0, w, h).data;
     const step = Math.max(1, Math.floor(data.length / 4 / 512));
     for (let j = 0; j < data.length; j += step * 4) {
-      samplePixels.push(data[j], data[j + 1], data[j + 2]);
+      // Keep alpha: quantize() reads the sample as RGBA and reinterprets the
+      // buffer as a Uint32Array, which needs a length divisible by four.
+      // Sampling only RGB made that throw and killed every GIF build.
+      samplePixels.push(data[j], data[j + 1], data[j + 2], data[j + 3]);
     }
   }
 
