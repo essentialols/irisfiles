@@ -38,29 +38,27 @@ export async function convertVideoToAudio(file, targetFormat, onProgress = () =>
       return await withFFmpeg(async (ffmpeg) => {
         const inputName = `media-input.${inputExtension(file)}`;
         const outputName = `media-output.${target.ext}`;
-        await ffmpeg.writeFile(inputName, new Uint8Array(await file.arrayBuffer()));
-
-        const progressHandler = ({ progress }) => {
-          onProgress(Math.min(92, 10 + Math.round(progress * 82)));
-        };
-        ffmpeg.on('progress', progressHandler);
-
-        let exitCode;
+        let progressHandler = null;
         try {
-          exitCode = await ffmpeg.exec(['-i', inputName, ...target.args, '-y', outputName]);
+          await ffmpeg.writeFile(inputName, new Uint8Array(await file.arrayBuffer()));
+          progressHandler = ({ progress }) => {
+            onProgress(Math.min(92, 10 + Math.round(progress * 82)));
+          };
+          ffmpeg.on('progress', progressHandler);
+
+          const exitCode = await ffmpeg.exec(['-i', inputName, ...target.args, '-y', outputName]);
+          if (exitCode !== 0) {
+            throw new Error('No usable audio track was found, or the video codec/container is unsupported.');
+          }
+
+          const data = await ffmpeg.readFile(outputName);
+          onProgress(100);
+          return new Blob([data.buffer], { type: target.mime });
         } finally {
-          ffmpeg.off('progress', progressHandler);
+          if (progressHandler) ffmpeg.off('progress', progressHandler);
+          try { await ffmpeg.deleteFile(inputName); } catch {}
+          try { await ffmpeg.deleteFile(outputName); } catch {}
         }
-
-        if (exitCode !== 0) {
-          throw new Error('No usable audio track was found, or the video codec/container is unsupported.');
-        }
-
-        const data = await ffmpeg.readFile(outputName);
-        try { await ffmpeg.deleteFile(inputName); } catch {}
-        try { await ffmpeg.deleteFile(outputName); } catch {}
-        onProgress(100);
-        return new Blob([data.buffer], { type: target.mime });
       });
     } catch (ffmpegError) {
       const detail = ffmpegError?.message || browserDecodeError?.message || 'Conversion failed.';
