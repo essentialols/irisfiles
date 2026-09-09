@@ -27,6 +27,52 @@ TRIAGE_MODEL="${PATROL_TRIAGE_MODEL:-gpt-6-astra}"
 TRIAGE_RUNNER="${PATROL_TRIAGE_RUNNER:-$HOME/.claude/bin/codex-native-worker}"
 FIX_MODEL="${PATROL_FIX_MODEL:-claude-sonnet-5}"
 
+# --- Behavioural gate ---
+# Each fix is checked against a baseline of origin/main rather than against a
+# green suite. Gating on "all green" deadlocks: the suite carries long-standing
+# failures, so no fix could ever pass and the only agent able to repair the
+# tests would be blocked by them.
+PW_WORKERS="${PATROL_TEST_WORKERS:-4}"
+# Each run reviews by hand, so cap the batch rather than emitting fixes all night.
+MAX_FIXES="${PATROL_MAX_FIXES:-5}"
+BASELINE_FILE="$PROJECT_DIR/.patrol/baseline-failures.txt"
+
+# Print "file::title" for every failing test. Playwright nests specs inside
+# describe blocks, so this recurses; a flat one-level walk finds nothing and
+# reads as a clean run.
+pw_failures() {
+  local dir="$1"
+  local json port
+  json=$(mktemp)
+  port=$(( 3990 + RANDOM % 2000 ))
+  (cd "$dir" && IRIS_TEST_PORT="$port" IRIS_TEST_NO_REUSE=1 IRIS_TEST_WORKERS="$PW_WORKERS" \
+    IRIS_TEST_RETRIES=0 npx playwright test --reporter=json > "$json" 2>/dev/null) || true
+  python3 - "$json" <<'PYEOF'
+import json, sys
+try:
+    report = json.load(open(sys.argv[1]))
+except Exception:
+    print("PW_REPORT_UNREADABLE")
+    sys.exit(0)
+failures = []
+def walk(node, path=None):
+    path = node.get("file", path)
+    for spec in node.get("specs", []):
+        for test in spec.get("tests", []):
+            if test.get("status") == "unexpected":
+                failures.append("%s::%s" % (path, spec.get("title")))
+    for child in node.get("suites", []):
+        walk(child, path)
+for suite in report.get("suites", []):
+    walk(suite)
+# Print nothing when clean: a blank line would become a phantom entry in the
+# baseline diff below.
+if failures:
+    print("\n".join(sorted(set(failures))))
+PYEOF
+  rm -f "$json"
+}
+
 if [[ ! -x "$TRIAGE_RUNNER" ]]; then
   echo "ERROR: triage runner not executable: $TRIAGE_RUNNER"
   echo "Set PATROL_TRIAGE_RUNNER, or patrol cannot triage."
@@ -194,6 +240,21 @@ if [[ "$COUNT" != "0" ]]; then
 echo "" | tee -a "$LOG"
 echo "Phase 2: Fixing issues ($FIX_MODEL, isolated worktrees)..." | tee -a "$LOG"
 
+# Baseline: which tests does origin/main already fail? Measured once per run,
+# in a pristine worktree, so a fix is judged against main and not against a
+# green suite that has never existed here.
+BASELINE_WORKTREE="$PROJECT_DIR/.patrol/baseline-worktree"
+echo "Measuring baseline failures on origin/main..." | tee -a "$LOG"
+rm -rf "$BASELINE_WORKTREE" 2>/dev/null || true
+git worktree add --detach "$BASELINE_WORKTREE" origin/main 2>>"$LOG"
+pw_failures "$BASELINE_WORKTREE" | sort -u > "$BASELINE_FILE"
+git worktree remove --force "$BASELINE_WORKTREE" 2>>"$LOG" || true
+if grep -q "PW_REPORT_UNREADABLE" "$BASELINE_FILE"; then
+  echo "ERROR: could not measure a baseline; refusing to gate fixes blind." | tee -a "$LOG"
+  exit 1
+fi
+echo "Baseline: $(wc -l < "$BASELINE_FILE" | tr -d ' ') failing test(s) on origin/main." | tee -a "$LOG"
+
 # Write issues to temp file to avoid pipeline subshell
 ISSUES_FILE=$(mktemp)
 echo "$ISSUES" | python3 -c "
@@ -202,6 +263,10 @@ for i, issue in enumerate(json.load(sys.stdin)):
     print(f\"{i}|{issue['file']}|{issue['severity']}|{issue['description']}|{issue.get('fix','')}\")" > "$ISSUES_FILE"
 
 while IFS='|' read -r idx file severity desc fix; do
+  if [[ "$FIXED" -ge "$MAX_FIXES" ]]; then
+    echo "Reached PATROL_MAX_FIXES=$MAX_FIXES; remaining issues stay in $LOG." | tee -a "$LOG"
+    break
+  fi
   FIX_BRANCH="patrol/${TIMESTAMP}-${idx}"
 
   echo "" | tee -a "$LOG"
@@ -239,8 +304,30 @@ Steps:
 
   # Check if there are actual changes to commit (in the worktree)
   if [[ -n "$(git -C "$WORKTREE_DIR" status --porcelain)" ]]; then
-    # Double-check validation ourselves
+    # Double-check validation ourselves. validate.mjs only inspects page
+    # structure, so it cannot see a behavioural regression; the e2e gate below
+    # is what actually exercises the change.
     if (cd "$WORKTREE_DIR" && node test/validate.mjs > /dev/null 2>&1); then
+
+      # Behavioural gate: run the suite against THIS fix, in ITS worktree,
+      # before anything is pushed, and reject any test that main was passing.
+      echo "  Gate: running e2e against the fix..." | tee -a "$LOG"
+      CANDIDATE_FAILURES=$(pw_failures "$WORKTREE_DIR")
+      if echo "$CANDIDATE_FAILURES" | grep -q "PW_REPORT_UNREADABLE"; then
+        echo "  REJECTED: e2e report unreadable, cannot verify this fix." | tee -a "$LOG"
+        SKIPPED=$((SKIPPED + 1))
+        continue
+      fi
+      NEW_FAILURES=$(comm -13 "$BASELINE_FILE" <(echo "$CANDIDATE_FAILURES" | sed '/^$/d' | sort -u))
+      if [[ -n "$NEW_FAILURES" ]]; then
+        echo "  REJECTED: introduces $(echo "$NEW_FAILURES" | wc -l | tr -d ' ') new test failure(s):" | tee -a "$LOG"
+        echo "$NEW_FAILURES" | sed 's/^/    /' | tee -a "$LOG"
+        SKIPPED=$((SKIPPED + 1))
+        continue
+      fi
+      FIXED_FAILURES=$(comm -23 "$BASELINE_FILE" <(echo "$CANDIDATE_FAILURES" | sed '/^$/d' | sort -u) | wc -l | tr -d ' ')
+      echo "  Gate passed: no new failures (and $FIXED_FAILURES fewer than main)." | tee -a "$LOG"
+
       git -C "$WORKTREE_DIR" add -A
       git -C "$WORKTREE_DIR" commit -m "patrol: $desc" --no-verify
 
@@ -261,7 +348,10 @@ Steps:
 **Fix:** $fix
 
 ---
-*Automated patrol fix. Validation passed (all tests green).*
+*Automated patrol fix. Checks that actually ran: \`node test/validate.mjs\` passed, and the
+Playwright suite ran against this branch in its own worktree with no failure that
+\`origin/main\` was not already failing. The suite has pre-existing failures; this was
+gated on introducing none, not on a green run.*
 PREOF
 )" 2>>"$LOG") || true
 
@@ -302,15 +392,28 @@ if (cd "$PROJECT_DIR" && npx playwright test --reporter=json > "$E2E_RESULT_FILE
 else
   E2E_PASSED=$(python3 -c "import sys,json; r=json.load(open('$E2E_RESULT_FILE')); print(r['stats']['expected'])" 2>/dev/null || echo "?")
   E2E_FAILED=$(python3 -c "import sys,json; r=json.load(open('$E2E_RESULT_FILE')); print(r['stats']['unexpected'])" 2>/dev/null || echo "?")
-  E2E_FAILURES=$(python3 -c "
-import json
-r = json.load(open('$E2E_RESULT_FILE'))
-for s in r.get('suites', []):
-  for sp in s.get('specs', []):
-    for t in sp.get('tests', []):
-      if t.get('status') == 'unexpected':
-        print(f\"  - {sp['title']}: {t['results'][0].get('error',{}).get('message','unknown')[:120]}\")
-" 2>/dev/null || echo "  (could not parse failures)")
+  # Specs nest inside describe blocks, so this must recurse. A one-level walk
+  # prints nothing, which produced an issue reporting 277 failures by name of
+  # none of them, and nobody acts on a report that names nothing.
+  E2E_FAILURES=$(python3 - "$E2E_RESULT_FILE" <<'PYEOF' 2>/dev/null || echo "  (could not parse failures)"
+import json, sys
+report = json.load(open(sys.argv[1]))
+lines = []
+def walk(node, path=None):
+    path = node.get("file", path)
+    for spec in node.get("specs", []):
+        for test in spec.get("tests", []):
+            if test.get("status") == "unexpected":
+                results = test.get("results") or [{}]
+                message = (results[0].get("error") or {}).get("message", "unknown")
+                lines.append("  - %s :: %s: %s" % (path, spec.get("title"), message[:120]))
+    for child in node.get("suites", []):
+        walk(child, path)
+for suite in report.get("suites", []):
+    walk(suite)
+print("\n".join(lines) if lines else "  (report parsed but listed no failing test)")
+PYEOF
+)
   echo "E2E: $E2E_PASSED passed, $E2E_FAILED FAILED." | tee -a "$LOG"
   echo "$E2E_FAILURES" | tee -a "$LOG"
 

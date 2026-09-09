@@ -11,6 +11,30 @@ Automated code patrol for IrisFiles. The patrol agent reads this file to underst
 
 Override with `PATROL_TRIAGE_MODEL`, `PATROL_TRIAGE_RUNNER`, or `PATROL_FIX_MODEL`.
 
+## The gate
+
+A fix is pushed only if it introduces **no test failure that `origin/main` was not
+already failing**. The suite is not required to be green: it carries long-standing
+failures, and gating on green deadlocks, because the only agent that could repair
+the tests would be blocked by them.
+
+Each run measures a baseline on a pristine `origin/main` worktree, then runs the
+suite **inside each fix's own worktree, before anything is pushed**. `validate.mjs`
+alone cannot see a behavioural regression, so it is a precondition, not the gate.
+
+## Launching
+
+| How | Command | When |
+| --- | --- | --- |
+| Scheduled | `launchctl load -w ~/Library/LaunchAgents/com.irisfiles.patrol.plist` | Daily 04:00. Primary trigger. |
+| Triage only | `bash patrol.sh --dry-run` | Safe. Finds issues, changes nothing, opens nothing. |
+| One full run | `bash patrol.sh` | Opens PRs. |
+| On push to main | `PATROL_ON_PUSH=1 git push origin main` | Opt-in; off by default because a run takes hours. |
+| Clean up | `bash patrol.sh --cleanup` | Closes patrol PRs, deletes `patrol/*` branches. |
+
+Tuning: `PATROL_MAX_FIXES` (default 5) caps PRs per run; `PATROL_TEST_WORKERS`
+(default 4) sets suite parallelism.
+
 ## Scope
 
 ### Fix autonomously
