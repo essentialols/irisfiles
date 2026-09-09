@@ -21,7 +21,7 @@ const PAGES = [
   '/ico-to-jpg', '/ico-to-png', '/ico-to-webp', '/ico-to-pdf',
   '/tiff-to-jpg', '/tiff-to-png', '/tiff-to-webp', '/tiff-to-pdf',
   // High-value image tools
-  '/image-to-text', '/png-to-ico',
+  '/background-remover', '/image-to-text', '/png-to-ico',
   '/mp3-to-wav', '/wav-to-mp3', '/ogg-to-wav', '/ogg-to-mp3',
   '/flac-to-wav', '/flac-to-mp3', '/m4a-to-wav', '/m4a-to-mp3',
   '/aac-to-wav', '/aac-to-mp3',
