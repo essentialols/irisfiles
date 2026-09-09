@@ -90,13 +90,23 @@ test.describe('Responsive design', () => {
     await page.goto('/png-to-jpg');
     await page.waitForLoadState('networkidle');
 
-    const about = page.locator('.nav a[href="/about"]');
     const support = page.locator('.support-btn');
-    const aboutBox = await about.boundingBox();
     const supportBox = await support.boundingBox();
-
-    expect(aboutBox.height).toBeGreaterThanOrEqual(44);
     expect(supportBox.height).toBeGreaterThanOrEqual(44);
+
+    // Below 480px the theme deliberately hides the secondary nav links to keep
+    // the header uncluttered, so the guarantee is about the links that remain:
+    // every visible one has to stay tappable.
+    const visibleNavLinks = await page.locator('.nav a').evaluateAll(links =>
+      links
+        .filter(link => getComputedStyle(link).display !== 'none')
+        .map(link => ({ href: link.getAttribute('href'), height: link.getBoundingClientRect().height }))
+    );
+    expect(visibleNavLinks.length).toBeGreaterThan(0);
+    for (const link of visibleNavLinks) {
+      expect(link.height, `nav link ${link.href}`).toBeGreaterThanOrEqual(44);
+    }
+
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
     await expect(support).toHaveCSS('white-space', 'nowrap');
   });

@@ -334,6 +334,12 @@ main.container { padding-top: clamp(1rem, 3vw, 2rem) !important; }
 .file-item__progress-bar { background: var(--primary); }
 
 .btn { min-height: 42px; border-radius: 11px; font-weight: 680; }
+/* This sheet is imported after style-base.css, and a media query adds no
+   specificity, so the 42px above would otherwise win on phones and shrink the
+   tap target below the 44px minimum that style-base.css sets. */
+@media (max-width: 640px) {
+  .btn { min-height: 44px; }
+}
 .btn--primary { background: var(--primary); box-shadow: 0 8px 20px rgba(8,122,91,.14); }
 .btn--primary:hover:not(:disabled) { background: var(--primary-hover); }
 .btn--secondary { background: #fff; border-color: var(--border); }
