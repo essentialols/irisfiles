@@ -206,7 +206,7 @@ test.describe('Audio Compression', () => {
     await page.locator('#action-btn').click();
     await page.locator('#audio-file.done').waitFor({ timeout: 45000 });
 
-    const sizeInfo = page.locator('.file-item__size, [class*="size"]');
+    const sizeInfo = page.locator('.file-item__meta, [class*="size"]');
     await expect(sizeInfo.first()).toBeVisible();
   });
 

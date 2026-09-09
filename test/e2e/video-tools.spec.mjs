@@ -14,7 +14,7 @@ test.describe('Video Tools E2E', () => {
 
       await expect(page.locator('#action-btn')).toBeVisible();
       await expect(page.locator('#video-file')).toBeVisible();
-      await expect(page.locator('.file-item__size')).toBeVisible();
+      await expect(page.locator('.file-item__meta')).toBeVisible();
       await expect(page.locator('.file-item__duration')).toBeVisible();
 
       await page.locator('#action-btn').click();
@@ -124,7 +124,7 @@ test.describe('Video Tools E2E', () => {
 
       await expect(page.locator('#video-file')).toBeVisible();
       await expect(page.locator('#action-btn')).toBeVisible();
-      await expect(page.locator('.file-item__size')).toBeVisible();
+      await expect(page.locator('.file-item__meta')).toBeVisible();
 
       await page.locator('#compress-quality').selectOption('low');
 
@@ -144,7 +144,7 @@ test.describe('Video Tools E2E', () => {
 
       await dropFile(page, '#drop-zone', fixture('sample.mp4'));
 
-      const originalSize = await page.locator('.file-item__size').textContent();
+      const originalSize = await page.locator('.file-item__meta').textContent();
       expect(originalSize).toBeTruthy();
 
       await page.locator('#compress-quality').selectOption('medium');
