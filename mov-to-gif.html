@@ -52,6 +52,22 @@
         },
         {
           "@type": "Question",
+          "name": "Does the GIF keep audio from the MOV?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. The GIF image format has no audio track, so MOV to GIF conversion uses video frames only and discards sound."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How long can a MOV clip be for GIF conversion?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The current IrisFiles MOV to GIF interface lets you trim and convert up to the first 60 seconds of a video. Shorter clips usually produce much more practical GIF file sizes."
+          }
+        },
+        {
+          "@type": "Question",
           "name": "Why is the GIF quality lower than my original MOV?",
           "acceptedAnswer": {
             "@type": "Answer",
@@ -85,7 +101,7 @@
   <main class="container">
     <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> Back</a>
     <div id="drop-zone" class="drop-zone">
-      <h1 class="drop-zone__title">MOV to GIF privately.</h1>
+      <h1 class="drop-zone__title">Convert MOV to GIF privately.</h1>
       <p class="drop-zone__subtitle">Everything runs in your browser. Nothing is uploaded. Ever.</p>
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
       <p>Drop a MOV video, or <strong>click to browse</strong></p>
@@ -136,7 +152,7 @@
       <h2>How to convert MOV to GIF</h2>
       <ol>
         <li>Add a MOV file and wait for the preview to appear.</li>
-        <li>Choose the part of the video you want with the start and end controls.</li>
+        <li>Choose the part of the video you want with the start and end controls. The current interface exposes up to the first 60 seconds.</li>
         <li>Set the output width from 160 to 800 pixels and frame rate from 4 to 20 frames per second.</li>
         <li>Click <strong>Convert to GIF</strong> and download the animated result.</li>
       </ol>
@@ -144,8 +160,17 @@
       <h2>Higher-quality MOV to GIF settings</h2>
       <p>GIF can show only 256 colors, so it cannot preserve the full color range of a modern MOV video. A wider output keeps more detail, while a higher frame rate makes motion smoother. Both increase file size. For interface demos and short screen recordings, a moderate width and around 8 to 12 frames per second is often a practical starting point.</p>
 
+      <h2>Why can the GIF be larger than the MOV?</h2>
+      <p>Modern MOV video codecs compress motion much more efficiently than GIF. A GIF stores a sequence of palette-based images rather than a modern inter-frame video stream, so even a short GIF can become larger than the source clip. Trim aggressively and reduce width or frame rate when file size matters.</p>
+
+      <h2>What happens to the MOV audio?</h2>
+      <p>GIF has no audio track. IrisFiles uses the video frames and does not include sound in the output. If you need a smaller video that keeps audio, use a video format instead of GIF.</p>
+
       <h2>iPhone, QuickTime, Mac, and Windows MOV files</h2>
       <p>MOV is a container, so compatibility depends on the video codec inside it. IrisFiles can convert a MOV only when the browser can decode that codec. If your MOV does not preview, try another modern browser or use <a href="/mov-to-mp4">MOV to MP4</a> when that workflow is compatible with the source. For other browser-compatible video files, see <a href="/video-to-gif">Video to GIF</a> or <a href="/mp4-to-gif">MP4 to GIF</a>.</p>
+
+      <h2>Private MOV to GIF conversion</h2>
+      <p>Frame extraction, resizing, palette generation, and GIF encoding all happen in the browser tab. The MOV itself is not uploaded to an IrisFiles conversion server. More implementation detail is available on the <a href="/about">About IrisFiles</a> page.</p>
     </section>
 
     <div class="related-tools">
@@ -172,6 +197,18 @@
         <button class="faq-question">Does MOV to GIF conversion work on Windows?</button>
         <div class="faq-answer">
           <p>Yes for MOV files whose video codec your Windows browser can decode. H.264 is the safest case. If a MOV will not load, converting or remuxing it to a browser-compatible video format first may help.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Does the GIF keep audio from the MOV?</button>
+        <div class="faq-answer">
+          <p>No. The GIF image format has no audio track, so MOV to GIF conversion uses video frames only and discards sound.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">How long can a MOV clip be for GIF conversion?</button>
+        <div class="faq-answer">
+          <p>The current IrisFiles MOV to GIF interface lets you trim and convert up to the first 60 seconds of a video. Shorter clips usually produce much more practical GIF file sizes.</p>
         </div>
       </div>
       <div class="faq-item">
