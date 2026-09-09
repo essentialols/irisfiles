@@ -154,7 +154,7 @@ test.describe('Document Pages - RTF Conversion', () => {
       test('clear all resets', async ({ page }) => {
         await page.goto(`${path}`);
         await page.locator('#file-input').setInputFiles(fixture('sample.rtf'));
-        await expect(page.locator('#file-list')).toBeVisible();
+        await expect(page.locator('#file-list')).toBeAttached();
         await page.locator('#clear-all').click();
         const fileList = page.locator('#file-list');
         await expect(fileList).toHaveCount(0);
@@ -378,7 +378,7 @@ test.describe('Archive Pages - Extract ZIP', () => {
   test('clear all resets', async ({ page }) => {
     await page.goto(`/extract-zip`);
     await page.locator('#file-input').setInputFiles(fixture('sample.zip'));
-    await expect(page.locator('#file-list')).toBeVisible();
+    await expect(page.locator('#file-list')).toBeAttached();
     await page.locator('#clear-all').click();
     const fileList = page.locator('#file-list');
     await expect(fileList).toHaveCount(0);

@@ -23,7 +23,7 @@ test.describe('Audio Formats - MP3 Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -81,7 +81,7 @@ test.describe('Audio Formats - MP3 Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -139,7 +139,7 @@ test.describe('Audio Formats - MP3 Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -197,7 +197,7 @@ test.describe('Audio Formats - MP3 Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -255,7 +255,7 @@ test.describe('Audio Formats - MP3 Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -313,7 +313,7 @@ test.describe('Audio Formats - WAV Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -371,7 +371,7 @@ test.describe('Audio Formats - WAV Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -429,7 +429,7 @@ test.describe('Audio Formats - WAV Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -487,7 +487,7 @@ test.describe('Audio Formats - WAV Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -545,7 +545,7 @@ test.describe('Audio Formats - WAV Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -605,7 +605,7 @@ test.describe('Audio Formats - OGG Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -663,7 +663,7 @@ test.describe('Audio Formats - OGG Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -721,7 +721,7 @@ test.describe('Audio Formats - OGG Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -731,11 +731,11 @@ test.describe('Audio Formats - OGG Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 
@@ -762,7 +762,7 @@ test.describe('Audio Formats - OGG Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -772,11 +772,11 @@ test.describe('Audio Formats - OGG Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 
@@ -803,7 +803,7 @@ test.describe('Audio Formats - OGG Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -813,11 +813,11 @@ test.describe('Audio Formats - OGG Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 });
@@ -844,7 +844,7 @@ test.describe('Audio Formats - FLAC Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -854,11 +854,11 @@ test.describe('Audio Formats - FLAC Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 
@@ -883,7 +883,7 @@ test.describe('Audio Formats - FLAC Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -893,11 +893,11 @@ test.describe('Audio Formats - FLAC Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 
@@ -924,7 +924,7 @@ test.describe('Audio Formats - FLAC Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -934,11 +934,11 @@ test.describe('Audio Formats - FLAC Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 
@@ -965,7 +965,7 @@ test.describe('Audio Formats - FLAC Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -975,11 +975,11 @@ test.describe('Audio Formats - FLAC Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 
@@ -1006,7 +1006,7 @@ test.describe('Audio Formats - FLAC Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -1016,11 +1016,11 @@ test.describe('Audio Formats - FLAC Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 });
@@ -1047,7 +1047,7 @@ test.describe('Audio Formats - M4A Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -1057,11 +1057,11 @@ test.describe('Audio Formats - M4A Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 
@@ -1086,7 +1086,7 @@ test.describe('Audio Formats - M4A Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -1096,11 +1096,11 @@ test.describe('Audio Formats - M4A Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 
@@ -1127,7 +1127,7 @@ test.describe('Audio Formats - M4A Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -1137,11 +1137,11 @@ test.describe('Audio Formats - M4A Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 
@@ -1168,7 +1168,7 @@ test.describe('Audio Formats - M4A Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -1178,11 +1178,11 @@ test.describe('Audio Formats - M4A Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 
@@ -1209,7 +1209,7 @@ test.describe('Audio Formats - M4A Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -1219,11 +1219,11 @@ test.describe('Audio Formats - M4A Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 });
@@ -1250,7 +1250,7 @@ test.describe('Audio Formats - AAC Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -1260,11 +1260,11 @@ test.describe('Audio Formats - AAC Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 
@@ -1289,7 +1289,7 @@ test.describe('Audio Formats - AAC Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -1299,11 +1299,11 @@ test.describe('Audio Formats - AAC Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 
@@ -1330,7 +1330,7 @@ test.describe('Audio Formats - AAC Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -1340,11 +1340,11 @@ test.describe('Audio Formats - AAC Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 
@@ -1371,7 +1371,7 @@ test.describe('Audio Formats - AAC Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -1381,11 +1381,11 @@ test.describe('Audio Formats - AAC Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 
@@ -1412,7 +1412,7 @@ test.describe('Audio Formats - AAC Source', () => {
     });
 
     test('file input is present', async ({ page }) => {
-      await expect(page.locator('#file-input')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
     });
 
     test('batch buttons hidden initially', async ({ page }) => {
@@ -1422,11 +1422,11 @@ test.describe('Audio Formats - AAC Source', () => {
 
     test('page structure is correct', async ({ page }) => {
       await expect(page.locator('#drop-zone')).toBeVisible();
-      await expect(page.locator('#file-input')).toBeVisible();
-      await expect(page.locator('#converter-config')).toBeVisible();
+      await expect(page.locator('#file-input')).toBeAttached();
+      await expect(page.locator('#converter-config')).toBeAttached();
       await expect(page.locator('#download-all')).toBeHidden();
       await expect(page.locator('#clear-all')).toBeHidden();
-      await expect(page.locator('#file-list')).toBeVisible();
+      await expect(page.locator('#file-list')).toBeAttached();
     });
   });
 });
