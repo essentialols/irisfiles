@@ -20,7 +20,13 @@ async function choose(files_){const file=Array.from(files_).find(isPdf);if(!file
 function renderPages(){if(!workspace)return;workspace.innerHTML='<div class="pdf-page-grid" id="pdf-page-grid"></div>';const grid=workspace.firstElementChild;for(const index of order){const info=pages.find(p=>p.index===index);const card=document.createElement('div');card.className='pdf-page-card'+(selected.has(index)?' selected':'');card.dataset.index=index;card.innerHTML=`<img src="${info.preview}" alt="Page ${info.pageNum} preview"><div class="pdf-page-card__footer"><span>Page ${info.pageNum}</span><span class="pdf-page-card__badge">${mode==='rotate'?(rotations.get(index)||0)+'°':mode==='reorder'?'Drag to move':selected.has(index)?'Selected':'Click to select'}</span></div>`;
     if(mode==='rotate'){const b=document.createElement('button');b.className='btn btn--secondary';b.textContent='Rotate 90°';b.onclick=e=>{e.stopPropagation();rotations.set(index,((rotations.get(index)||0)+90)%360);renderPages()};card.querySelector('.pdf-page-card__footer').appendChild(b)}
     if(mode==='delete'||mode==='extract')card.onclick=()=>{selected.has(index)?selected.delete(index):selected.add(index);renderPages()};
-    if(mode==='reorder'){card.draggable=true;card.addEventListener('dragstart',()=>{card.classList.add('dragging');card.dataset.dragging='1'});card.addEventListener('dragend',()=>card.classList.remove('dragging'));card.addEventListener('dragover',e=>e.preventDefault());card.addEventListener('drop',e=>{e.preventDefault();const from=grid.querySelector('[data-dragging="1"]');if(!from)return;const fromIndex=Number(from.dataset.index),toIndex=Number(card.dataset.index),a=order.indexOf(fromIndex),b=order.indexOf(toIndex);if(a<0||b<0)return;order.splice(a,1);order.splice(b,0,fromIndex);renderPages()})}
+    if(mode==='reorder'){
+      card.draggable=true;
+      card.addEventListener('dragstart',()=>{grid.querySelectorAll('[data-dragging]').forEach(el=>delete el.dataset.dragging);card.classList.add('dragging');card.dataset.dragging='1'});
+      card.addEventListener('dragend',()=>{card.classList.remove('dragging');delete card.dataset.dragging});
+      card.addEventListener('dragover',e=>e.preventDefault());
+      card.addEventListener('drop',e=>{e.preventDefault();const from=grid.querySelector('[data-dragging="1"]');if(!from)return;const fromIndex=Number(from.dataset.index),toIndex=Number(card.dataset.index),a=order.indexOf(fromIndex),b=order.indexOf(toIndex);if(a<0||b<0||a===b)return;order.splice(a,1);order.splice(b,0,fromIndex);renderPages()});
+    }
     grid.appendChild(card)}
 }
 async function run(){if(!currentFile)return;const warn=checkWorkload({fileSizeMb:currentFile.size/1e6});if(warn)notice(warn);actionBtn.disabled=true;const old=actionBtn.textContent;removeResult();try{
