@@ -6,6 +6,7 @@ test.describe('High-value tool expansion', () => {
     await page.goto('/');
 
     await expect(page.locator('a[href="/mp4-to-mp3"]')).toBeVisible();
+    await expect(page.locator('a[href="/background-remover"]')).toBeVisible();
     await expect(page.locator('a[href="/image-to-text"]')).toBeVisible();
     await expect(page.locator('a[href="/png-to-ico"]')).toBeVisible();
     await expect(page.locator('a[href="/compress-pdf"]')).toBeVisible();
@@ -19,6 +20,14 @@ test.describe('High-value tool expansion', () => {
     await expect(page.locator('.route-option[data-href="/mp4-to-mp3"]')).toBeVisible({ timeout: 10_000 });
     await expect(page.locator('.route-option[data-href="/mp4-to-wav"]')).toBeVisible();
     await expect(page.locator('.route-option[data-href="/mp4-to-webm"]')).toBeVisible();
+  });
+
+  test('smart drop offers background removal for an image', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#smart-file-input').setInputFiles(fixture('sample.png'));
+
+    await expect(page.locator('.route-option[data-href="/background-remover"]')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.route-option[data-href="/image-to-text"]')).toBeVisible();
   });
 
   test('MP4 to MP3 converts a sample video', async ({ page }) => {
@@ -36,6 +45,31 @@ test.describe('High-value tool expansion', () => {
     await expect(page.locator('.file-item.done')).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('.file-item.done .btn--success')).toBeVisible();
     await expect(page.locator('.file-item__meta')).toContainText('→');
+  });
+
+  test('background remover exposes quality, refinement, and manual cleanup UI', async ({ page }) => {
+    await page.goto('/background-remover');
+    await page.locator('#file-input').setInputFiles(fixture('sample.png'));
+
+    await expect(page.locator('#action-btn')).toBeVisible();
+    await expect(page.locator('#bg-quality')).toHaveValue('auto');
+    await expect(page.locator('#edge-refinement')).toHaveValue('normal');
+    await expect(page.locator('#bg-editor')).toBeHidden();
+    await expect(page.locator('.file-item__name')).toContainText('sample.png');
+  });
+
+  test('fast background removal produces an editable transparent cutout', async ({ page }) => {
+    test.slow();
+    await page.goto('/background-remover');
+    await page.locator('#bg-quality').selectOption('fast');
+    await page.locator('#file-input').setInputFiles(fixture('sample.png'));
+    await page.locator('#action-btn').click();
+
+    await expect(page.locator('#bg-editor')).toBeVisible({ timeout: 90_000 });
+    await expect(page.locator('#download-transparent')).toBeVisible();
+    await expect(page.locator('#brush-erase')).toBeVisible();
+    await expect(page.locator('#brush-restore')).toBeVisible();
+    await expect.poll(async () => page.locator('#bg-preview-canvas').evaluate(canvas => canvas.width * canvas.height)).toBeGreaterThan(0);
   });
 
   test('image OCR page accepts a supported image without uploading it', async ({ page }) => {
