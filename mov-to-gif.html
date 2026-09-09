@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MOV to GIF Converter - Free, Private, No Upload | IrisFiles</title>
-  <meta name="description" content="Convert MOV videos to GIF animations in your browser. No upload needed. Trim, resize, and adjust frame rate. Files never leave your device.">
+  <meta name="description" content="Free MOV to GIF conversion in your browser. Trim QuickTime or iPhone MOV video, resize it, choose frame rate, and make a GIF with no upload.">
   <meta property="og:title" content="MOV to GIF Converter - Free, Private, No Upload | IrisFiles">
-  <meta property="og:description" content="Convert MOV videos to GIF animations in your browser. No upload needed. Trim, resize, and adjust frame rate. Files never leave your device.">
+  <meta property="og:description" content="Free MOV to GIF conversion in your browser. Trim QuickTime or iPhone MOV video, resize it, choose frame rate, and make a GIF with no upload.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://irisfiles.com/mov-to-gif">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="MOV to GIF Converter - Free, Private, No Upload | IrisFiles">
-  <meta name="twitter:description" content="Convert MOV videos to GIF animations in your browser. No upload needed. Trim, resize, and adjust frame rate. Files never leave your device.">
+  <meta name="twitter:description" content="Free MOV to GIF conversion in your browser. Trim QuickTime or iPhone MOV video, resize it, choose frame rate, and make a GIF with no upload.">
   <meta property="og:image" content="https://irisfiles.com/img/og-default.png">
   <meta name="twitter:image" content="https://irisfiles.com/img/og-default.png">
   <link rel="canonical" href="https://irisfiles.com/mov-to-gif">
@@ -25,7 +25,7 @@
       "@type": "WebApplication",
       "name": "MOV to GIF Converter - IrisFiles",
       "url": "https://irisfiles.com/mov-to-gif",
-      "description": "Convert MOV videos to GIF animations entirely in your browser. No server upload required.",
+      "description": "Convert MOV videos to animated GIFs entirely in your browser. Trim, resize, and choose frame rate with no server upload.",
       "applicationCategory": "MultimediaApplication",
       "operatingSystem": "Any",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
@@ -39,7 +39,7 @@
           "name": "Can I convert iPhone MOV recordings to GIF?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. iPhones record video as MOV files with H.264 or H.265 (HEVC) codec. H.264 MOV files work in all browsers. HEVC MOV files work in Safari and recent Chrome versions. If the file does not load, try using Safari on macOS or iOS."
+            "text": "Yes, when the video codec inside the MOV can be decoded by your browser. H.264 MOV files have broad browser support; HEVC and other codecs vary by browser and operating system."
           }
         },
         {
@@ -47,7 +47,7 @@
           "name": "Does MOV to GIF conversion work on Windows?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. Most MOV files use H.264 video, which Chrome, Firefox, and Edge on Windows all support. Some MOV files from older Mac software may use the Apple ProRes codec, which is not supported in Windows browsers. In that case, convert to MP4 first."
+            "text": "Yes for MOV files whose video codec your Windows browser can decode. H.264 is the safest case. If a MOV will not load, converting or remuxing it to a browser-compatible video format first may help."
           }
         },
         {
@@ -55,7 +55,7 @@
           "name": "Why is the GIF quality lower than my original MOV?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "GIF is limited to 256 colors per frame and does not support smooth gradients the way video codecs do. This is a fundamental limitation of the GIF format. For best results, increase the width setting and use clips with flat colors or simple graphics rather than photographic content."
+            "text": "GIF is limited to a 256-color palette and does not use modern video compression. Increasing width and frame rate can make motion look better, but also makes the GIF larger."
           }
         },
         {
@@ -63,7 +63,7 @@
           "name": "How do I convert a screen recording from QuickTime to GIF?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "QuickTime screen recordings are saved as MOV files. Simply drop the file into IrisFiles, set your desired width and frame rate, trim to the section you need, and click Convert. Screen recordings with flat UI elements and text produce particularly clean GIFs."
+            "text": "Drop the MOV screen recording into IrisFiles, choose the start and end times, set the output width and frame rate, then click Convert to GIF. Short clips with flat interface colors tend to work especially well as GIFs."
           }
         }
       ]
@@ -84,7 +84,7 @@
 
   <main class="container">
     <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> Back</a>
-<div id="drop-zone" class="drop-zone">
+    <div id="drop-zone" class="drop-zone">
       <h1 class="drop-zone__title">MOV to GIF privately.</h1>
       <p class="drop-zone__subtitle">Everything runs in your browser. Nothing is uploaded. Ever.</p>
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
@@ -129,6 +129,25 @@
 
     <div id="gif-result" style="margin-top:1.5rem"></div>
 
+    <section class="prose">
+      <h2>How MOV to GIF conversion works</h2>
+      <p>IrisFiles decodes the MOV with the browser's video engine, samples frames at the frame rate you choose, resizes them to the selected width, and encodes an animated GIF in the tab. The encoder samples colors from the clip to build one 256-color palette and skips nearly identical consecutive frames while extending their display time. That keeps simple screen recordings and static moments smaller without uploading the video.</p>
+
+      <h2>How to convert MOV to GIF</h2>
+      <ol>
+        <li>Add a MOV file and wait for the preview to appear.</li>
+        <li>Choose the part of the video you want with the start and end controls.</li>
+        <li>Set the output width from 160 to 800 pixels and frame rate from 4 to 20 frames per second.</li>
+        <li>Click <strong>Convert to GIF</strong> and download the animated result.</li>
+      </ol>
+
+      <h2>Higher-quality MOV to GIF settings</h2>
+      <p>GIF can show only 256 colors, so it cannot preserve the full color range of a modern MOV video. A wider output keeps more detail, while a higher frame rate makes motion smoother. Both increase file size. For interface demos and short screen recordings, a moderate width and around 8 to 12 frames per second is often a practical starting point.</p>
+
+      <h2>iPhone, QuickTime, Mac, and Windows MOV files</h2>
+      <p>MOV is a container, so compatibility depends on the video codec inside it. IrisFiles can convert a MOV only when the browser can decode that codec. If your MOV does not preview, try another modern browser or use <a href="/mov-to-mp4">MOV to MP4</a> when that workflow is compatible with the source. For other browser-compatible video files, see <a href="/video-to-gif">Video to GIF</a> or <a href="/mp4-to-gif">MP4 to GIF</a>.</p>
+    </section>
+
     <div class="related-tools">
       <h2>Related Tools</h2>
       <div class="related-tools__links">
@@ -146,25 +165,25 @@
       <div class="faq-item">
         <button class="faq-question">Can I convert iPhone MOV recordings to GIF?</button>
         <div class="faq-answer">
-          <p>Yes. iPhones record video as MOV files with H.264 or H.265 (HEVC) codec. H.264 MOV files work in all browsers. HEVC MOV files work in Safari and recent Chrome versions. If the file does not load, try using Safari on macOS or iOS.</p>
+          <p>Yes, when the video codec inside the MOV can be decoded by your browser. H.264 MOV files have broad browser support; HEVC and other codecs vary by browser and operating system.</p>
         </div>
       </div>
       <div class="faq-item">
         <button class="faq-question">Does MOV to GIF conversion work on Windows?</button>
         <div class="faq-answer">
-          <p>Yes. Most MOV files use H.264 video, which Chrome, Firefox, and Edge on Windows all support. Some MOV files from older Mac software may use the Apple ProRes codec, which is not supported in Windows browsers. In that case, convert to MP4 first.</p>
+          <p>Yes for MOV files whose video codec your Windows browser can decode. H.264 is the safest case. If a MOV will not load, converting or remuxing it to a browser-compatible video format first may help.</p>
         </div>
       </div>
       <div class="faq-item">
         <button class="faq-question">Why is the GIF quality lower than my original MOV?</button>
         <div class="faq-answer">
-          <p>GIF is limited to 256 colors per frame and does not support smooth gradients the way video codecs do. This is a fundamental limitation of the GIF format. For best results, increase the width setting and use clips with flat colors or simple graphics rather than photographic content.</p>
+          <p>GIF is limited to a 256-color palette and does not use modern video compression. Increasing width and frame rate can make motion look better, but also makes the GIF larger.</p>
         </div>
       </div>
       <div class="faq-item">
         <button class="faq-question">How do I convert a screen recording from QuickTime to GIF?</button>
         <div class="faq-answer">
-          <p>QuickTime screen recordings are saved as MOV files. Simply drop the file into IrisFiles, set your desired width and frame rate, trim to the section you need, and click Convert. Screen recordings with flat UI elements and text produce particularly clean GIFs.</p>
+          <p>Drop the MOV screen recording into IrisFiles, choose the start and end times, set the output width and frame rate, then click Convert to GIF. Short clips with flat interface colors tend to work especially well as GIFs.</p>
         </div>
       </div>
     </section>
