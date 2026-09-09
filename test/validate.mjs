@@ -20,11 +20,15 @@ const PAGES = [
   '/avif-to-jpg', '/avif-to-png', '/avif-to-webp', '/avif-to-pdf',
   '/ico-to-jpg', '/ico-to-png', '/ico-to-webp', '/ico-to-pdf',
   '/tiff-to-jpg', '/tiff-to-png', '/tiff-to-webp', '/tiff-to-pdf',
+  // High-value image tools
+  '/image-to-text', '/png-to-ico',
   '/mp3-to-wav', '/wav-to-mp3', '/ogg-to-wav', '/ogg-to-mp3',
   '/flac-to-wav', '/flac-to-mp3', '/m4a-to-wav', '/m4a-to-mp3',
   '/aac-to-wav', '/aac-to-mp3',
   '/epub-to-txt', '/epub-to-pdf', '/rtf-to-txt', '/rtf-to-pdf',
   '/docx-to-txt', '/docx-to-pdf',
+  // HTML document conversion
+  '/html-to-pdf',
   '/otf-to-ttf', '/woff-to-ttf', '/ttf-to-otf', '/woff-to-otf',
   '/ttf-to-woff', '/otf-to-woff',
   '/extract-zip', '/create-zip',
@@ -32,17 +36,23 @@ const PAGES = [
   '/mov-to-mp4', '/avi-to-mp4', '/mkv-to-mp4', '/webm-to-mp4', '/mp4-to-webm',
   '/compress-video',
   '/image-metadata',
-  // New video conversions
+  // Video conversions
   '/mp4-to-avi', '/mp4-to-mkv', '/mp4-to-mov',
   '/webm-to-avi', '/webm-to-mkv', '/webm-to-mov',
   '/mov-to-webm', '/mov-to-avi', '/mov-to-mkv',
   '/avi-to-webm', '/avi-to-mov', '/avi-to-mkv',
   '/mkv-to-webm', '/mkv-to-avi', '/mkv-to-mov',
+  // Video-to-audio
+  '/mp4-to-mp3', '/mp4-to-wav',
+  '/mov-to-mp3', '/mov-to-wav',
+  '/webm-to-mp3', '/webm-to-wav',
+  '/avi-to-mp3', '/avi-to-wav',
+  '/mkv-to-mp3', '/mkv-to-wav',
   // Video-to-GIF (format-specific)
   '/mp4-to-gif', '/webm-to-gif', '/mov-to-gif', '/avi-to-gif', '/mkv-to-gif',
   // GIF-to-Video
   '/gif-to-mp4', '/gif-to-webm', '/gif-to-mov', '/gif-to-avi', '/gif-to-mkv',
-  // New audio conversions
+  // Audio conversions
   '/mp3-to-ogg', '/wav-to-ogg', '/flac-to-ogg', '/m4a-to-ogg', '/aac-to-ogg',
   '/mp3-to-flac', '/wav-to-flac', '/ogg-to-flac', '/m4a-to-flac', '/aac-to-flac',
   '/mp3-to-m4a', '/wav-to-m4a', '/ogg-to-m4a', '/flac-to-m4a', '/aac-to-m4a',
@@ -53,6 +63,9 @@ const PAGES = [
   '/video-metadata',
   '/video-speed',
   '/pdf-ocr',
+  // PDF page/text/compression tools
+  '/delete-pdf-pages', '/extract-pdf-pages', '/reorder-pdf-pages',
+  '/rotate-pdf', '/pdf-to-text', '/compress-pdf',
   '/about', '/privacy'
 ];
 
@@ -75,11 +88,9 @@ function fetch(url) {
 }
 
 function meta(html, property) {
-  // property= or name= attribute
   const re = new RegExp(`<meta\\s+(?:property|name)=["']${property}["']\\s+content=["']([^"']+)["']`, 'i');
   const m = html.match(re);
   if (m) return m[1];
-  // try reversed attribute order (content before property/name)
   const re2 = new RegExp(`<meta\\s+content=["']([^"']+)["']\\s+(?:property|name)=["']${property}["']`, 'i');
   const m2 = html.match(re2);
   return m2 ? m2[1] : null;
@@ -111,38 +122,31 @@ async function validatePage(path) {
   ok(html.includes('<html'), `${label}: missing <html>`);
   ok(html.includes('</html>'), `${label}: missing </html>`);
 
-  // title
   const titleMatch = html.match(/<title>([^<]+)<\/title>/);
   ok(titleMatch && titleMatch[1].trim().length > 0, `${label}: missing or empty <title>`);
 
-  // meta description
   const desc = meta(html, 'description');
   ok(desc && desc.length > 0, `${label}: missing meta description`);
 
-  // OG tags
   ok(meta(html, 'og:title'), `${label}: missing og:title`);
   ok(meta(html, 'og:description'), `${label}: missing og:description`);
   ok(meta(html, 'og:type'), `${label}: missing og:type`);
   ok(meta(html, 'og:url'), `${label}: missing og:url`);
   ok(meta(html, 'og:image'), `${label}: missing og:image`);
 
-  // Twitter tags
   ok(meta(html, 'twitter:card'), `${label}: missing twitter:card`);
   ok(meta(html, 'twitter:title'), `${label}: missing twitter:title`);
   ok(meta(html, 'twitter:description'), `${label}: missing twitter:description`);
   ok(meta(html, 'twitter:image'), `${label}: missing twitter:image`);
 
-  // Canonical
   const canonMatch = html.match(/<link\s+rel=["']canonical["']\s+href=["']([^"']+)["']/);
   ok(canonMatch, `${label}: missing canonical link`);
   if (canonMatch) {
     ok(canonMatch[1].startsWith('https://irisfiles.com'), `${label}: canonical doesn't start with https://irisfiles.com`);
   }
 
-  // Favicon
   ok(html.includes('href="/favicon.png"'), `${label}: missing favicon link`);
 
-  // JSON-LD (all pages except /about should have array of 2: WebApplication + FAQPage)
   const ldMatch = html.match(/<script\s+type=["']application\/ld\+json["']>([\s\S]*?)<\/script>/);
   if (path === '/about' || path === '/privacy') {
     // about/privacy pages: no JSON-LD required (but ok if present)
@@ -161,12 +165,10 @@ async function validatePage(path) {
     }
   }
 
-  // Internal links resolve to real files
   const hrefRe = /href="(\/[^"#]*)"/g;
   let m;
   while ((m = hrefRe.exec(html)) !== null) {
     const linkPath = m[1];
-    // /favicon.svg is a file, others are clean URLs (html files)
     if (linkPath.includes('.')) {
       ok(existsSync(join(ROOT, linkPath)), `${label}: broken asset link ${linkPath}`);
     } else {
@@ -175,7 +177,6 @@ async function validatePage(path) {
     }
   }
 
-  // Local script src paths exist on disk
   const scriptRe = /<script[^>]+src="([^"]+)"/g;
   while ((m = scriptRe.exec(html)) !== null) {
     const src = m[1];
@@ -187,31 +188,29 @@ async function validatePage(path) {
 async function globalChecks() {
   console.log('\n=== GLOBAL CHECKS ===');
 
-  // sitemap.xml
   const { status: smStatus, body: sitemap } = await fetch(`${BASE}/sitemap.xml`);
   ok(smStatus === 200, 'sitemap.xml: not found');
   const locRe = /<loc>([^<]+)<\/loc>/g;
   const urls = [];
   let m;
   while ((m = locRe.exec(sitemap)) !== null) urls.push(m[1]);
-  ok(urls.length === 134, `sitemap.xml: has ${urls.length} URLs (expected 134)`);
+  ok(urls.length === PAGES.length, `sitemap.xml: has ${urls.length} URLs (expected ${PAGES.length})`);
+  const sitemapPaths = new Set(urls.map(url => url.replace('https://irisfiles.com', '') || '/'));
+  for (const page of PAGES) {
+    ok(sitemapPaths.has(page), `sitemap.xml: missing registered page ${page}`);
+  }
 
-  // each sitemap URL corresponds to a real page
   for (const url of urls) {
     const path = url.replace('https://irisfiles.com', '');
     const filePath = (path === '' || path === '/') ? 'index.html' : `${path.replace(/^\//, '')}.html`;
     ok(existsSync(join(ROOT, filePath)), `sitemap.xml: ${url} has no corresponding file (${filePath})`);
   }
 
-  // robots.txt
   const { status: rbStatus, body: robots } = await fetch(`${BASE}/robots.txt`);
   ok(rbStatus === 200, 'robots.txt: not found');
   ok(robots.includes('Allow: /'), 'robots.txt: missing Allow: /');
   ok(robots.toLowerCase().includes('sitemap:'), 'robots.txt: missing Sitemap directive');
 
-  // Stylesheet cache-buster must match the stylesheet contents. css/style.css
-  // is an @import shim, so editing the imported sheets changes what renders
-  // without changing any cached URL. That shipped a redesign nobody could see.
   const expectedCssVersion = cssVersion();
   const shim = readFileSync(join(ROOT, 'css/style.css'), 'utf8');
   for (const [, imported, version] of shim.matchAll(/@import url\('\.\/([a-z-]+\.css)\?v=([^']*)'\)/g)) {
@@ -223,7 +222,6 @@ async function globalChecks() {
   ok(stalePages.length === 0,
     `${stalePages.length} page(s) link a stale stylesheet version, e.g. ${stalePages[0]} (run: node scripts/css-version.mjs --write)`);
 
-  // vercel.json CSP checks
   const vercelJson = JSON.parse(readFileSync(join(ROOT, 'vercel.json'), 'utf8'));
   const cspHeader = vercelJson.headers
     .find(h => h.source === '/(.*)')
@@ -237,11 +235,9 @@ async function globalChecks() {
     ok(csp.includes("'unsafe-inline'"), 'vercel.json CSP: missing unsafe-inline in style-src');
   }
 
-  // favicon.png
   const { status: fvStatus } = await fetch(`${BASE}/favicon.png`);
   ok(fvStatus === 200, 'favicon.png: not served (status ' + fvStatus + ')');
 
-  // og-default.png
   const { status: ogStatus } = await fetch(`${BASE}/img/og-default.png`);
   ok(ogStatus === 200, 'img/og-default.png: not served (status ' + ogStatus + ')');
 }
@@ -260,9 +256,9 @@ async function main() {
     server.kill('SIGTERM');
   }
 
-  console.log(`\n========================================`);
+  console.log('\n========================================');
   console.log(`  ${passed} passed, ${failed} failed`);
-  console.log(`========================================`);
+  console.log('========================================');
   process.exit(failed > 0 ? 1 : 0);
 }
 
