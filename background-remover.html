@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Background Remover - Free, Private, No Upload | IrisFiles</title>
+  <meta name="description" content="Remove image backgrounds privately in your browser with AI. Best-quality edge matting, manual erase/restore cleanup, transparent PNG output, and no image upload.">
+  <meta property="og:title" content="Background Remover - Private AI Cutouts | IrisFiles">
+  <meta property="og:description" content="Remove backgrounds locally in your browser. Best-quality AI edges, manual cleanup, transparent PNG. Your image is never uploaded.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://irisfiles.com/background-remover">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Background Remover | IrisFiles">
+  <meta name="twitter:description" content="Private AI background removal that runs on your device.">
+  <meta property="og:image" content="https://irisfiles.com/img/og-default.png">
+  <meta name="twitter:image" content="https://irisfiles.com/img/og-default.png">
+  <link rel="canonical" href="https://irisfiles.com/background-remover">
+  <link rel="stylesheet" href="css/style.css?v=b819e90d">
+  <link rel="stylesheet" href="css/high-value-tools.css">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script type="application/ld+json">
+  [
+    {
+      "@context":"https://schema.org",
+      "@type":"WebApplication",
+      "name":"Background Remover - IrisFiles",
+      "url":"https://irisfiles.com/background-remover",
+      "description":"Remove image backgrounds with client-side AI. Images stay on the user's device.",
+      "applicationCategory":"GraphicsApplication",
+      "operatingSystem":"Any",
+      "offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}
+    },
+    {
+      "@context":"https://schema.org",
+      "@type":"FAQPage",
+      "mainEntity":[
+        {
+          "@type":"Question",
+          "name":"Are my photos uploaded to remove the background?",
+          "acceptedAnswer":{"@type":"Answer","text":"No. IrisFiles runs image segmentation and edge refinement in your browser. Your photo never leaves your device. The AI model files are downloaded when needed and cached by your browser."}
+        },
+        {
+          "@type":"Question",
+          "name":"What is the difference between Best edges and Fast mode?",
+          "acceptedAnswer":{"@type":"Answer","text":"Best edges uses a larger WebGPU BiRefNet model for more detailed cutouts. Fast mode uses a much smaller U2-Net model and works on more browsers. Auto chooses based on your device."}
+        },
+        {
+          "@type":"Question",
+          "name":"Can I fix parts the AI removed incorrectly?",
+          "acceptedAnswer":{"@type":"Answer","text":"Yes. Use the Erase and Restore brushes after automatic background removal to edit the mask before downloading."}
+        },
+        {
+          "@type":"Question",
+          "name":"Can I download a transparent PNG?",
+          "acceptedAnswer":{"@type":"Answer","text":"Yes. Transparent PNG is the primary output. You can also preview other backgrounds and download a white-background JPG."}
+        },
+        {
+          "@type":"Question",
+          "name":"What images work best?",
+          "acceptedAnswer":{"@type":"Answer","text":"People, products, pets, vehicles and other clear foreground subjects work best. Hair, fur, transparent objects and low-contrast edges benefit most from Best edges mode and the manual cleanup brush."}
+        }
+      ]
+    }
+  ]
+  </script>
+</head>
+<body>
+  <header class="header">
+    <div class="container container--wide">
+      <a href="/" class="logo">Iris<span>Files</span></a>
+      <nav class="nav">
+        <a href="/about">About</a>
+        <a href="https://ko-fi.com/irisfiles" class="support-btn" target="_blank" rel="noopener">Support this project</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <a href="/" class="back-link">‹ Back</a>
+
+    <div id="drop-zone" class="drop-zone">
+      <h1 class="drop-zone__title">Remove backgrounds privately.</h1>
+      <p class="drop-zone__subtitle">AI cutouts run on your device. Your image is never uploaded.</p>
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><circle cx="19" cy="21" r="4"/><path d="M12 34l8-8 6 6 4-4 6 6"/></svg>
+      <p>Drop a JPG, PNG, WebP, or BMP image here, or <strong>click to browse</strong></p>
+      <p class="drop-zone__disclaimer">Only AI model files are downloaded. Your source image stays in this browser.</p>
+      <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.webp,.bmp,image/jpeg,image/png,image/webp,image/bmp">
+    </div>
+
+    <div id="file-list" class="file-list"></div>
+
+    <section class="bg-removal-settings" aria-label="Background removal settings">
+      <div class="bg-setting">
+        <label for="bg-quality">AI quality</label>
+        <select id="bg-quality">
+          <option value="auto">Auto · choose for this device</option>
+          <option value="best">Best edges · ~94 MB, WebGPU</option>
+          <option value="fast">Fast · ~4.4 MB, broad support</option>
+        </select>
+      </div>
+      <div class="bg-setting">
+        <label for="edge-refinement">Edge refinement</label>
+        <select id="edge-refinement">
+          <option value="normal" selected>Normal · recommended</option>
+          <option value="soft">Soft · hair & fur</option>
+          <option value="strong">Crisp · products & logos</option>
+        </select>
+      </div>
+    </section>
+    <p id="bg-model-note" class="tool-help"></p>
+
+    <div class="batch-actions">
+      <button id="action-btn" class="btn btn--primary" style="display:none">Remove Background</button>
+      <button id="clear-all" class="btn btn--secondary" style="display:none">Clear</button>
+    </div>
+
+    <div id="bg-progress" class="ocr-progress" style="display:none" aria-live="polite">
+      <div id="bg-progress-status" class="ocr-progress-status">Starting…</div>
+      <div class="route-convert-progress"><div id="bg-progress-bar" class="route-convert-bar"></div></div>
+    </div>
+
+    <section id="bg-editor" class="bg-editor" style="display:none">
+      <div class="bg-editor__heading">
+        <div>
+          <h2>Refine your cutout</h2>
+          <p id="bg-result-meta" class="tool-help"></p>
+        </div>
+        <label class="bg-crop-toggle"><input id="crop-subject" type="checkbox"> Trim transparent edges</label>
+      </div>
+
+      <div class="bg-preview-controls" aria-label="Preview background">
+        <span class="bg-control-label">Preview on</span>
+        <button id="preview-transparent" class="bg-chip active" type="button">Transparent</button>
+        <button id="preview-white" class="bg-chip" type="button">White</button>
+        <button id="preview-black" class="bg-chip" type="button">Black</button>
+        <button id="preview-custom" class="bg-chip" type="button">Custom</button>
+        <input id="background-color" class="bg-color-input" type="color" value="#4f46e5" aria-label="Custom background color">
+      </div>
+
+      <div class="bg-preview-shell checkerboard">
+        <canvas id="bg-preview-canvas" class="bg-preview-canvas" aria-label="Background removed preview. Draw on this preview with Erase or Restore brush."></canvas>
+      </div>
+
+      <div class="bg-brush-panel">
+        <div class="bg-brush-tools">
+          <span class="bg-control-label">Fix mask</span>
+          <button id="brush-erase" class="bg-chip active" type="button" aria-pressed="true">Erase</button>
+          <button id="brush-restore" class="bg-chip" type="button" aria-pressed="false">Restore</button>
+          <button id="brush-undo" class="bg-chip" type="button" disabled>Undo</button>
+          <button id="brush-reset" class="bg-chip" type="button" disabled>Reset edits</button>
+        </div>
+        <div class="bg-slider-row">
+          <label for="brush-size">Brush size</label>
+          <input id="brush-size" type="range" min="8" max="140" value="46">
+          <label for="brush-hardness">Hardness</label>
+          <input id="brush-hardness" type="range" min="25" max="100" value="82">
+        </div>
+        <p class="tool-help">Erase removes foreground. Restore paints it back. Edits affect the mask only, never the original file.</p>
+      </div>
+
+      <div class="bg-download-panel">
+        <button id="download-transparent" class="btn btn--success">Download Transparent PNG</button>
+        <button id="download-white" class="btn btn--secondary">Download White JPG</button>
+        <button id="download-current" class="btn btn--secondary">Download Current Background</button>
+      </div>
+    </section>
+
+    <div class="related-tools">
+      <h2>Related Tools</h2>
+      <div class="related-tools__links">
+        <a href="/resize-image">Resize Image</a>
+        <a href="/compress">Compress Image</a>
+        <a href="/image-to-text">Image to Text</a>
+        <a href="/png-to-ico">PNG to ICO</a>
+      </div>
+    </div>
+
+    <section class="faq">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-item"><button class="faq-question">Are my photos uploaded?</button><div class="faq-answer"><p>No. Segmentation, edge refinement, manual mask editing, and output encoding all happen in your browser. IrisFiles downloads the AI model weights when needed, but your photo itself never leaves your device.</p></div></div>
+      <div class="faq-item"><button class="faq-question">What is Best edges mode?</button><div class="faq-answer"><p>Best edges uses the browser-tuned BiRefNet-lite 512 model on WebGPU. It is much larger than Fast mode, about 94 MB, but is designed for detailed foreground extraction. The model is cached by the browser after download.</p></div></div>
+      <div class="faq-item"><button class="faq-question">What happens if Best edges does not work on my device?</button><div class="faq-answer"><p>IrisFiles automatically falls back to the smaller U²-Netp model, so background removal still works on browsers without compatible WebGPU support.</p></div></div>
+      <div class="faq-item"><button class="faq-question">Can I fix hair or object edges manually?</button><div class="faq-answer"><p>Yes. Automatic output is passed through an edge-aware guided refinement step, then you can use Erase and Restore brushes to correct the remaining mask mistakes before download.</p></div></div>
+      <div class="faq-item"><button class="faq-question">Can I get a transparent PNG?</button><div class="faq-answer"><p>Yes. Transparent PNG is the main output. You can also preview white, black, or custom backgrounds and download a white-background JPG.</p></div></div>
+    </section>
+  </main>
+
+  <footer class="footer"><div class="container"><div class="footer-links"><a href="/">All Converters</a><a href="/resize-image">Resize Image</a><a href="/about">About</a></div><p>IrisFiles. All processing happens in your browser.</p></div></footer>
+  <script type="module" src="js/background-removal-boot.js"></script>
+</body>
+</html>
