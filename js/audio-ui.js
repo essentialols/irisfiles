@@ -18,15 +18,6 @@ const CONCURRENCY = 2;
 const fileQueue = [];
 let activeCount = 0;
 
-// FFmpeg conversions share one wasm instance and fixed input/output filenames,
-// so only one can run its write/execute/read/cleanup sequence at a time.
-let ffmpegChain = Promise.resolve();
-function serializeFFmpeg(task) {
-  const result = ffmpegChain.then(task, task);
-  ffmpegChain = result.then(() => {}, () => {});
-  return result;
-}
-
 let dropZone, fileInput, fileList, downloadAllBtn, clearAllBtn;
 
 export function init() {
@@ -139,13 +130,11 @@ async function processQueue() {
     const t0 = performance.now();
     try {
       next.outputName = outputFilename(next.file.name, targetExt);
-      const isFFmpeg = FFMPEG_FORMATS.has(targetFormat);
-      const convertFn = isFFmpeg ? convertAudioFFmpeg : convertAudio;
-      const runConvert = () => convertFn(next.file, targetFormat, pct => {
+      const convertFn = FFMPEG_FORMATS.has(targetFormat) ? convertAudioFFmpeg : convertAudio;
+      next.outputBlob = await convertFn(next.file, targetFormat, pct => {
         next.progress = pct;
         updateFileItem(next);
       });
-      next.outputBlob = isFFmpeg ? await serializeFFmpeg(runConvert) : await runConvert();
       next.durationMs = Math.round(performance.now() - t0);
       next.status = 'done';
       next.progress = 100;
