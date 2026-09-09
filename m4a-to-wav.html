@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>M4A to WAV Converter - Free, Private, No Upload | IrisFiles</title>
-  <meta name="description" content="Convert M4A audio files to WAV format in your browser. No upload needed. All processing is local and private.">
+  <meta name="description" content="Convert M4A audio to 16-bit PCM WAV in your browser. Free M4A to WAV converter for voice memos and editing, with batch support and no upload.">
   <meta property="og:title" content="M4A to WAV Converter - Free, Private, No Upload | IrisFiles">
-  <meta property="og:description" content="Convert M4A audio files to WAV format in your browser. No upload needed. All processing is local and private.">
+  <meta property="og:description" content="Convert M4A audio to 16-bit PCM WAV in your browser. Free M4A to WAV converter for voice memos and editing, with batch support and no upload.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://irisfiles.com/m4a-to-wav">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="M4A to WAV Converter - Free, Private, No Upload | IrisFiles">
-  <meta name="twitter:description" content="Convert M4A audio files to WAV format in your browser. No upload needed. All processing is local and private.">
+  <meta name="twitter:description" content="Convert M4A audio to 16-bit PCM WAV in your browser. Free M4A to WAV converter for voice memos and editing, with batch support and no upload.">
   <meta property="og:image" content="https://irisfiles.com/img/og-default.png">
   <meta name="twitter:image" content="https://irisfiles.com/img/og-default.png">
   <link rel="canonical" href="https://irisfiles.com/m4a-to-wav">
@@ -25,7 +25,7 @@
       "@type": "WebApplication",
       "name": "M4A to WAV Converter - IrisFiles",
       "url": "https://irisfiles.com/m4a-to-wav",
-      "description": "Convert M4A audio files to WAV format in your browser. No upload needed. All processing is local and private.",
+      "description": "Convert M4A audio files to 16-bit PCM WAV in your browser. No upload needed. All processing is local and private.",
       "applicationCategory": "MultimediaApplication",
       "operatingSystem": "Any",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
@@ -39,23 +39,23 @@
           "name": "How does M4A to WAV conversion work?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Your browser decodes the M4A audio using the Web Audio API, then re-encodes it as WAV. No server is involved, so your files stay completely private."
+            "text": "Your browser decodes the M4A audio with the Web Audio API and writes the decoded samples as a 16-bit PCM WAV file. No server is involved, so your audio stays on your device."
           }
         },
         {
           "@type": "Question",
-          "name": "Will the audio quality be good?",
+          "name": "Does converting M4A to WAV improve audio quality?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "WAV is lossless, so converted files keep detail. If the source was lossy, lost detail cannot be restored."
+            "text": "No. WAV stores the decoded audio without additional lossy compression, but it cannot restore detail that was already removed if the M4A contains lossy AAC audio."
           }
         },
         {
           "@type": "Question",
-          "name": "Can I convert multiple files at once?",
+          "name": "Can I convert multiple M4A files at once?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. Drop as many M4A files as you want. IrisFiles processes them in parallel and lets you download all results as a ZIP."
+            "text": "Yes. IrisFiles accepts batches of up to 50 M4A files, processes up to two conversions at a time, and can package multiple completed WAV files into a ZIP download."
           }
         }
       ]
@@ -69,14 +69,14 @@
       <a href="/" class="logo">Iris<span>Files</span></a>
       <nav class="nav">
         <a href="/about">About</a>
-        <a href="https://ko-fi.com/irisfiles" class="support-btn" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1.5a2.5 2.5 0 010 5H17"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z" fill="currentColor" stroke="none" opacity=".15"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3" opacity=".6"/></svg> Support this project</a>
+        <a href="https://ko-fi.com/irisfiles" class="support-btn" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1.5a2.5 2.5 0 010 5H17"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z" fill="currentColor" stroke="none" opacity=".15"/><path d="M3 8h14v9a4 4 0 01-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3" opacity=".6"/></svg> Support this project</a>
       </nav>
     </div>
   </header>
 
   <main class="container">
     <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> Back</a>
-<div id="drop-zone" class="drop-zone">
+    <div id="drop-zone" class="drop-zone">
       <h1 class="drop-zone__title">M4A to WAV privately.</h1>
       <p class="drop-zone__subtitle">Everything runs in your browser. Nothing is uploaded. Ever.</p>
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
@@ -92,11 +92,33 @@
       <button id="clear-all" class="btn btn--secondary" style="display:none">Clear All</button>
     </div>
 
+    <section class="prose">
+      <h2>How to convert M4A to WAV</h2>
+      <ol>
+        <li>Add an M4A file, or add several files for a batch conversion.</li>
+        <li>IrisFiles decodes the M4A audio locally in your browser and writes a WAV file.</li>
+        <li>Download each WAV individually, or download a ZIP when multiple conversions finish.</li>
+      </ol>
+
+      <h2>Why convert M4A to WAV?</h2>
+      <p>M4A is a container commonly used for AAC audio on Apple devices, iPhone Voice Memos, music libraries, and other compressed audio. WAV is widely accepted by audio editors, digital audio workstations, transcription software, samplers, and older applications that expect uncompressed PCM audio. Converting first can make an M4A file easier to edit without repeatedly decoding it inside another application.</p>
+
+      <h2>What does IrisFiles put in the WAV file?</h2>
+      <p>IrisFiles uses the browser's Web Audio API to decode the M4A and writes the result as <strong>16-bit PCM WAV</strong>. The WAV keeps the decoded channel count. Its sample rate is the rate produced by the browser's audio decoder, so a browser may resample some inputs during decoding. Because WAV is uncompressed, the output will usually be much larger than the original M4A.</p>
+
+      <h2>Does M4A to WAV improve quality?</h2>
+      <p>No. If the M4A contains lossy AAC audio, information discarded during the original AAC encoding cannot be recovered. WAV avoids adding another lossy codec after decoding, which is useful for editing, but it does not make a lossy source higher fidelity. If you only need a smaller, widely playable file, <a href="/m4a-to-mp3">M4A to MP3</a> may be a better fit.</p>
+
+      <h2>Private batch M4A to WAV conversion</h2>
+      <p>You can queue up to 50 files. IrisFiles runs up to two audio conversions at a time and packages multiple finished files into a ZIP on your device. No audio file is uploaded to an IrisFiles server.</p>
+    </section>
+
     <div class="related-tools">
       <h2>Related Tools</h2>
       <div class="related-tools__links">
         <a href="/wav-to-mp3">WAV to MP3</a>
         <a href="/m4a-to-mp3">M4A to MP3</a>
+        <a href="/compress-audio">Compress Audio</a>
       </div>
     </div>
 
@@ -105,19 +127,19 @@
       <div class="faq-item">
         <button class="faq-question">How does M4A to WAV conversion work?</button>
         <div class="faq-answer">
-          <p>Your browser decodes the M4A audio using the Web Audio API, then re-encodes it as WAV. No server is involved, so your files stay completely private.</p>
+          <p>Your browser decodes the M4A audio with the Web Audio API and writes the decoded samples as a 16-bit PCM WAV file. No server is involved, so your audio stays on your device.</p>
         </div>
       </div>
       <div class="faq-item">
-        <button class="faq-question">Will the audio quality be good?</button>
+        <button class="faq-question">Does converting M4A to WAV improve audio quality?</button>
         <div class="faq-answer">
-          <p>WAV is lossless, so converted files keep detail. If the source was lossy, lost detail cannot be restored.</p>
+          <p>No. WAV stores the decoded audio without additional lossy compression, but it cannot restore detail that was already removed if the M4A contains lossy AAC audio.</p>
         </div>
       </div>
       <div class="faq-item">
-        <button class="faq-question">Can I convert multiple files at once?</button>
+        <button class="faq-question">Can I convert multiple M4A files at once?</button>
         <div class="faq-answer">
-          <p>Yes. Drop as many M4A files as you want. IrisFiles processes them in parallel and lets you download all results as a ZIP.</p>
+          <p>Yes. IrisFiles accepts batches of up to 50 M4A files, processes up to two conversions at a time, and can package multiple completed WAV files into a ZIP download.</p>
         </div>
       </div>
     </section>
@@ -128,6 +150,7 @@
       <div class="footer-links">
         <a href="/">All Converters</a>
         <a href="/wav-to-mp3">WAV to MP3</a>
+        <a href="/m4a-to-mp3">M4A to MP3</a>
         <a href="/about">About</a>
       </div>
       <p>IrisFiles. All processing happens in your browser.</p>
