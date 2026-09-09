@@ -21,8 +21,10 @@ document.querySelectorAll('.faq-question').forEach(btn => {
 applyPageUX({
   dropZoneSelector: '#smart-drop',
   fileInputSelector: '#smart-file-input',
-  manualText: 'Mode: drop one file, then choose a conversion or tool below.',
-  autoText: 'Mode: drop one file, then choose a conversion or tool below.',
+  // No mode hint here. The tool pages use it to distinguish manual from
+  // automatic conversion, but the landing page has one behaviour, so the hint
+  // only restated the drop zone directly above it.
+  showInteractionHint: false,
 });
 
 const SEARCH_FILLER_WORDS = new Set([
