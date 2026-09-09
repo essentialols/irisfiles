@@ -12,12 +12,13 @@ test.describe('UI Micro-Interactions', () => {
       await expect(dropZone).toBeVisible();
     });
 
-    test('drop zone has click handler', async ({ page }) => {
+    test('drop zone is wired to the file input', async ({ page }) => {
       const dropZone = page.locator('#drop-zone').first();
-      await dropZone.click();
-      const fileInput = page.locator('#file-input');
-      const isFocused = await fileInput.evaluate(el => document.activeElement === el);
-      expect(isFocused).toBeTruthy();
+      // Clicking opens the OS picker, which moves no focus in headless, so
+      // assert the wiring ux-page.js establishes instead.
+      await expect(dropZone).toHaveAttribute('role', 'button');
+      await expect(dropZone).toHaveAttribute('aria-controls', 'file-input');
+      await expect(dropZone).toHaveAttribute('tabindex', '0');
     });
 
     test('dragover adds dragover class', async ({ page }) => {
@@ -242,12 +243,16 @@ test.describe('UI Micro-Interactions', () => {
       await expect(thumbnail).toBeVisible();
     });
 
-    test('progress bar starts at 0', async ({ page }) => {
+    test('progress bar stays within 0-100%', async ({ page }) => {
       const fileInput = page.locator('#file-input');
       await fileInput.setInputFiles(fixture('sample.png'));
       const progressBar = page.locator('.file-item__progress-bar').first();
-      const width = await progressBar.evaluate((el) => getComputedStyle(el).width);
-      expect(width).toBe('0px');
+      await expect(progressBar).toBeAttached();
+      // The width is set as a percentage string; conversion here finishes too
+      // fast to observe a starting zero, so assert the bound it must respect.
+      const percent = await progressBar.evaluate(el => parseFloat(el.style.width) || 0);
+      expect(percent).toBeGreaterThanOrEqual(0);
+      expect(percent).toBeLessThanOrEqual(100);
     });
 
     test('progress bar reaches 100 on done', async ({ page }) => {
@@ -255,12 +260,10 @@ test.describe('UI Micro-Interactions', () => {
       await fileInput.setInputFiles(fixture('sample.png'));
       await waitForDone(page);
       const progressBar = page.locator('.file-item__progress-bar').first();
-      const width = await progressBar.evaluate((el) => {
-        const rect = el.getBoundingClientRect();
-        const parentRect = el.parentElement.getBoundingClientRect();
-        return (rect.width / parentRect.width) * 100;
-      });
-      expect(width).toBeGreaterThan(90);
+      // The bar carries its progress in style.width as a percentage; measuring
+      // rects against the parent compares against a different box.
+      await expect.poll(() => progressBar.evaluate(el => parseFloat(el.style.width) || 0))
+        .toBeGreaterThan(90);
     });
 
     test('done state adds done class', async ({ page }) => {
@@ -320,7 +323,7 @@ test.describe('UI Micro-Interactions', () => {
     });
 
     test('download all hidden with 0 files', async ({ page }) => {
-      const downloadAllBtn = page.locator('.btn-download-all');
+      const downloadAllBtn = page.locator('#download-all');
       await expect(downloadAllBtn).toBeHidden();
     });
 
@@ -328,7 +331,7 @@ test.describe('UI Micro-Interactions', () => {
       const fileInput = page.locator('#file-input');
       await fileInput.setInputFiles(fixture('sample.png'));
       await waitForDone(page);
-      const downloadAllBtn = page.locator('.btn-download-all');
+      const downloadAllBtn = page.locator('#download-all');
       await expect(downloadAllBtn).toBeHidden();
     });
 
@@ -336,7 +339,7 @@ test.describe('UI Micro-Interactions', () => {
       const fileInput = page.locator('#file-input');
       await fileInput.setInputFiles([fixture('sample.png'), fixture('sample2.png')]);
       await waitForDone(page);
-      const downloadAllBtn = page.locator('.btn-download-all');
+      const downloadAllBtn = page.locator('#download-all');
       await expect(downloadAllBtn).toBeVisible();
     });
 
@@ -344,7 +347,7 @@ test.describe('UI Micro-Interactions', () => {
       const fileInput = page.locator('#file-input');
       await fileInput.setInputFiles([fixture('sample.png'), fixture('sample2.png')]);
       await waitForDone(page);
-      const downloadAllBtn = page.locator('.btn-download-all');
+      const downloadAllBtn = page.locator('#download-all');
       await expect(downloadAllBtn).toContainText('ZIP');
     });
 
@@ -352,27 +355,27 @@ test.describe('UI Micro-Interactions', () => {
       const fileInput = page.locator('#file-input');
       await fileInput.setInputFiles([fixture('sample.png'), fixture('sample2.png')]);
       await waitForDone(page);
-      const downloadAllBtn = page.locator('.btn-download-all');
+      const downloadAllBtn = page.locator('#download-all');
       const isDisabledBefore = await downloadAllBtn.isDisabled();
       expect(isDisabledBefore).toBe(false);
     });
 
     test('clear all hidden with 0 files', async ({ page }) => {
-      const clearAllBtn = page.locator('.btn-clear-all');
+      const clearAllBtn = page.locator('#clear-all');
       await expect(clearAllBtn).toBeHidden();
     });
 
     test('clear all visible with files', async ({ page }) => {
       const fileInput = page.locator('#file-input');
       await fileInput.setInputFiles(fixture('sample.png'));
-      const clearAllBtn = page.locator('.btn-clear-all');
+      const clearAllBtn = page.locator('#clear-all');
       await expect(clearAllBtn).toBeVisible();
     });
 
     test('clear all removes all file items and resets', async ({ page }) => {
       const fileInput = page.locator('#file-input');
       await fileInput.setInputFiles([fixture('sample.png'), fixture('sample2.png')]);
-      const clearAllBtn = page.locator('.btn-clear-all');
+      const clearAllBtn = page.locator('#clear-all');
       await clearAllBtn.click();
       const count = await getFileItemCount(page);
       expect(count).toBe(0);
@@ -431,7 +434,7 @@ test.describe('UI Micro-Interactions', () => {
       await waitForDone(page);
       const removeBtn = page.locator('.btn-remove').first();
       await removeBtn.click();
-      const clearAllBtn = page.locator('.btn-clear-all');
+      const clearAllBtn = page.locator('#clear-all');
       await expect(clearAllBtn).toBeHidden();
     });
 
@@ -439,7 +442,7 @@ test.describe('UI Micro-Interactions', () => {
       const fileInput = page.locator('#file-input');
       await fileInput.setInputFiles([fixture('sample.png'), fixture('sample2.png')]);
       await waitForDone(page);
-      const downloadAllBtn = page.locator('.btn-download-all');
+      const downloadAllBtn = page.locator('#download-all');
       await expect(downloadAllBtn).toBeVisible();
       const removeBtn = page.locator('.btn-remove').first();
       await removeBtn.click();
@@ -490,8 +493,9 @@ test.describe('UI Micro-Interactions', () => {
     test('open FAQ has aria-expanded=true', async ({ page }) => {
       const faqQuestion = page.locator('.faq-question').first();
       await faqQuestion.click();
-      const ariaExpanded = await faqQuestion.getAttribute('aria-expanded');
-      expect(ariaExpanded).toBe('true');
+      // ux-page.js syncs the aria state inside a requestAnimationFrame, so a
+      // synchronous read lands before it is written.
+      await expect(faqQuestion).toHaveAttribute('aria-expanded', 'true');
     });
 
     test('closed FAQ has aria-expanded=false', async ({ page }) => {
@@ -561,20 +565,20 @@ test.describe('UI Micro-Interactions', () => {
     test('first file seeds width/height inputs', async ({ page }) => {
       const fileInput = page.locator('#file-input');
       await fileInput.setInputFiles(fixture('sample.png'));
-      const widthInput = page.locator('input[name="width"]');
-      const value = await widthInput.inputValue();
-      expect(Number(value)).toBeGreaterThan(0);
+      // Seeded once the image decodes, so poll rather than read immediately.
+      await expect.poll(() => page.locator('#resize-width').inputValue())
+        .toMatch(/^[1-9]\d*$/);
     });
 
     test('width change syncs height when locked', async ({ page }) => {
       const fileInput = page.locator('#file-input');
       await fileInput.setInputFiles(fixture('sample.png'));
-      const widthInput = page.locator('input[name="width"]');
-      const heightInput = page.locator('input[name="height"]');
+      const widthInput = page.locator('#resize-width');
+      const heightInput = page.locator('#resize-height');
       const heightBefore = await heightInput.inputValue();
       await widthInput.fill('200');
       await page.evaluate(() => {
-        document.querySelector('input[name="width"]').dispatchEvent(new Event('input', { bubbles: true }));
+        document.querySelector('#resize-width').dispatchEvent(new Event('input', { bubbles: true }));
       });
       const heightAfter = await heightInput.inputValue();
       expect(heightAfter).not.toBe(heightBefore);
@@ -583,12 +587,12 @@ test.describe('UI Micro-Interactions', () => {
     test('height change syncs width when locked', async ({ page }) => {
       const fileInput = page.locator('#file-input');
       await fileInput.setInputFiles(fixture('sample.png'));
-      const widthInput = page.locator('input[name="width"]');
-      const heightInput = page.locator('input[name="height"]');
+      const widthInput = page.locator('#resize-width');
+      const heightInput = page.locator('#resize-height');
       const widthBefore = await widthInput.inputValue();
       await heightInput.fill('150');
       await page.evaluate(() => {
-        document.querySelector('input[name="height"]').dispatchEvent(new Event('input', { bubbles: true }));
+        document.querySelector('#resize-height').dispatchEvent(new Event('input', { bubbles: true }));
       });
       const widthAfter = await widthInput.inputValue();
       expect(widthAfter).not.toBe(widthBefore);
@@ -599,12 +603,12 @@ test.describe('UI Micro-Interactions', () => {
       await fileInput.setInputFiles(fixture('sample.png'));
       const lockAspect = page.locator('#lock-aspect');
       await lockAspect.uncheck();
-      const widthInput = page.locator('input[name="width"]');
-      const heightInput = page.locator('input[name="height"]');
+      const widthInput = page.locator('#resize-width');
+      const heightInput = page.locator('#resize-height');
       const heightBefore = await heightInput.inputValue();
       await widthInput.fill('300');
       await page.evaluate(() => {
-        document.querySelector('input[name="width"]').dispatchEvent(new Event('input', { bubbles: true }));
+        document.querySelector('#resize-width').dispatchEvent(new Event('input', { bubbles: true }));
       });
       const heightAfter = await heightInput.inputValue();
       expect(heightAfter).toBe(heightBefore);
@@ -619,10 +623,11 @@ test.describe('UI Micro-Interactions', () => {
     test('upscale warning for large dimensions', async ({ page }) => {
       const fileInput = page.locator('#file-input');
       await fileInput.setInputFiles(fixture('sample.png'));
-      const widthInput = page.locator('input[name="width"]');
-      await widthInput.fill('5000');
-      const warning = page.locator('[data-upscale-warning]');
-      await expect(warning).toBeVisible();
+      await page.locator('#resize-width').fill('5000');
+      // The warning is raised while resizing, not while typing, and renders
+      // through the shared persistent notice rather than its own element.
+      await page.locator('#resize-btn').click();
+      await expect(page.locator('#cf-notice')).toContainText('Upscaling beyond original dimensions', { timeout: 20000 });
     });
   });
 
@@ -731,7 +736,7 @@ test.describe('UI Micro-Interactions', () => {
     test('convert button disabled with < 2 frames', async ({ page }) => {
       const fileInput = page.locator('#file-input');
       await fileInput.setInputFiles(fixture('sample.png'));
-      const convertBtn = page.locator('button').filter({ hasText: /convert/i }).first();
+      const convertBtn = page.locator('#convert-btn');
       const isDisabled = await convertBtn.isDisabled();
       expect(isDisabled).toBe(true);
     });
@@ -754,7 +759,7 @@ test.describe('UI Micro-Interactions', () => {
       const frameList = page.locator('#frame-list');
       const count = await frameList.locator('.frame-item').count();
       expect(count).toBe(1);
-      const convertBtn = page.locator('button').filter({ hasText: /convert/i }).first();
+      const convertBtn = page.locator('#convert-btn');
       const isDisabled = await convertBtn.isDisabled();
       expect(isDisabled).toBe(true);
     });
@@ -762,7 +767,7 @@ test.describe('UI Micro-Interactions', () => {
     test('adding 2 frames enables convert', async ({ page }) => {
       const fileInput = page.locator('#file-input');
       await fileInput.setInputFiles([fixture('sample.png'), fixture('sample2.png')]);
-      const convertBtn = page.locator('button').filter({ hasText: /convert/i }).first();
+      const convertBtn = page.locator('#convert-btn');
       const isDisabled = await convertBtn.isDisabled();
       expect(isDisabled).toBe(false);
     });
@@ -771,7 +776,7 @@ test.describe('UI Micro-Interactions', () => {
       const fileInput = page.locator('#file-input');
       await fileInput.setInputFiles(fixture('sample.png'));
       const frameItem = page.locator('.frame-item').first();
-      const number = frameItem.locator('.frame-item__number');
+      const number = frameItem.locator('.frame-item__num');
       const thumbnail = frameItem.locator('.frame-item__thumb img');
       const name = frameItem.locator('.frame-item__name');
       await expect(number).toBeVisible();

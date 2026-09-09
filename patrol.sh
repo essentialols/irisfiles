@@ -44,7 +44,10 @@ pw_failures() {
   local dir="$1"
   local json port
   json=$(mktemp)
-  port=$(( 3990 + RANDOM % 2000 ))
+  # 7100-7899 only: Chromium refuses a list of ports with ERR_UNSAFE_PORT
+  # (4045, 5060, 6000, 6665-6669 among others), and landing on one would fail
+  # every test and read as a regression.
+  port=$(( 7100 + RANDOM % 800 ))
   (cd "$dir" && IRIS_TEST_PORT="$port" IRIS_TEST_NO_REUSE=1 IRIS_TEST_WORKERS="$PW_WORKERS" \
     IRIS_TEST_RETRIES=0 npx playwright test --reporter=json > "$json" 2>/dev/null) || true
   python3 - "$json" <<'PYEOF'
