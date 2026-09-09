@@ -303,6 +303,24 @@ test.describe('File size validation', () => {
     const errorText = await page.locator('.file-item__status.error').first().textContent();
     expect(errorText).toContain('too large');
   });
+
+  test('exceeding batch limit caps the queue at 50 files', async ({ page }) => {
+    await page.goto('/png-to-jpg');
+    await page.evaluate(() => {
+      const pngHeader = new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+      const dt = new DataTransfer();
+      for (let i = 0; i < 55; i++) {
+        dt.items.add(new File([pngHeader], `file${i}.png`, { type: 'image/png' }));
+      }
+      document.getElementById('file-input').files = dt.files;
+      document.getElementById('file-input').dispatchEvent(new Event('change'));
+    });
+    // 55 files exceed both the 50-file batch cap and the workload warning's
+    // batch-size threshold, and both warnings share the #cf-notice element,
+    // so only the last one written is visible; the queue cap is the contract.
+    await expect(page.locator('#cf-notice')).toBeVisible({ timeout: 10000 });
+    expect(await page.locator('.file-item').count()).toBe(50);
+  });
 });
 
 test.describe('Done meta shows size and duration', () => {

@@ -366,6 +366,23 @@ test.describe('Audio Conversion - WAV to OGG download extension', () => {
   });
 });
 
+test.describe('Audio Compression - oversized file rejected', () => {
+  test('file over 100MB shows a size limit error', async ({ page }) => {
+    await page.goto('/compress-audio');
+    await page.evaluate(() => {
+      const padding = new Uint8Array(101 * 1024 * 1024);
+      const file = new File([padding], 'huge.wav', { type: 'audio/wav' });
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      document.getElementById('file-input').files = dt.files;
+      document.getElementById('file-input').dispatchEvent(new Event('change'));
+    });
+    await page.locator('.file-item__status.error').first().waitFor({ timeout: 10000 });
+    const errorText = await page.locator('.file-item__status.error').first().textContent();
+    expect(errorText).toContain('too large');
+  });
+});
+
 test.describe('Audio Conversion - remove and re-add', () => {
   test('can add new file after removing previous', async ({ page }) => {
     await page.goto('/wav-to-mp3');
