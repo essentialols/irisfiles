@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import http from 'node:http';
+import { cssVersion, htmlFiles } from '../scripts/css-version.mjs';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const BASE = 'http://localhost:3987';
@@ -207,6 +208,20 @@ async function globalChecks() {
   ok(rbStatus === 200, 'robots.txt: not found');
   ok(robots.includes('Allow: /'), 'robots.txt: missing Allow: /');
   ok(robots.toLowerCase().includes('sitemap:'), 'robots.txt: missing Sitemap directive');
+
+  // Stylesheet cache-buster must match the stylesheet contents. css/style.css
+  // is an @import shim, so editing the imported sheets changes what renders
+  // without changing any cached URL. That shipped a redesign nobody could see.
+  const expectedCssVersion = cssVersion();
+  const shim = readFileSync(join(ROOT, 'css/style.css'), 'utf8');
+  for (const [, imported, version] of shim.matchAll(/@import url\('\.\/([a-z-]+\.css)\?v=([^']*)'\)/g)) {
+    ok(version === expectedCssVersion,
+      `css/style.css: @import ${imported} is ?v=${version}, expected ?v=${expectedCssVersion} (run: node scripts/css-version.mjs --write)`);
+  }
+  const stalePages = htmlFiles().filter(file =>
+    !readFileSync(join(ROOT, file), 'utf8').includes(`css/style.css?v=${expectedCssVersion}`));
+  ok(stalePages.length === 0,
+    `${stalePages.length} page(s) link a stale stylesheet version, e.g. ${stalePages[0]} (run: node scripts/css-version.mjs --write)`);
 
   // vercel.json CSP checks
   const vercelJson = JSON.parse(readFileSync(join(ROOT, 'vercel.json'), 'utf8'));
