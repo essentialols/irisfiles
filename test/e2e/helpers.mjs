@@ -25,6 +25,12 @@ export async function waitForStatus(page, text, { timeout = 30_000 } = {}) {
 }
 
 export async function getFileItemCount(page) {
+  // The list renders asynchronously after setInputFiles, so counting straight
+  // away reports 0 no matter what was uploaded. Give the list a chance to
+  // appear first; genuinely-empty cases still fall through and return 0.
+  await page.locator('.file-item').first()
+    .waitFor({ state: 'attached', timeout: 2000 })
+    .catch(() => {});
   return page.locator('.file-item').count();
 }
 
