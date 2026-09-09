@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 import { fixture } from './helpers.mjs';
 
@@ -104,6 +105,34 @@ test.describe('Merge PDF', () => {
 
     const dragHandles = page.locator('.drag-handle');
     await expect(dragHandles).toHaveCount(2);
+  });
+
+  test('forward drag order matches the order used for merging', async ({ page }) => {
+    await page.addInitScript(() => {
+      const original = File.prototype.arrayBuffer;
+      window.__irisfilesPdfReadOrder = [];
+      File.prototype.arrayBuffer = function (...args) {
+        window.__irisfilesPdfReadOrder.push(this.name);
+        return original.apply(this, args);
+      };
+    });
+    await page.goto('/merge-pdf');
+
+    const pdf = await readFile(fixture('sample.pdf'));
+    await page.locator('#file-input').setInputFiles([
+      { name: 'alpha.pdf', mimeType: 'application/pdf', buffer: pdf },
+      { name: 'beta.pdf', mimeType: 'application/pdf', buffer: pdf },
+      { name: 'gamma.pdf', mimeType: 'application/pdf', buffer: pdf },
+    ]);
+
+    const items = page.locator('#file-list .file-item');
+    await items.nth(0).dragTo(items.nth(2));
+    await expect(page.locator('.file-item__name')).toHaveText(['beta.pdf', 'gamma.pdf', 'alpha.pdf']);
+
+    await page.locator('#action-btn').click();
+    await page.locator('#pdf-results').waitFor({ timeout: 15000 });
+    const readOrder = await page.evaluate(() => window.__irisfilesPdfReadOrder);
+    expect(readOrder).toEqual(['beta.pdf', 'gamma.pdf', 'alpha.pdf']);
   });
 });
 
