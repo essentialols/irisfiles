@@ -3,7 +3,7 @@
  * Uses FFmpeg.wasm for client-side time lapse and slow motion.
  */
 
-import { ensureFFmpeg } from './ffmpeg-shared.js';
+import { withFFmpeg } from './ffmpeg-shared.js';
 
 export const WARN_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB soft warning
 export const MAX_DURATION = 600; // 10 minutes
@@ -32,7 +32,13 @@ export async function changeVideoSpeed(file, opts, onProgress, onStatus) {
   if (!preset) throw new Error(`Unsupported speed: ${opts.speed}`);
 
   if (onProgress) onProgress(5);
-  const ffmpeg = await ensureFFmpeg(onStatus);
+  return withFFmpeg(
+    (ffmpeg) => runSpeedChange(ffmpeg, file, preset, opts, onProgress, onStatus),
+    onStatus,
+  );
+}
+
+async function runSpeedChange(ffmpeg, file, preset, opts, onProgress, onStatus) {
 
   if (onProgress) onProgress(15);
   if (onStatus) onStatus('Reading file...');

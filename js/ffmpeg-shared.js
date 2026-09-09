@@ -41,7 +41,7 @@ async function toBlobURL(url, mimeType) {
  * @param {function} onStatus - Status message callback
  * @returns {Promise<FFmpeg>}
  */
-export async function ensureFFmpeg(onStatus) {
+async function ensureFFmpeg(onStatus) {
   if (ffmpegInstance) return ffmpegInstance;
   if (loadingPromise) return loadingPromise;
 
@@ -80,4 +80,28 @@ export async function ensureFFmpeg(onStatus) {
     loadingPromise = null;
     throw e;
   }
+}
+
+// Every engine drives this one instance through fixed filenames (input.<ext>,
+// output.<ext>) and attaches its own 'progress' listener to it, so two
+// transactions in flight at once overwrite each other's files, delete files the
+// other still needs, and cross-wire their progress bars. The unit that has to
+// be exclusive is the whole write/exec/read/cleanup sequence, not any single
+// call, so engines hand the entire transaction to withFFmpeg.
+let ffmpegChain = Promise.resolve();
+
+/**
+ * Run an FFmpeg transaction with exclusive access to the shared instance.
+ * @param {function(FFmpeg): Promise<T>} task - Receives the loaded instance.
+ * @param {function} [onStatus] - Status message callback, forwarded to the load.
+ * @returns {Promise<T>}
+ */
+export function withFFmpeg(task, onStatus) {
+  const run = async () => task(await ensureFFmpeg(onStatus));
+  // then(run, run) queues behind the previous transaction whether it resolved
+  // or rejected; the chain is then normalized so one failure can neither
+  // reject every later caller nor leave the queue stalled.
+  const result = ffmpegChain.then(run, run);
+  ffmpegChain = result.then(() => {}, () => {});
+  return result;
 }
