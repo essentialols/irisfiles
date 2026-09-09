@@ -3,7 +3,7 @@
  * Re-encodes audio to MP3 with adjustable bitrate via FFmpeg.wasm.
  */
 
-import { ensureFFmpeg } from './ffmpeg-shared.js';
+import { withFFmpeg } from './ffmpeg-shared.js';
 
 export const MAX_AUDIO_SIZE = 100 * 1024 * 1024; // 100MB
 export const MAX_AUDIO_DURATION = 3600; // 60 minutes
@@ -25,7 +25,13 @@ export async function compressAudio(file, opts, onProgress, onStatus) {
 
   if (onProgress) onProgress(5);
 
-  const ffmpeg = await ensureFFmpeg(onStatus);
+  return withFFmpeg(
+    (ffmpeg) => runAudioCompression(ffmpeg, file, opts, onProgress, onStatus),
+    onStatus,
+  );
+}
+
+async function runAudioCompression(ffmpeg, file, opts, onProgress, onStatus) {
 
   if (onProgress) onProgress(15);
   if (onStatus) onStatus('Reading file...');

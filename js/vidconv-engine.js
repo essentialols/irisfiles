@@ -5,7 +5,7 @@
  * Cached by the browser after first download.
  */
 
-import { ensureFFmpeg } from "./ffmpeg-shared.js";
+import { withFFmpeg } from "./ffmpeg-shared.js";
 
 // Guardrails
 export const WARN_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB soft warning
@@ -136,8 +136,13 @@ export async function convertVideo(
 
   if (onProgress) onProgress(5);
 
-  const ffmpeg = await ensureFFmpeg(onStatus);
+  return withFFmpeg(
+    (ffmpeg) => runVideoConversion(ffmpeg, file, fmt, onProgress, onStatus, opts),
+    onStatus,
+  );
+}
 
+async function runVideoConversion(ffmpeg, file, fmt, onProgress, onStatus, opts) {
   if (onProgress) onProgress(15);
   if (onStatus) onStatus("Reading file...");
 
@@ -215,8 +220,13 @@ export async function gifToVideo(
 
   if (onProgress) onProgress(5);
 
-  const ffmpeg = await ensureFFmpeg(onStatus);
+  return withFFmpeg(
+    (ffmpeg) => runGifToVideo(ffmpeg, file, fmt, onProgress, onStatus, opts),
+    onStatus,
+  );
+}
 
+async function runGifToVideo(ffmpeg, file, fmt, onProgress, onStatus, opts) {
   if (onProgress) onProgress(15);
   if (onStatus) onStatus("Reading GIF...");
 
@@ -285,8 +295,13 @@ const HEIGHTS = { 1080: 1080, 720: 720, 480: 480 };
 export async function compressVideo(file, opts, onProgress, onStatus) {
   if (onProgress) onProgress(5);
 
-  const ffmpeg = await ensureFFmpeg(onStatus);
+  return withFFmpeg(
+    (ffmpeg) => runVideoCompression(ffmpeg, file, opts, onProgress, onStatus),
+    onStatus,
+  );
+}
 
+async function runVideoCompression(ffmpeg, file, opts, onProgress, onStatus) {
   if (onProgress) onProgress(15);
   if (onStatus) onStatus("Reading file...");
 

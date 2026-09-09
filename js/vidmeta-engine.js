@@ -4,7 +4,7 @@
  * FFmpeg.wasm (via ffmpeg-shared.js) for lossless metadata stripping.
  */
 
-import { ensureFFmpeg } from './ffmpeg-shared.js';
+import { withFFmpeg } from './ffmpeg-shared.js';
 
 const MEDIAINFO_BASE = 'https://cdn.jsdelivr.net/npm/mediainfo.js@0.3.7';
 
@@ -139,7 +139,13 @@ export async function readVideoMetadata(file) {
  * @returns {Promise<Blob>}
  */
 export async function stripVideoMetadata(file, onStatus, onProgress) {
-  const ffmpeg = await ensureFFmpeg(onStatus);
+  return withFFmpeg(
+    (ffmpeg) => runMetadataStrip(ffmpeg, file, onStatus, onProgress),
+    onStatus,
+  );
+}
+
+async function runMetadataStrip(ffmpeg, file, onStatus, onProgress) {
 
   if (onStatus) onStatus('Reading video file...');
   if (onProgress) onProgress(10);

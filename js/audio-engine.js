@@ -4,7 +4,7 @@
  * For OGG/FLAC/M4A/AAC output, uses FFmpeg.wasm via the shared loader.
  */
 
-import { ensureFFmpeg } from "./ffmpeg-shared.js";
+import { withFFmpeg } from "./ffmpeg-shared.js";
 
 const LAMEJS_CDN = "https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js";
 let lameReady = null; // Promise that resolves when lamejs is loaded
@@ -162,8 +162,19 @@ export async function convertAudioFFmpeg(
 
   onProgress(5);
 
-  const ffmpeg = await ensureFFmpeg((msg) => {});
+  return withFFmpeg((ffmpeg) =>
+    runAudioConversion(ffmpeg, file, fmt, targetFormat, onProgress, opts),
+  );
+}
 
+async function runAudioConversion(
+  ffmpeg,
+  file,
+  fmt,
+  targetFormat,
+  onProgress,
+  opts,
+) {
   onProgress(15);
 
   const inputExt = ((file.name || "").match(/\.(\w+)$/) || [
