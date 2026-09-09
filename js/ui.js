@@ -94,6 +94,9 @@ export function init() {
           entry.outputBlob = null;
           entry.progress = 0;
           entry.status = 'queued';
+          const div = document.getElementById(`file-${entry.id}`);
+          const actions = div?.querySelector('.file-item__actions');
+          if (actions) actions.innerHTML = '<span class="file-item__status">Queued</span>';
         }
       }
       processQueue();
@@ -197,9 +200,9 @@ async function processQueue() {
     if (!next) break;
     activeCount++;
     next.status = 'processing';
-    updateFileItem(next);
     const t0 = performance.now();
     try {
+      updateFileItem(next);
       await processFile(next);
       next.durationMs = Math.round(performance.now() - t0);
       next.status = 'done';
@@ -212,10 +215,11 @@ async function processQueue() {
       next.status = 'error';
       next.errorMsg = err.message;
       console.error('Conversion error:', err);
+    } finally {
+      activeCount--;
+      updateFileItem(next);
+      updateBatchActions();
     }
-    activeCount--;
-    updateFileItem(next);
-    updateBatchActions();
   }
   // Continue processing if more in queue (use setTimeout to avoid stack growth)
   if (fileQueue.some(f => f.status === 'queued')) {
