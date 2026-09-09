@@ -123,7 +123,7 @@ test.describe('Document Pages - RTF Conversion', () => {
         await page.locator('#file-input').setInputFiles(fixture('sample.rtf'));
         const fileList = page.locator('#file-list');
         await expect(fileList).toBeVisible();
-        const fileItem = fileList.locator('li').first();
+        const fileItem = fileList.locator('.file-item').first();
         await expect(fileItem).toBeVisible();
       });
 
@@ -156,8 +156,9 @@ test.describe('Document Pages - RTF Conversion', () => {
         await page.locator('#file-input').setInputFiles(fixture('sample.rtf'));
         await expect(page.locator('#file-list')).toBeAttached();
         await page.locator('#clear-all').click();
-        const fileList = page.locator('#file-list');
-        await expect(fileList).toHaveCount(0);
+        // #file-list is a static container: clearing empties it rather
+        // than removing it.
+        await expect(page.locator('#file-list .file-item')).toHaveCount(0);
       });
     });
   });
@@ -318,7 +319,7 @@ test.describe('Archive Pages - Extract ZIP', () => {
     await page.locator('#file-input').setInputFiles(fixture('sample.zip'));
     const fileList = page.locator('#file-list');
     await expect(fileList).toBeVisible();
-    const fileItem = fileList.locator('li').first();
+    const fileItem = fileList.locator('.file-item').first();
     await expect(fileItem).toBeVisible();
   });
 
@@ -380,16 +381,17 @@ test.describe('Archive Pages - Extract ZIP', () => {
     await page.locator('#file-input').setInputFiles(fixture('sample.zip'));
     await expect(page.locator('#file-list')).toBeAttached();
     await page.locator('#clear-all').click();
-    const fileList = page.locator('#file-list');
-    await expect(fileList).toHaveCount(0);
+    // #file-list is a static container: clearing empties it rather
+    // than removing it.
+    await expect(page.locator('#file-list .file-item')).toHaveCount(0);
   });
 
   test('second upload replaces first', async ({ page }) => {
     await page.goto(`/extract-zip`);
     await page.locator('#file-input').setInputFiles(fixture('sample.zip'));
-    await expect(page.locator('#file-list li')).toHaveCount(1);
+    await expect(page.locator('#file-list .file-item')).toHaveCount(1);
     await page.locator('#file-input').setInputFiles(fixture('sample.zip'));
-    await expect(page.locator('#file-list li')).toHaveCount(1);
+    await expect(page.locator('#file-list .file-item')).toHaveCount(1);
   });
 });
 
@@ -411,14 +413,14 @@ test.describe('Archive Pages - Create ZIP', () => {
     await page.locator('#file-input').setInputFiles(fixture('sample.png'));
     const fileList = page.locator('#file-list');
     await expect(fileList).toBeVisible();
-    const fileItem = fileList.locator('li').first();
+    const fileItem = fileList.locator('.file-item').first();
     await expect(fileItem).toBeVisible();
   });
 
   test('upload multiple files', async ({ page }) => {
     await page.goto(`/create-zip`);
     await page.locator('#file-input').setInputFiles([fixture('sample.png'), fixture('sample.jpg')]);
-    const items = page.locator('#file-list li');
+    const items = page.locator('#file-list .file-item');
     await expect(items).toHaveCount(2);
   });
 
@@ -449,19 +451,20 @@ test.describe('Archive Pages - Create ZIP', () => {
   test('remove individual file', async ({ page }) => {
     await page.goto(`/create-zip`);
     await page.locator('#file-input').setInputFiles([fixture('sample.png'), fixture('sample.jpg')]);
-    await expect(page.locator('#file-list li')).toHaveCount(2);
+    await expect(page.locator('#file-list .file-item')).toHaveCount(2);
     const removeBtn = page.locator('.btn-remove').first();
     await removeBtn.click();
-    await expect(page.locator('#file-list li')).toHaveCount(1);
+    await expect(page.locator('#file-list .file-item')).toHaveCount(1);
   });
 
   test('clear all resets', async ({ page }) => {
     await page.goto(`/create-zip`);
     await page.locator('#file-input').setInputFiles([fixture('sample.png'), fixture('sample.jpg')]);
-    await expect(page.locator('#file-list li')).toHaveCount(2);
+    await expect(page.locator('#file-list .file-item')).toHaveCount(2);
     await page.locator('#clear-all').click();
-    const fileList = page.locator('#file-list');
-    await expect(fileList).toHaveCount(0);
+    // #file-list is a static container: clearing empties it rather
+    // than removing it.
+    await expect(page.locator('#file-list .file-item')).toHaveCount(0);
   });
 });
 
@@ -491,11 +494,11 @@ test.describe('PDF Merge', () => {
   test('remove reduces count', async ({ page }) => {
     await page.goto(`/merge-pdf`);
     await page.locator('#file-input').setInputFiles([fixture('sample.pdf'), fixture('sample2.pdf')]);
-    await expect(page.locator('#file-list li')).toHaveCount(2);
+    await expect(page.locator('#file-list .file-item')).toHaveCount(2);
     await expect(page.locator('#action-btn')).toBeEnabled();
     const removeBtn = page.locator('.btn-remove').first();
     await removeBtn.click();
-    await expect(page.locator('#file-list li')).toHaveCount(1);
+    await expect(page.locator('#file-list .file-item')).toHaveCount(1);
     await expect(page.locator('#action-btn')).toBeDisabled();
   });
 });
@@ -506,16 +509,16 @@ test.describe('PDF Split', () => {
     await page.locator('#file-input').setInputFiles(fixture('sample.pdf'));
     const fileList = page.locator('#file-list');
     await expect(fileList).toBeVisible();
-    const fileItem = fileList.locator('li').first();
+    const fileItem = fileList.locator('.file-item').first();
     await expect(fileItem).toBeVisible();
   });
 
   test('only accepts single file', async ({ page }) => {
     await page.goto(`/split-pdf`);
     await page.locator('#file-input').setInputFiles(fixture('sample.pdf'));
-    await expect(page.locator('#file-list li')).toHaveCount(1);
+    await expect(page.locator('#file-list .file-item')).toHaveCount(1);
     await page.locator('#file-input').setInputFiles(fixture('sample2.pdf'));
-    await expect(page.locator('#file-list li')).toHaveCount(1);
+    await expect(page.locator('#file-list .file-item')).toHaveCount(1);
   });
 });
 
