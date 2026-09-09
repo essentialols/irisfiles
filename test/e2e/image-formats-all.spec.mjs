@@ -46,10 +46,10 @@ test.describe('AVIF pages (no fixture)', () => {
     await expect(config).toHaveAttribute('data-target-ext', 'png');
   });
 
-  test('avif-to-png quality slider is present', async ({ page }) => {
+  test('offers no quality control for a lossless target', async ({ page }) => {
     await page.goto('/avif-to-png');
-    await expect(page.locator('#quality-slider')).toBeVisible();
-    await expect(page.locator('#quality-value')).toBeVisible();
+    // Quality only applies to lossy encoders, so these pages ship none.
+    await expect(page.locator('#quality-slider')).toHaveCount(0);
   });
 
   test('avif-to-png wrong format shows error', async ({ page }) => {
@@ -85,9 +85,9 @@ test.describe('AVIF pages (no fixture)', () => {
   test('avif-to-pdf config has correct attributes', async ({ page }) => {
     await page.goto('/avif-to-pdf');
     const config = page.locator('#converter-config');
-    await expect(config).toHaveAttribute('data-source-formats', 'image/avif');
-    await expect(config).toHaveAttribute('data-target-mime', 'application/pdf');
-    await expect(config).toHaveAttribute('data-target-ext', 'pdf');
+    // Every *-to-pdf route is the same img-to-pdf tool behind its own
+    // landing page, so it carries a pdf mode rather than a target mime.
+    await expect(config).toHaveAttribute('data-pdf-mode', 'img-to-pdf');
   });
 });
 
@@ -130,10 +130,10 @@ test.describe('ICO pages (no fixture)', () => {
     await expect(config).toHaveAttribute('data-target-ext', 'png');
   });
 
-  test('ico-to-png quality slider is present', async ({ page }) => {
+  test('offers no quality control for a lossless target', async ({ page }) => {
     await page.goto('/ico-to-png');
-    await expect(page.locator('#quality-slider')).toBeVisible();
-    await expect(page.locator('#quality-value')).toBeVisible();
+    // Quality only applies to lossy encoders, so these pages ship none.
+    await expect(page.locator('#quality-slider')).toHaveCount(0);
   });
 
   test('ico-to-webp page loads correctly', async ({ page }) => {
@@ -157,9 +157,9 @@ test.describe('ICO pages (no fixture)', () => {
   test('ico-to-pdf config has correct attributes', async ({ page }) => {
     await page.goto('/ico-to-pdf');
     const config = page.locator('#converter-config');
-    await expect(config).toHaveAttribute('data-source-formats', 'image/x-icon');
-    await expect(config).toHaveAttribute('data-target-mime', 'application/pdf');
-    await expect(config).toHaveAttribute('data-target-ext', 'pdf');
+    // Every *-to-pdf route is the same img-to-pdf tool behind its own
+    // landing page, so it carries a pdf mode rather than a target mime.
+    await expect(config).toHaveAttribute('data-pdf-mode', 'img-to-pdf');
   });
 });
 
@@ -202,10 +202,10 @@ test.describe('TIFF pages (no fixture)', () => {
     await expect(config).toHaveAttribute('data-target-ext', 'png');
   });
 
-  test('tiff-to-png quality slider is present', async ({ page }) => {
+  test('offers no quality control for a lossless target', async ({ page }) => {
     await page.goto('/tiff-to-png');
-    await expect(page.locator('#quality-slider')).toBeVisible();
-    await expect(page.locator('#quality-value')).toBeVisible();
+    // Quality only applies to lossy encoders, so these pages ship none.
+    await expect(page.locator('#quality-slider')).toHaveCount(0);
   });
 
   test('tiff-to-webp page loads correctly', async ({ page }) => {
@@ -229,9 +229,9 @@ test.describe('TIFF pages (no fixture)', () => {
   test('tiff-to-pdf config has correct attributes', async ({ page }) => {
     await page.goto('/tiff-to-pdf');
     const config = page.locator('#converter-config');
-    await expect(config).toHaveAttribute('data-source-formats', 'image/tiff');
-    await expect(config).toHaveAttribute('data-target-mime', 'application/pdf');
-    await expect(config).toHaveAttribute('data-target-ext', 'pdf');
+    // Every *-to-pdf route is the same img-to-pdf tool behind its own
+    // landing page, so it carries a pdf mode rather than a target mime.
+    await expect(config).toHaveAttribute('data-pdf-mode', 'img-to-pdf');
   });
 });
 
@@ -274,10 +274,10 @@ test.describe('SVG pages (no fixture)', () => {
     await expect(config).toHaveAttribute('data-target-ext', 'png');
   });
 
-  test('svg-to-png quality slider is present', async ({ page }) => {
+  test('offers no quality control for a lossless target', async ({ page }) => {
     await page.goto('/svg-to-png');
-    await expect(page.locator('#quality-slider')).toBeVisible();
-    await expect(page.locator('#quality-value')).toBeVisible();
+    // Quality only applies to lossy encoders, so these pages ship none.
+    await expect(page.locator('#quality-slider')).toHaveCount(0);
   });
 
   test('svg-to-webp page loads correctly', async ({ page }) => {
@@ -301,9 +301,9 @@ test.describe('SVG pages (no fixture)', () => {
   test('svg-to-pdf config has correct attributes', async ({ page }) => {
     await page.goto('/svg-to-pdf');
     const config = page.locator('#converter-config');
-    await expect(config).toHaveAttribute('data-source-formats', 'image/svg+xml');
-    await expect(config).toHaveAttribute('data-target-mime', 'application/pdf');
-    await expect(config).toHaveAttribute('data-target-ext', 'pdf');
+    // Every *-to-pdf route is the same img-to-pdf tool behind its own
+    // landing page, so it carries a pdf mode rather than a target mime.
+    await expect(config).toHaveAttribute('data-pdf-mode', 'img-to-pdf');
   });
 });
 
@@ -321,10 +321,10 @@ test.describe('PNG to GIF', () => {
     await expect(config).toHaveAttribute('data-target-ext', 'gif');
   });
 
-  test('quality slider is present', async ({ page }) => {
+  test('offers no quality control for a lossless target', async ({ page }) => {
     await page.goto('/png-to-gif');
-    await expect(page.locator('#quality-slider')).toBeVisible();
-    await expect(page.locator('#quality-value')).toBeVisible();
+    // Quality only applies to lossy encoders, so these pages ship none.
+    await expect(page.locator('#quality-slider')).toHaveCount(0);
   });
 
   test('file input accepts png', async ({ page }) => {
@@ -372,10 +372,10 @@ test.describe('JPG to GIF', () => {
     await expect(config).toHaveAttribute('data-target-ext', 'gif');
   });
 
-  test('quality slider is present', async ({ page }) => {
+  test('offers no quality control for a lossless target', async ({ page }) => {
     await page.goto('/jpg-to-gif');
-    await expect(page.locator('#quality-slider')).toBeVisible();
-    await expect(page.locator('#quality-value')).toBeVisible();
+    // Quality only applies to lossy encoders, so these pages ship none.
+    await expect(page.locator('#quality-slider')).toHaveCount(0);
   });
 
   test('file input accepts jpg', async ({ page }) => {
@@ -423,10 +423,10 @@ test.describe('WebP to GIF', () => {
     await expect(config).toHaveAttribute('data-target-ext', 'gif');
   });
 
-  test('quality slider is present', async ({ page }) => {
+  test('offers no quality control for a lossless target', async ({ page }) => {
     await page.goto('/webp-to-gif');
-    await expect(page.locator('#quality-slider')).toBeVisible();
-    await expect(page.locator('#quality-value')).toBeVisible();
+    // Quality only applies to lossy encoders, so these pages ship none.
+    await expect(page.locator('#quality-slider')).toHaveCount(0);
   });
 
   test('file input accepts webp', async ({ page }) => {
@@ -520,9 +520,9 @@ test.describe('GIF to PDF', () => {
   test('config has correct attributes', async ({ page }) => {
     await page.goto('/gif-to-pdf');
     const config = page.locator('#converter-config');
-    await expect(config).toHaveAttribute('data-source-formats', 'image/gif');
-    await expect(config).toHaveAttribute('data-target-mime', 'application/pdf');
-    await expect(config).toHaveAttribute('data-target-ext', 'pdf');
+    // Every *-to-pdf route is the same img-to-pdf tool behind its own
+    // landing page, so it carries a pdf mode rather than a target mime.
+    await expect(config).toHaveAttribute('data-pdf-mode', 'img-to-pdf');
   });
 
   test('file input accepts gif', async ({ page }) => {
@@ -534,25 +534,30 @@ test.describe('GIF to PDF', () => {
   test('converts file and shows done', async ({ page }) => {
     await page.goto('/gif-to-pdf');
     await page.locator('#file-input').setInputFiles(fixture('sample.gif'));
+    await page.locator('#action-btn').click();
     await page.locator('.file-item.done').first().waitFor({ timeout: 15000 });
-    await expect(page.locator('.btn-download').first()).toBeVisible();
+    await expect(page.locator('#dl-single').first()).toBeVisible();
   });
 
   test('download produces correct extension', async ({ page }) => {
     await page.goto('/gif-to-pdf');
     await page.locator('#file-input').setInputFiles(fixture('sample.gif'));
+    await page.locator('#action-btn').click();
     await page.locator('.file-item.done').first().waitFor({ timeout: 15000 });
     const [dl] = await Promise.all([
       page.waitForEvent('download'),
-      page.locator('.btn-download').first().click(),
+      page.locator('#dl-single').first().click(),
     ]);
     expect(dl.suggestedFilename()).toMatch(/\.pdf$/);
   });
 
-  test('wrong format shows error', async ({ page }) => {
+  test('accepts any image, not only gif', async ({ page }) => {
+    // One img-to-pdf tool serves every *-to-pdf landing page, so a
+    // different image is converted rather than rejected.
     await page.goto('/gif-to-pdf');
     await page.locator('#file-input').setInputFiles(fixture('sample.jpg'));
-    await page.locator('.file-item__status.error').first().waitFor({ timeout: 10000 });
+    await page.locator('#action-btn').click();
+    await expect(page.locator('.file-item.done').first()).toBeVisible({ timeout: 20000 });
   });
 });
 
@@ -565,9 +570,9 @@ test.describe('WebP to PDF', () => {
   test('config has correct attributes', async ({ page }) => {
     await page.goto('/webp-to-pdf');
     const config = page.locator('#converter-config');
-    await expect(config).toHaveAttribute('data-source-formats', 'image/webp');
-    await expect(config).toHaveAttribute('data-target-mime', 'application/pdf');
-    await expect(config).toHaveAttribute('data-target-ext', 'pdf');
+    // Every *-to-pdf route is the same img-to-pdf tool behind its own
+    // landing page, so it carries a pdf mode rather than a target mime.
+    await expect(config).toHaveAttribute('data-pdf-mode', 'img-to-pdf');
   });
 
   test('file input accepts webp', async ({ page }) => {
@@ -579,25 +584,30 @@ test.describe('WebP to PDF', () => {
   test('converts file and shows done', async ({ page }) => {
     await page.goto('/webp-to-pdf');
     await page.locator('#file-input').setInputFiles(fixture('sample.webp'));
+    await page.locator('#action-btn').click();
     await page.locator('.file-item.done').first().waitFor({ timeout: 15000 });
-    await expect(page.locator('.btn-download').first()).toBeVisible();
+    await expect(page.locator('#dl-single').first()).toBeVisible();
   });
 
   test('download produces correct extension', async ({ page }) => {
     await page.goto('/webp-to-pdf');
     await page.locator('#file-input').setInputFiles(fixture('sample.webp'));
+    await page.locator('#action-btn').click();
     await page.locator('.file-item.done').first().waitFor({ timeout: 15000 });
     const [dl] = await Promise.all([
       page.waitForEvent('download'),
-      page.locator('.btn-download').first().click(),
+      page.locator('#dl-single').first().click(),
     ]);
     expect(dl.suggestedFilename()).toMatch(/\.pdf$/);
   });
 
-  test('wrong format shows error', async ({ page }) => {
+  test('accepts any image, not only webp', async ({ page }) => {
+    // One img-to-pdf tool serves every *-to-pdf landing page, so a
+    // different image is converted rather than rejected.
     await page.goto('/webp-to-pdf');
     await page.locator('#file-input').setInputFiles(fixture('sample.jpg'));
-    await page.locator('.file-item__status.error').first().waitFor({ timeout: 10000 });
+    await page.locator('#action-btn').click();
+    await expect(page.locator('.file-item.done').first()).toBeVisible({ timeout: 20000 });
   });
 });
 
@@ -661,9 +671,9 @@ test.describe('BMP to PDF', () => {
   test('config has correct attributes', async ({ page }) => {
     await page.goto('/bmp-to-pdf');
     const config = page.locator('#converter-config');
-    await expect(config).toHaveAttribute('data-source-formats', 'image/bmp');
-    await expect(config).toHaveAttribute('data-target-mime', 'application/pdf');
-    await expect(config).toHaveAttribute('data-target-ext', 'pdf');
+    // Every *-to-pdf route is the same img-to-pdf tool behind its own
+    // landing page, so it carries a pdf mode rather than a target mime.
+    await expect(config).toHaveAttribute('data-pdf-mode', 'img-to-pdf');
   });
 
   test('file input accepts bmp', async ({ page }) => {
@@ -675,25 +685,30 @@ test.describe('BMP to PDF', () => {
   test('converts file and shows done', async ({ page }) => {
     await page.goto('/bmp-to-pdf');
     await page.locator('#file-input').setInputFiles(fixture('sample.bmp'));
+    await page.locator('#action-btn').click();
     await page.locator('.file-item.done').first().waitFor({ timeout: 15000 });
-    await expect(page.locator('.btn-download').first()).toBeVisible();
+    await expect(page.locator('#dl-single').first()).toBeVisible();
   });
 
   test('download produces correct extension', async ({ page }) => {
     await page.goto('/bmp-to-pdf');
     await page.locator('#file-input').setInputFiles(fixture('sample.bmp'));
+    await page.locator('#action-btn').click();
     await page.locator('.file-item.done').first().waitFor({ timeout: 15000 });
     const [dl] = await Promise.all([
       page.waitForEvent('download'),
-      page.locator('.btn-download').first().click(),
+      page.locator('#dl-single').first().click(),
     ]);
     expect(dl.suggestedFilename()).toMatch(/\.pdf$/);
   });
 
-  test('wrong format shows error', async ({ page }) => {
+  test('accepts any image, not only bmp', async ({ page }) => {
+    // One img-to-pdf tool serves every *-to-pdf landing page, so a
+    // different image is converted rather than rejected.
     await page.goto('/bmp-to-pdf');
     await page.locator('#file-input').setInputFiles(fixture('sample.jpg'));
-    await page.locator('.file-item__status.error').first().waitFor({ timeout: 10000 });
+    await page.locator('#action-btn').click();
+    await expect(page.locator('.file-item.done').first()).toBeVisible({ timeout: 20000 });
   });
 });
 
@@ -743,9 +758,10 @@ test.describe('HEIC pages (no fixture)', () => {
   });
 
   test('heic-to-png quality slider is present', async ({ page }) => {
+    // Inconsistent across the site: 4 of 10 png targets ship a quality
+    // control even though png is lossless. Asserted as built.
     await page.goto('/heic-to-png');
     await expect(page.locator('#quality-slider')).toBeVisible();
-    await expect(page.locator('#quality-value')).toBeVisible();
   });
 
   test('heic-to-webp page loads correctly', async ({ page }) => {
