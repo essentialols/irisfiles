@@ -44,10 +44,26 @@
         },
         {
           "@type": "Question",
+          "name": "Which M4A files can IrisFiles convert?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "M4A is a container and may hold codecs such as AAC or ALAC. Conversion works when your browser can decode the audio codec inside the file. DRM-protected or browser-unsupported media will not convert."
+          }
+        },
+        {
+          "@type": "Question",
           "name": "Does converting M4A to WAV improve audio quality?",
           "acceptedAnswer": {
             "@type": "Answer",
             "text": "No. WAV stores the decoded audio without additional lossy compression, but it cannot restore detail that was already removed if the M4A contains lossy AAC audio."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why is the WAV file much larger than the M4A?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "IrisFiles writes uncompressed 16-bit PCM WAV. An M4A often contains compressed AAC audio, so the WAV can be many times larger even though it does not contain more musical detail than the decoded source."
           }
         },
         {
@@ -77,7 +93,7 @@
   <main class="container">
     <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> Back</a>
     <div id="drop-zone" class="drop-zone">
-      <h1 class="drop-zone__title">M4A to WAV privately.</h1>
+      <h1 class="drop-zone__title">Convert M4A to WAV privately.</h1>
       <p class="drop-zone__subtitle">Everything runs in your browser. Nothing is uploaded. Ever.</p>
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
       <p>Drop M4A files here, or <strong>click to browse</strong></p>
@@ -101,16 +117,27 @@
       </ol>
 
       <h2>Why convert M4A to WAV?</h2>
-      <p>M4A is a container commonly used for AAC audio on Apple devices, iPhone Voice Memos, music libraries, and other compressed audio. WAV is widely accepted by audio editors, digital audio workstations, transcription software, samplers, and older applications that expect uncompressed PCM audio. Converting first can make an M4A file easier to edit without repeatedly decoding it inside another application.</p>
+      <p>M4A is commonly used for compressed audio, voice recordings, music-library files, and exports from Apple software. WAV is widely accepted by audio editors, digital audio workstations, transcription software, samplers, and older applications that expect uncompressed PCM audio. Converting first can make an M4A easier to edit without relying on M4A codec support in the next application.</p>
+
+      <h2>M4A is a container, not one audio codec</h2>
+      <p>An <code>.m4a</code> file can contain different kinds of audio, most commonly AAC and sometimes ALAC. IrisFiles uses the browser's own audio decoder, so the important question is whether that browser can decode the codec inside your M4A. DRM-protected media and files using a codec the browser does not support will fail instead of producing a misleading WAV.</p>
 
       <h2>What does IrisFiles put in the WAV file?</h2>
       <p>IrisFiles uses the browser's Web Audio API to decode the M4A and writes the result as <strong>16-bit PCM WAV</strong>. The WAV keeps the decoded channel count. Its sample rate is the rate produced by the browser's audio decoder, so a browser may resample some inputs during decoding. Because WAV is uncompressed, the output will usually be much larger than the original M4A.</p>
+
+      <h2>M4A vs WAV: what actually changes?</h2>
+      <ul>
+        <li><strong>Compression:</strong> M4A often contains compressed AAC; the IrisFiles WAV output is uncompressed PCM.</li>
+        <li><strong>Editing compatibility:</strong> WAV is accepted by nearly every audio editor and DAW.</li>
+        <li><strong>File size:</strong> WAV is usually much larger because it stores PCM samples directly.</li>
+        <li><strong>Quality:</strong> converting a lossy source to WAV does not recover information already discarded by AAC.</li>
+      </ul>
 
       <h2>Does M4A to WAV improve quality?</h2>
       <p>No. If the M4A contains lossy AAC audio, information discarded during the original AAC encoding cannot be recovered. WAV avoids adding another lossy codec after decoding, which is useful for editing, but it does not make a lossy source higher fidelity. If you only need a smaller, widely playable file, <a href="/m4a-to-mp3">M4A to MP3</a> may be a better fit.</p>
 
       <h2>Private batch M4A to WAV conversion</h2>
-      <p>You can queue up to 50 files. IrisFiles runs up to two audio conversions at a time and packages multiple finished files into a ZIP on your device. No audio file is uploaded to an IrisFiles server.</p>
+      <p>You can queue up to 50 files. IrisFiles runs up to two audio conversions at a time and packages multiple finished files into a ZIP on your device. No audio file is uploaded to an IrisFiles conversion server. More implementation detail is available on the <a href="/about">About IrisFiles</a> page.</p>
     </section>
 
     <div class="related-tools">
@@ -131,9 +158,21 @@
         </div>
       </div>
       <div class="faq-item">
+        <button class="faq-question">Which M4A files can IrisFiles convert?</button>
+        <div class="faq-answer">
+          <p>M4A is a container and may hold codecs such as AAC or ALAC. Conversion works when your browser can decode the audio codec inside the file. DRM-protected or browser-unsupported media will not convert.</p>
+        </div>
+      </div>
+      <div class="faq-item">
         <button class="faq-question">Does converting M4A to WAV improve audio quality?</button>
         <div class="faq-answer">
           <p>No. WAV stores the decoded audio without additional lossy compression, but it cannot restore detail that was already removed if the M4A contains lossy AAC audio.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Why is the WAV file much larger than the M4A?</button>
+        <div class="faq-answer">
+          <p>IrisFiles writes uncompressed 16-bit PCM WAV. An M4A often contains compressed AAC audio, so the WAV can be many times larger even though it does not contain more musical detail than the decoded source.</p>
         </div>
       </div>
       <div class="faq-item">
