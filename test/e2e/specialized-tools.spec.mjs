@@ -12,6 +12,88 @@ function pngDimensions(buffer) {
   };
 }
 
+function addGifComment(buffer, text = 'GPS:37.7749,-122.4194') {
+  const trailer = buffer.lastIndexOf(0x3b);
+  if (trailer < 0) throw new Error('GIF trailer not found');
+  const payload = Buffer.from(text, 'utf8');
+  if (payload.length > 255) throw new Error('GIF test comment is too long');
+  const extension = Buffer.concat([Buffer.from([0x21, 0xfe, payload.length]), payload, Buffer.from([0])]);
+  return Buffer.concat([buffer.subarray(0, trailer), extension, buffer.subarray(trailer)]);
+}
+
+function gifFrameCount(buffer) {
+  let pos = 13;
+  const packed = buffer[10];
+  if (packed & 0x80) pos += 3 * (1 << ((packed & 0x07) + 1));
+  let frames = 0;
+  const skipSubBlocks = () => {
+    while (pos < buffer.length) {
+      const size = buffer[pos++];
+      if (size === 0) return;
+      pos += size;
+    }
+    throw new Error('Truncated GIF');
+  };
+  while (pos < buffer.length) {
+    const marker = buffer[pos++];
+    if (marker === 0x3b) break;
+    if (marker === 0x21) {
+      pos += 1;
+      skipSubBlocks();
+      continue;
+    }
+    if (marker === 0x2c) {
+      frames += 1;
+      if (pos + 9 > buffer.length) throw new Error('Truncated GIF image descriptor');
+      const localPacked = buffer[pos + 8];
+      pos += 9;
+      if (localPacked & 0x80) pos += 3 * (1 << ((localPacked & 0x07) + 1));
+      pos += 1;
+      skipSubBlocks();
+      continue;
+    }
+    throw new Error(`Unexpected GIF marker 0x${marker.toString(16)}`);
+  }
+  return frames;
+}
+
+function addWebpXmp(buffer) {
+  const payload = Buffer.from('<x:xmpmeta>GPS 37.7749 -122.4194</x:xmpmeta>', 'utf8');
+  const header = Buffer.alloc(8);
+  header.write('XMP ', 0, 'ascii');
+  header.writeUInt32LE(payload.length, 4);
+  const padding = payload.length & 1 ? Buffer.from([0]) : Buffer.alloc(0);
+  const out = Buffer.concat([buffer, header, payload, padding]);
+  out.writeUInt32LE(out.length - 8, 4);
+  let pos = 12;
+  while (pos + 8 <= out.length) {
+    const type = out.toString('ascii', pos, pos + 4);
+    const size = out.readUInt32LE(pos + 4);
+    if (type === 'VP8X' && size >= 1) {
+      out[pos + 8] |= 0x04;
+      break;
+    }
+    pos += 8 + size + (size & 1);
+  }
+  return out;
+}
+
+function webpChunkTypes(buffer) {
+  if (buffer.toString('ascii', 0, 4) !== 'RIFF' || buffer.toString('ascii', 8, 12) !== 'WEBP') {
+    throw new Error('Expected WebP output');
+  }
+  const types = [];
+  let pos = 12;
+  while (pos + 8 <= buffer.length) {
+    const type = buffer.toString('ascii', pos, pos + 4);
+    const size = buffer.readUInt32LE(pos + 4);
+    types.push(type);
+    pos += 8 + size + (size & 1);
+  }
+  if (pos !== buffer.length) throw new Error('Malformed WebP chunk layout');
+  return types;
+}
+
 test.describe('Resize Image', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`/resize-image`);
@@ -148,6 +230,52 @@ test.describe('Strip EXIF', () => {
     await page.locator('#file-input').setInputFiles(fixture('sample.jpg'));
     await page.locator('.file-item.done').waitFor({ timeout: 10000 });
     await expect(page.locator('.btn-download').first()).toBeVisible();
+  });
+
+  test('preserves animated GIF frames while removing comment metadata', async ({ page }) => {
+    const source = await readFile(fixture('animated.gif'));
+    const tagged = addGifComment(source);
+    await page.locator('#file-input').setInputFiles({
+      name: 'Résumé_日本語_animation.gif',
+      mimeType: 'image/gif',
+      buffer: tagged,
+    });
+    await page.locator('.file-item.done').waitFor({ timeout: 10000 });
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('.btn-download').click(),
+    ]);
+    const output = await readFile(await download.path());
+    expect(download.suggestedFilename()).toBe('Résumé_日本語_animation-clean.gif');
+    expect(output.subarray(0, 6).toString('ascii')).toMatch(/^GIF8[79]a$/);
+    expect(gifFrameCount(output)).toBe(gifFrameCount(tagged));
+    expect(output.includes(Buffer.from('GPS:37.7749,-122.4194'))).toBe(false);
+  });
+
+  test('preserves animated WebP frames while removing XMP metadata', async ({ page }) => {
+    const source = await readFile(fixture('animated.webp'));
+    const tagged = addWebpXmp(source);
+    await page.locator('#file-input').setInputFiles({
+      name: 'Résumé_日本語_animation.webp',
+      mimeType: 'image/webp',
+      buffer: tagged,
+    });
+    await page.locator('.file-item.done').waitFor({ timeout: 10000 });
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('.btn-download').click(),
+    ]);
+    const output = await readFile(await download.path());
+    const beforeTypes = webpChunkTypes(tagged);
+    const afterTypes = webpChunkTypes(output);
+    expect(download.suggestedFilename()).toBe('Résumé_日本語_animation-clean.webp');
+    expect(afterTypes.filter(type => type === 'ANMF')).toHaveLength(beforeTypes.filter(type => type === 'ANMF').length);
+    expect(afterTypes).toContain('ANIM');
+    expect(afterTypes).not.toContain('XMP ');
+    expect(afterTypes).not.toContain('EXIF');
+    expect(afterTypes).not.toContain('ICCP');
   });
 
   test('batch process multiple files', async ({ page }) => {

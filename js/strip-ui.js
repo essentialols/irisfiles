@@ -114,11 +114,11 @@ async function processQueue() {
     updateFileItem(next);
     const t0 = performance.now();
     try {
-      next.outputName = stripOutputFilename(next.file);
       next.outputBlob = await stripMetadata(next.file, pct => {
         next.progress = pct;
         updateFileItem(next);
       });
+      next.outputName = stripOutputFilename(next.file, next.outputBlob);
       next.durationMs = Math.round(performance.now() - t0);
       next.status = 'done';
       next.progress = 100;
@@ -137,13 +137,17 @@ async function processQueue() {
 }
 
 /**
- * Build output filename: originalname-clean.png or originalname-clean.jpg.
- * PNG stays PNG, everything else becomes JPG (mirrors strip-engine.js logic).
+ * Build output filename from the actual output type. Animated GIF/WebP remain in
+ * their original container; PNG remains PNG; Canvas-reencoded images are JPEG.
  */
-function stripOutputFilename(file) {
-  const isPng = file.type === 'image/png' ||
-    (file.name && file.name.toLowerCase().endsWith('.png'));
-  const ext = isPng ? 'png' : 'jpg';
+function stripOutputFilename(file, outputBlob) {
+  const extByMime = {
+    'image/png': 'png',
+    'image/gif': 'gif',
+    'image/webp': 'webp',
+    'image/jpeg': 'jpg',
+  };
+  const ext = extByMime[outputBlob?.type] || 'jpg';
   const base = file.name.replace(/\.[^.]+$/, '');
   return `${base}-clean.${ext}`;
 }
