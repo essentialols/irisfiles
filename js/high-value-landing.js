@@ -3,7 +3,7 @@
  *
  * Kept separate from smart-drop.js so the mature inline-conversion dispatcher
  * does not need to learn about task routes that intentionally navigate to a
- * dedicated page (video -> audio, PDF editing, OCR, HTML -> PDF).
+ * dedicated page (video -> audio, PDF editing, OCR, background removal, HTML -> PDF).
  */
 
 const LANDING_GROUPS = [
@@ -20,7 +20,7 @@ const LANDING_GROUPS = [
   {
     label: 'Image Tools',
     rows: [
-      ['Image', [['Text (OCR)', '/image-to-text']]],
+      ['Image', [['Background Remover', '/background-remover'], ['Text (OCR)', '/image-to-text']]],
       ['PNG', [['ICO', '/png-to-ico']]],
     ],
   },
@@ -45,6 +45,11 @@ const LANDING_GROUPS = [
   },
 ];
 
+const IMAGE_TOOLS = [
+  ['Remove Background', '/background-remover'],
+  ['Extract Text (OCR)', '/image-to-text'],
+];
+
 const SMART_ROUTES = {
   mp4: { conversions: [['MP3', '/mp4-to-mp3'], ['WAV', '/mp4-to-wav']] },
   mov: { conversions: [['MP3', '/mov-to-mp3'], ['WAV', '/mov-to-wav']] },
@@ -53,12 +58,12 @@ const SMART_ROUTES = {
   mkv: { conversions: [['MP3', '/mkv-to-mp3'], ['WAV', '/mkv-to-wav']] },
   png: {
     conversions: [['ICO', '/png-to-ico']],
-    tools: [['Extract Text (OCR)', '/image-to-text']],
+    tools: IMAGE_TOOLS,
   },
-  jpg: { tools: [['Extract Text (OCR)', '/image-to-text']] },
-  jpeg: { tools: [['Extract Text (OCR)', '/image-to-text']] },
-  webp: { tools: [['Extract Text (OCR)', '/image-to-text']] },
-  bmp: { tools: [['Extract Text (OCR)', '/image-to-text']] },
+  jpg: { tools: IMAGE_TOOLS },
+  jpeg: { tools: IMAGE_TOOLS },
+  webp: { tools: IMAGE_TOOLS },
+  bmp: { tools: IMAGE_TOOLS },
   pdf: {
     tools: [
       ['Compress PDF', '/compress-pdf'],
