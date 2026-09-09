@@ -89,7 +89,8 @@ export async function videoToGif(file, opts = {}) {
   let prevSamples = null;
   let encodedFrames = 0;
   let skippedFrames = 0;
-  let prevDelay = frameDelay;
+  let pendingIndex = null;
+  let pendingDelay = frameDelay;
 
   for (let i = 0; i < totalFrames; i++) {
     const t = start + i / fps;
@@ -103,24 +104,34 @@ export async function videoToGif(file, opts = {}) {
     // Frame deduplication: sample grid of pixels
     const samples = sampleGridPixels(data, w, h);
     if (prevSamples && pixelDiffBelow(prevSamples, samples, DEDUP_THRESHOLD)) {
-      // Frame is nearly identical, extend previous frame's delay
+      // Frame is nearly identical, extend the pending frame's delay
       skippedFrames++;
-      prevDelay += frameDelay;
+      pendingDelay += frameDelay;
       onProgress(Math.round((i / totalFrames) * 100), `Encoding... (${encodedFrames} frames, ${skippedFrames} skipped)`);
       continue;
     }
     prevSamples = samples;
 
-    // Apply global palette and write frame
-    const index = applyPalette(data, palette);
-    gif.writeFrame(index, w, h, { palette, delay: prevDelay, dispose: 0 });
-    prevDelay = frameDelay;
-    encodedFrames++;
+    // Flush the previously pending frame now that its delay is final
+    if (pendingIndex) {
+      gif.writeFrame(pendingIndex, w, h, { palette, delay: pendingDelay, dispose: 0 });
+      encodedFrames++;
+    }
+
+    // Apply global palette and hold this frame pending
+    pendingIndex = applyPalette(data, palette);
+    pendingDelay = frameDelay;
 
     onProgress(Math.round((i / totalFrames) * 100), `Encoding... (${encodedFrames} frames, ${skippedFrames} skipped)`);
 
     // Yield to main thread every 5 frames to keep UI responsive
     if (i % 5 === 0) await yieldThread();
+  }
+
+  // Flush the final pending frame, including any trailing duplicate delay
+  if (pendingIndex) {
+    gif.writeFrame(pendingIndex, w, h, { palette, delay: pendingDelay, dispose: 0 });
+    encodedFrames++;
   }
 
   gif.finish();
