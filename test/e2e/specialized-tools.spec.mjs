@@ -334,9 +334,22 @@ test.describe('Images to GIF', () => {
   test('width slider updates display value', async ({ page }) => {
     await page.locator('#file-input').setInputFiles([fixture('sample.png'), fixture('sample2.png')]);
     await page.locator('.frame-item').nth(1).waitFor({ timeout: 5000 });
-    await page.locator('#width-slider').fill('300');
-    const displayValue = await page.locator('#width-value').textContent();
-    expect(displayValue).toContain('300');
+    const setWidth = async (value) => {
+      await page.locator('#width-slider').fill(String(value));
+      // Filling a range input raises no input event, and the handler that
+      // updates the readout listens for one.
+      await page.evaluate(() => {
+        document.querySelector('#width-slider').dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    };
+
+    // 300 is within the 21px snap threshold of the 320 preset, so it snaps.
+    await setWidth(300);
+    await expect(page.locator('#width-value')).toContainText('320px');
+
+    // 400 is clear of every preset and is kept as typed.
+    await setWidth(400);
+    await expect(page.locator('#width-value')).toContainText('400px');
   });
 
   test('convert button processes GIF and shows result', async ({ page }) => {
