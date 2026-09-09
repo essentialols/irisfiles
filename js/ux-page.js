@@ -59,36 +59,6 @@ export function normalizeActionLabels(root = document) {
   });
 }
 
-function detectInteractionMode(root = document) {
-  const convertBtn = root.querySelector('#action-btn, #convert-btn, [data-action=\"convert\"]');
-  if (convertBtn) return 'manual';
-  return 'auto';
-}
-
-export function injectInteractionHint(options = {}) {
-  const {
-    dropZoneSelector = '#drop-zone',
-    hintId = 'interaction-mode-hint',
-    manualText = 'Mode: choose files, then click Convert.',
-    autoText = 'Mode: processing starts automatically after you add files.',
-  } = options;
-
-  const dropZone = document.querySelector(dropZoneSelector);
-  if (!dropZone) return;
-
-  const existing = document.getElementById(hintId);
-  if (existing) {
-    existing.textContent = detectInteractionMode(document) === 'manual' ? manualText : autoText;
-    return;
-  }
-
-  const hint = document.createElement('p');
-  hint.id = hintId;
-  hint.className = 'interaction-mode-hint';
-  hint.textContent = detectInteractionMode(document) === 'manual' ? manualText : autoText;
-  dropZone.insertAdjacentElement('afterend', hint);
-}
-
 export function injectPreflightBadge(options = {}) {
   const dropZoneSelector = options.dropZoneSelector || '#drop-zone';
   const dropZone = document.querySelector(dropZoneSelector);
@@ -130,10 +100,8 @@ export function injectPreflightBadge(options = {}) {
   if (textNode) textNode.textContent = preflight.text;
   badge.style.display = '';
 
-  const hint = document.getElementById(options.hintId || 'interaction-mode-hint');
   if (!badge.parentElement) {
-    const anchor = hint && hint.parentElement === dropZone.parentElement ? hint : dropZone;
-    anchor.insertAdjacentElement('afterend', badge);
+    dropZone.insertAdjacentElement('afterend', badge);
   }
 }
 
@@ -141,8 +109,5 @@ export function applyPageUX(options = {}) {
   enableKeyboardDropZone(options.dropZoneSelector, options.fileInputSelector);
   enhanceFaqSemantics(document);
   normalizeActionLabels(document);
-  if (options.showInteractionHint !== false) {
-    injectInteractionHint(options);
-  }
   injectPreflightBadge(options);
 }
