@@ -12,12 +12,10 @@ test.describe('Video Tools E2E', () => {
 
       await dropFile(page, '#drop-zone', fixture('sample.mov'));
 
-      await expect(page.locator('#action-btn')).toBeVisible();
-      await expect(page.locator('#video-file')).toBeVisible();
+      // Same container in and out, so remux-boot converts on drop: there is
+      // no action button, no #video-file and no duration readout here.
+      await expect(page.locator('#action-btn')).toHaveCount(0);
       await expect(page.locator('.file-item__meta')).toBeVisible();
-      await expect(page.locator('.file-item__duration')).toBeVisible();
-
-      await page.locator('#action-btn').click();
       await waitForDone(page, { timeout: TIMEOUT });
 
       await expect(page.locator('.btn-download')).toBeVisible();
@@ -34,12 +32,13 @@ test.describe('Video Tools E2E', () => {
       await page.goto(`/mov-to-mp4`);
 
       await dropFile(page, '#drop-zone', fixture('sample.mov'));
-      await expect(page.locator('#video-file')).toBeVisible();
+      // remux-boot renders the shared file list, not the #video-file panel
+      // that the compress and speed pages build.
+      await expect(page.locator('.file-item')).toBeVisible();
 
       await page.locator('#clear-all').click();
 
-      await expect(page.locator('#video-file')).not.toBeVisible();
-      await expect(page.locator('#action-btn')).not.toBeVisible();
+      await expect(page.locator('.file-item')).toHaveCount(0);
     });
 
     test('should replace file on second upload', async ({ page }) => {
@@ -61,13 +60,11 @@ test.describe('Video Tools E2E', () => {
 
       await dropFile(page, '#drop-zone', fixture('sample.mp4'));
 
-      await expect(page.locator('#action-btn')).toBeVisible();
-      await expect(page.locator('#video-file')).toBeVisible();
-
-      await page.locator('#action-btn').click();
-      await waitForDone(page, { timeout: TIMEOUT });
-
-      await expect(page.locator('.btn-download')).toBeVisible();
+      await expect(page.locator('#gif-controls')).toBeVisible();
+      await page.locator('#convert-btn').click();
+      // The GIF lands in its own result panel rather than the file list.
+      await expect(page.locator('#gif-result')).toBeVisible({ timeout: TIMEOUT });
+      await expect(page.locator('#gif-result img')).toBeVisible();
     });
   });
 
@@ -107,12 +104,10 @@ test.describe('Video Tools E2E', () => {
 
       await dropFile(page, '#drop-zone', fixture('sample.mp4'));
 
-      await expect(page.locator('#action-btn')).toBeVisible();
-
-      await page.locator('#action-btn').click();
-      await waitForDone(page, { timeout: TIMEOUT });
-
-      await expect(page.locator('.btn-download')).toBeVisible();
+      await expect(page.locator('#gif-controls')).toBeVisible();
+      await page.locator('#convert-btn').click();
+      await expect(page.locator('#gif-result')).toBeVisible({ timeout: TIMEOUT });
+      await expect(page.locator('#gif-result img')).toBeVisible();
     });
   });
 
