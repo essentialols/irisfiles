@@ -74,7 +74,7 @@ export async function videoToGif(file, opts = {}) {
     // Sample evenly spaced pixels for palette
     const step = Math.max(1, Math.floor(data.length / 4 / 512));
     for (let j = 0; j < data.length; j += step * 4) {
-      samplePixels.push(data[j], data[j + 1], data[j + 2]);
+      samplePixels.push(data[j], data[j + 1], data[j + 2], data[j + 3]);
     }
   }
 
