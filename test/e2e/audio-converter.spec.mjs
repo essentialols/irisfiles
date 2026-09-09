@@ -154,7 +154,9 @@ test.describe('Audio Conversion - File Management', () => {
     const input = page.locator('#file-input').first();
     await input.setInputFiles(fixture('sample.wav'));
 
-    await page.locator('.file-item').nth(1).locator('.file-item__status:has-text("Done")').waitFor({ timeout: 30000 });
+    // The status span is only written while converting; completion is marked
+    // by the done class on the item itself.
+    await page.locator('.file-item.done').nth(1).waitFor({ timeout: 30000 });
 
     const batchSummary = page.locator('#batch-summary');
     await expect(batchSummary).toBeVisible({ timeout: 5000 });
@@ -170,7 +172,9 @@ test.describe('Audio Compression', () => {
     const actionBtn = page.locator('#action-btn');
     const qualityDropdown = page.locator('#compress-quality');
 
-    await expect(actionBtn).toBeDisabled();
+    // The converter hides the action button until a file is queued; disabled
+    // is only used while a conversion is running.
+    await expect(actionBtn).toBeHidden();
     await expect(qualityDropdown).toBeVisible();
   });
 
@@ -222,7 +226,7 @@ test.describe('Audio Compression', () => {
     await expect(audioFile).not.toBeVisible();
 
     const actionBtn = page.locator('#action-btn');
-    await expect(actionBtn).toBeDisabled();
+    await expect(actionBtn).toBeHidden();
   });
 
   test('quality dropdown updates before compression', async ({ page }) => {

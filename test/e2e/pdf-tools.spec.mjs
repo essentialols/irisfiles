@@ -120,8 +120,9 @@ test.describe('Split PDF', () => {
     const pdfResults = page.locator('#pdf-results');
     await expect(pdfResults).toBeVisible();
 
-    const dlButtons = page.locator('.dl-btn');
-    await expect(dlButtons.count()).toBeGreaterThan(0);
+    // count() returns a promise, so the original expect compared a promise
+    // against a number and could never pass.
+    await expect(page.locator('.dl-btn').first()).toBeVisible();
   });
 });
 
