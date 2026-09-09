@@ -52,6 +52,14 @@
         },
         {
           "@type": "Question",
+          "name": "Why can a PNG be larger than the original GIF?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "GIF uses an indexed palette of at most 256 colors, while PNG can store full-color lossless pixel data and alpha transparency. Depending on the image, the static PNG can therefore be larger even though it contains only one frame."
+          }
+        },
+        {
+          "@type": "Question",
           "name": "Can I convert multiple GIF files at once?",
           "acceptedAnswer": {
             "@type": "Answer",
@@ -77,7 +85,7 @@
   <main class="container">
     <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> Back</a>
     <div id="drop-zone" class="drop-zone">
-      <h1 class="drop-zone__title">GIF to PNG privately.</h1>
+      <h1 class="drop-zone__title">Convert GIF to PNG privately.</h1>
       <p class="drop-zone__subtitle">Everything runs in your browser. Nothing is uploaded. Ever.</p>
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
       <p>Drop GIF files here, or <strong>click to browse</strong></p>
@@ -101,16 +109,27 @@
       </ol>
 
       <h2>GIF to PNG: what happens to animation?</h2>
-      <p>PNG is a static image format in this converter. If the source GIF is animated, IrisFiles currently exports <strong>only the first frame</strong>. It does not yet turn every GIF frame into a PNG sequence or ZIP of frames. This is intentional to make the current behavior clear rather than suggesting that the animation is preserved.</p>
+      <p>PNG is a static image format in this converter. If the source GIF is animated, IrisFiles currently exports <strong>only the first frame</strong>. It does not yet turn every GIF frame into a PNG sequence or ZIP of frames. This makes the current behavior explicit instead of implying that animation is preserved.</p>
+
+      <h2>GIF vs PNG</h2>
+      <ul>
+        <li><strong>Animation:</strong> GIF can contain multiple frames; this converter's PNG output is one static image.</li>
+        <li><strong>Color:</strong> GIF is limited to an indexed palette of up to 256 colors, while PNG can store full-color lossless pixels.</li>
+        <li><strong>Transparency:</strong> GIF has simple palette transparency; PNG supports richer alpha transparency.</li>
+        <li><strong>Compression:</strong> both formats avoid JPEG-style lossy compression, but they store image data differently.</li>
+      </ul>
 
       <h2>Transparency and image quality</h2>
-      <p>PNG is lossless and supports full alpha transparency. Transparent areas present in the converted GIF frame stay transparent in the PNG output. Converting a GIF to PNG does not recreate colors that were unavailable in the source GIF's limited palette, but the PNG encoding itself does not add lossy compression.</p>
+      <p>Transparent areas present in the converted GIF frame stay transparent in the PNG output. Converting GIF to PNG does not recreate colors that were unavailable in the source GIF's limited palette, but the PNG encoding itself does not add lossy compression.</p>
+
+      <h2>Why can the PNG be larger than the GIF?</h2>
+      <p>A GIF frame is built from a small indexed color palette. PNG can store full-color lossless pixel data and alpha information, so a static PNG may be larger than the source GIF even though it contains only one frame. File size depends heavily on the image's colors, dimensions, and transparency.</p>
 
       <h2>When is GIF to PNG useful?</h2>
       <p>Use PNG when you need a static frame for editing, documentation, a thumbnail, a presentation, or software that accepts PNG but not GIF. If you want to create animation rather than remove it, see <a href="/png-to-gif">PNG to GIF</a>. For a JPEG output where transparency is not needed, use <a href="/gif-to-jpg">GIF to JPG</a>.</p>
 
       <h2>Private batch conversion</h2>
-      <p>You can queue up to 50 GIF files. Conversion happens locally in the browser, and multiple completed PNG files can be packaged into a ZIP without uploading the source images to a conversion server.</p>
+      <p>You can queue up to 50 GIF files. Conversion happens locally in the browser, and multiple completed PNG files can be packaged into a ZIP without uploading the source images to a conversion server. More implementation detail is available on the <a href="/about">About IrisFiles</a> page.</p>
     </section>
 
     <div class="related-tools">
@@ -134,6 +153,12 @@
         <button class="faq-question">What happens to animated GIFs?</button>
         <div class="faq-answer">
           <p>The current GIF to PNG converter exports the first frame as one static PNG. It does not yet extract every animation frame as a PNG sequence.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Why can a PNG be larger than the original GIF?</button>
+        <div class="faq-answer">
+          <p>GIF uses an indexed palette of at most 256 colors, while PNG can store full-color lossless pixel data and alpha transparency. Depending on the image, the static PNG can therefore be larger even though it contains only one frame.</p>
         </div>
       </div>
       <div class="faq-item">
