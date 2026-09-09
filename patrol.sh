@@ -37,6 +37,20 @@ PW_WORKERS="${PATROL_TEST_WORKERS:-4}"
 MAX_FIXES="${PATROL_MAX_FIXES:-5}"
 BASELINE_FILE="$PROJECT_DIR/.patrol/baseline-failures.txt"
 
+# A dead credential is not a clean night. Every `claude --print` below is
+# guarded with `|| true` so one agent's failure cannot abort the batch, which
+# means an expired token otherwise reports as N quiet "no changes made" skips:
+# on 2026-09-09 that hid 16 auth failures behind "0 fixed, 15 skipped". Auth is
+# fatal for the whole run, so bail on the first one instead of retrying it once
+# per finding.
+abort_on_auth_failure() {
+  local errfile="$1"
+  if /usr/bin/grep -qiE 'Failed to authenticate|OAuth session expired|Invalid API key|Not logged in|Please run /?(login|claude login)' "$errfile"; then
+    echo "FATAL: claude CLI cannot authenticate. Aborting patrol; re-run after 'claude' login." | tee -a "$LOG" >&2
+    exit 78
+  fi
+}
+
 # Print "file::title" for every failing test. Playwright nests specs inside
 # describe blocks, so this recurses; a flat one-level walk finds nothing and
 # reads as a clean run.
@@ -297,11 +311,15 @@ Steps:
 5. If validation fails, undo your change (git checkout -- .) and output VALIDATION_FAILED
 6. If validation passes, output VALIDATION_PASSED"
 
+  FIX_ERR=$(mktemp)
   FIX_OUTPUT=$(claude --print \
     --model "$FIX_MODEL" \
     --dangerously-skip-permissions \
     --allowedTools "Read Glob Grep Edit Bash" \
-    -p "$FIX_PROMPT" 2>>"$LOG") || true
+    -p "$FIX_PROMPT" 2>"$FIX_ERR") || true
+  cat "$FIX_ERR" >>"$LOG"
+  abort_on_auth_failure "$FIX_ERR"
+  rm -f "$FIX_ERR"
 
   echo "$FIX_OUTPUT" | tail -5 | tee -a "$LOG"
 
@@ -466,11 +484,15 @@ Steps:
 
 Output a summary of what tests you added and why."
 
+TEST_DEV_ERR=$(mktemp)
 TEST_DEV_OUTPUT=$(claude --print \
   --model "$FIX_MODEL" \
   --dangerously-skip-permissions \
   --allowedTools "Read Glob Grep Edit Write Bash" \
-  -p "$TEST_DEV_PROMPT" 2>>"$LOG") || true
+  -p "$TEST_DEV_PROMPT" 2>"$TEST_DEV_ERR") || true
+cat "$TEST_DEV_ERR" >>"$LOG"
+abort_on_auth_failure "$TEST_DEV_ERR"
+rm -f "$TEST_DEV_ERR"
 
 echo "$TEST_DEV_OUTPUT" | tail -10 | tee -a "$LOG"
 
