@@ -20,6 +20,23 @@ async function loadScript(url) {
 }
 
 /**
+ * Re-host a CDN asset on this origin as a blob URL.
+ *
+ * A classic Worker script must be same-origin: the browser rejects
+ * `new Worker('https://cdn...')` regardless of what the CSP allows. FFmpeg
+ * spawns its worker relative to its own CDN script, so every FFmpeg conversion
+ * failed with a SecurityError until the worker is handed over as a blob.
+ */
+async function toBlobURL(url, mimeType) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error('Failed to load video converter. Check your internet connection.');
+  }
+  const buffer = await response.arrayBuffer();
+  return URL.createObjectURL(new Blob([buffer], { type: mimeType }));
+}
+
+/**
  * Ensure FFmpeg.wasm is loaded and ready. Returns the shared instance.
  * @param {function} onStatus - Status message callback
  * @returns {Promise<FFmpeg>}
@@ -39,9 +56,18 @@ export async function ensureFFmpeg(onStatus) {
 
     if (onStatus) onStatus('Downloading codec (~10MB compressed, cached after first use)...');
 
+    // Only the worker script has to be same-origin. importScripts() may fetch
+    // cross-origin, so the core and wasm stay on the CDN and keep their cache.
+    const classWorkerURL = await toBlobURL(
+      `${CDN}/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js`, 'text/javascript');
+
+    // The blob worker is a module worker, where importScripts does not exist,
+    // so FFmpeg falls back to import() and reads a default export. The UMD
+    // build has none; the ESM build does.
     await ffmpeg.load({
-      coreURL: `${CDN}/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js`,
-      wasmURL: `${CDN}/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm`,
+      coreURL: `${CDN}/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js`,
+      wasmURL: `${CDN}/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.wasm`,
+      classWorkerURL,
     });
 
     ffmpegInstance = ffmpeg;

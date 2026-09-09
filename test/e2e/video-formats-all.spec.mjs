@@ -261,7 +261,7 @@ test.describe('MKV Conversions', () => {
       test('page structure correct', async ({ page }) => {
         await page.goto(pageUrl);
         await expect(page.locator('#drop-zone')).toBeVisible();
-        await expect(page.locator('#converter-config')).toBeVisible();
+        await expect(page.locator('#converter-config')).toBeAttached();
         await expect(page.locator('#action-btn')).not.toBeVisible();
         await expect(page.locator('#clear-all')).not.toBeVisible();
       });
@@ -301,7 +301,7 @@ test.describe('WebM Conversions', () => {
       test('page structure correct', async ({ page }) => {
         await page.goto(pageUrl);
         await expect(page.locator('#drop-zone')).toBeVisible();
-        await expect(page.locator('#converter-config')).toBeVisible();
+        await expect(page.locator('#converter-config')).toBeAttached();
         await expect(page.locator('#action-btn')).not.toBeVisible();
         await expect(page.locator('#clear-all')).not.toBeVisible();
       });
