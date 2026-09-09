@@ -8,12 +8,12 @@ test.describe('UI Micro-Interactions', () => {
     });
 
     test('drop zone is visible on load', async ({ page }) => {
-      const dropZone = page.locator('[data-drop-zone]').first();
+      const dropZone = page.locator('#drop-zone').first();
       await expect(dropZone).toBeVisible();
     });
 
     test('drop zone has click handler', async ({ page }) => {
-      const dropZone = page.locator('[data-drop-zone]').first();
+      const dropZone = page.locator('#drop-zone').first();
       await dropZone.click();
       const fileInput = page.locator('#file-input');
       const isFocused = await fileInput.evaluate(el => document.activeElement === el);
@@ -21,9 +21,9 @@ test.describe('UI Micro-Interactions', () => {
     });
 
     test('dragover adds dragover class', async ({ page }) => {
-      const dropZone = page.locator('[data-drop-zone]').first();
+      const dropZone = page.locator('#drop-zone').first();
       await page.evaluate(() => {
-        const zone = document.querySelector('[data-drop-zone]');
+        const zone = document.querySelector('#drop-zone');
         const event = new DragEvent('dragover', { bubbles: true });
         zone.dispatchEvent(event);
       });
@@ -31,9 +31,9 @@ test.describe('UI Micro-Interactions', () => {
     });
 
     test('dragleave removes dragover class', async ({ page }) => {
-      const dropZone = page.locator('[data-drop-zone]').first();
+      const dropZone = page.locator('#drop-zone').first();
       await page.evaluate(() => {
-        const zone = document.querySelector('[data-drop-zone]');
+        const zone = document.querySelector('#drop-zone');
         zone.classList.add('dragover');
         const event = new DragEvent('dragleave', { bubbles: true });
         zone.dispatchEvent(event);
@@ -42,13 +42,13 @@ test.describe('UI Micro-Interactions', () => {
     });
 
     test('drop removes dragover class', async ({ page }) => {
-      const dropZone = page.locator('[data-drop-zone]').first();
+      const dropZone = page.locator('#drop-zone').first();
       await page.evaluate(() => {
-        const zone = document.querySelector('[data-drop-zone]');
+        const zone = document.querySelector('#drop-zone');
         zone.classList.add('dragover');
       });
       await page.evaluate(() => {
-        const zone = document.querySelector('[data-drop-zone]');
+        const zone = document.querySelector('#drop-zone');
         const dt = new DataTransfer();
         const file = new File([''], 'test.png', { type: 'image/png' });
         dt.items.add(file);
@@ -59,7 +59,7 @@ test.describe('UI Micro-Interactions', () => {
     });
 
     test('drop zone accessible via keyboard', async ({ page }) => {
-      const dropZone = page.locator('[data-drop-zone]').first();
+      const dropZone = page.locator('#drop-zone').first();
       const role = await dropZone.getAttribute('role');
       const tabindex = await dropZone.getAttribute('tabindex');
       expect(role).toBeTruthy();

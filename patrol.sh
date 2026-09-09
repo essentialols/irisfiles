@@ -472,8 +472,17 @@ TEST_DEV_OUTPUT=$(claude --print \
 echo "$TEST_DEV_OUTPUT" | tail -10 | tee -a "$LOG"
 
 if [[ -n "$(git -C "$WORKTREE_DIR" status --porcelain)" ]]; then
-  # Verify new tests pass
-  if (cd "$WORKTREE_DIR" && npx playwright test --reporter=line > /dev/null 2>&1); then
+  # Same baseline gate as the fix phase. Requiring a green suite here is what
+  # silently disabled test-writing: the suite has never been green, so the only
+  # agent able to repair the tests was blocked by the tests.
+  echo "  Gate: running e2e against the new tests..." | tee -a "$LOG"
+  TESTDEV_FAILURES=$(pw_failures "$WORKTREE_DIR")
+  TESTDEV_NEW=$(comm -13 "$BASELINE_FILE" <(echo "$TESTDEV_FAILURES" | sed '/^$/d' | sort -u))
+  if echo "$TESTDEV_FAILURES" | grep -q "PW_REPORT_UNREADABLE"; then
+    echo "  REJECTED: e2e report unreadable; not committing new tests." | tee -a "$LOG"
+    TESTDEV_NEW="unreadable"
+  fi
+  if [[ -z "$TESTDEV_NEW" ]]; then
     NEW_TESTS=$(git -C "$WORKTREE_DIR" diff --stat | grep -c 'spec.mjs' || echo 0)
     git -C "$WORKTREE_DIR" add -A
     git -C "$WORKTREE_DIR" commit -m "patrol: add E2E tests for uncovered features" --no-verify
@@ -490,14 +499,16 @@ if [[ -n "$(git -C "$WORKTREE_DIR" status --porcelain)" ]]; then
 $(echo "$TEST_DEV_OUTPUT" | tail -20)
 
 ---
-*Automated patrol test development. All tests pass.*
+*Automated patrol test development. These tests ran in their own worktree and
+introduced no failure that \`origin/main\` was not already failing.*
 TESTEOF
 )" 2>>"$LOG") || true
     if [[ -n "$PR_URL" ]]; then
       echo "Test PR created: $PR_URL" | tee -a "$LOG"
     fi
   else
-    echo "SKIPPED: new tests failed validation" | tee -a "$LOG"
+    echo "SKIPPED: new tests introduce failures main was not already failing:" | tee -a "$LOG"
+    echo "$TESTDEV_NEW" | sed 's/^/    /' | tee -a "$LOG"
   fi
 else
   echo "No new tests needed." | tee -a "$LOG"
