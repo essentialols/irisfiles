@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { unzipSync } from 'fflate';
 import { test, expect } from '@playwright/test';
 import { fixture } from './helpers.mjs';
 
@@ -50,6 +52,27 @@ test.describe('PNG to JPG', () => {
       page.locator('#download-all').click(),
     ]);
     expect(dl.suggestedFilename()).toMatch(/\.zip$/);
+  });
+
+  test('Download All preserves outputs with duplicate filenames', async ({ page }) => {
+    const [first, second] = await Promise.all([
+      readFile(fixture('landscape.png')),
+      readFile(fixture('portrait.png')),
+    ]);
+    await page.locator('#file-input').setInputFiles([
+      { name: 'photo.png', mimeType: 'image/png', buffer: first },
+      { name: 'photo.png', mimeType: 'image/png', buffer: second },
+    ]);
+    await page.locator('.file-item.done').nth(1).waitFor({ timeout: 15000 });
+
+    const [dl] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('#download-all').click(),
+    ]);
+    const archive = unzipSync(new Uint8Array(await readFile(await dl.path())));
+    expect(Object.keys(archive).sort()).toEqual(['photo (2).jpg', 'photo.jpg']);
+    expect(archive['photo.jpg'].length).toBeGreaterThan(0);
+    expect(archive['photo (2).jpg'].length).toBeGreaterThan(0);
   });
 
   test('Clear All empties file list', async ({ page }) => {
