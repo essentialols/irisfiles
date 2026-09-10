@@ -1,7 +1,37 @@
 import { readFile } from 'node:fs/promises';
-import { unzipSync } from 'fflate';
 import { test, expect } from '@playwright/test';
 import { fixture } from './helpers.mjs';
+
+function zipCentralEntries(buffer) {
+  let eocd = -1;
+  for (let i = buffer.length - 22; i >= Math.max(0, buffer.length - 0xffff - 22); i--) {
+    if (buffer.readUInt32LE(i) === 0x06054b50) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd === -1) throw new Error('Expected ZIP end-of-central-directory record');
+
+  const count = buffer.readUInt16LE(eocd + 10);
+  let offset = buffer.readUInt32LE(eocd + 16);
+  const entries = [];
+  for (let i = 0; i < count; i++) {
+    if (buffer.readUInt32LE(offset) !== 0x02014b50) throw new Error('Expected ZIP central-directory entry');
+    const compressedSize = buffer.readUInt32LE(offset + 20);
+    const uncompressedSize = buffer.readUInt32LE(offset + 24);
+    const nameLength = buffer.readUInt16LE(offset + 28);
+    const extraLength = buffer.readUInt16LE(offset + 30);
+    const commentLength = buffer.readUInt16LE(offset + 32);
+    const nameStart = offset + 46;
+    entries.push({
+      name: buffer.subarray(nameStart, nameStart + nameLength).toString('utf8'),
+      compressedSize,
+      uncompressedSize,
+    });
+    offset = nameStart + nameLength + extraLength + commentLength;
+  }
+  return entries;
+}
 
 test.describe('PNG to JPG', () => {
   test.beforeEach(async ({ page }) => {
@@ -69,10 +99,9 @@ test.describe('PNG to JPG', () => {
       page.waitForEvent('download'),
       page.locator('#download-all').click(),
     ]);
-    const archive = unzipSync(new Uint8Array(await readFile(await dl.path())));
-    expect(Object.keys(archive).sort()).toEqual(['photo (2).jpg', 'photo.jpg']);
-    expect(archive['photo.jpg'].length).toBeGreaterThan(0);
-    expect(archive['photo (2).jpg'].length).toBeGreaterThan(0);
+    const entries = zipCentralEntries(await readFile(await dl.path()));
+    expect(entries.map(entry => entry.name).sort()).toEqual(['photo (2).jpg', 'photo.jpg']);
+    expect(entries.every(entry => entry.uncompressedSize > 0 && entry.compressedSize > 0)).toBe(true);
   });
 
   test('Clear All empties file list', async ({ page }) => {
