@@ -302,7 +302,11 @@ function parseRtf(rtfString) {
     }
 
     if (skipGroup > 0) {
-      i++;
+      if (ch === '\\' && (rtfString[i + 1] === '\\' || rtfString[i + 1] === '{' || rtfString[i + 1] === '}')) {
+        i += 2;
+      } else {
+        i++;
+      }
       continue;
     }
 
