@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MP3 to OGG Converter - Free, Private, No Upload | IrisFiles</title>
-  <meta name="description" content="Convert MP3 audio files to OGG format in your browser. No upload needed. All processing is local and private.">
+  <meta name="description" content="Convert MP3 to OGG Vorbis in your browser with FFmpeg. Free private MP3 to OGG converter with batch support, no signup, and no file upload.">
   <meta property="og:title" content="MP3 to OGG Converter - Free, Private, No Upload | IrisFiles">
-  <meta property="og:description" content="Convert MP3 audio files to OGG format in your browser. No upload needed. All processing is local and private.">
+  <meta property="og:description" content="Convert MP3 to OGG Vorbis in your browser with FFmpeg. Free private MP3 to OGG converter with batch support, no signup, and no file upload.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://irisfiles.com/mp3-to-ogg">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="MP3 to OGG Converter - Free, Private, No Upload | IrisFiles">
-  <meta name="twitter:description" content="Convert MP3 audio files to OGG format in your browser. No upload needed. All processing is local and private.">
+  <meta name="twitter:description" content="Convert MP3 to OGG Vorbis in your browser with FFmpeg. Free private MP3 to OGG converter with batch support, no signup, and no file upload.">
   <meta property="og:image" content="https://irisfiles.com/img/og-default.png">
   <meta name="twitter:image" content="https://irisfiles.com/img/og-default.png">
   <link rel="canonical" href="https://irisfiles.com/mp3-to-ogg">
@@ -25,7 +25,7 @@
       "@type": "WebApplication",
       "name": "MP3 to OGG Converter - IrisFiles",
       "url": "https://irisfiles.com/mp3-to-ogg",
-      "description": "Convert MP3 audio files to OGG format in your browser. No upload needed. All processing is local and private.",
+      "description": "Convert MP3 audio to OGG Vorbis with FFmpeg running entirely in your browser. No upload required.",
       "applicationCategory": "MultimediaApplication",
       "operatingSystem": "Any",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
@@ -39,7 +39,23 @@
           "name": "How does MP3 to OGG conversion work?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Your browser decodes the MP3 audio using the Web Audio API, then re-encodes it as OGG Vorbis. Everything happens locally, so your files never leave your device."
+            "text": "IrisFiles runs FFmpeg in WebAssembly inside your browser. FFmpeg decodes the MP3 and re-encodes the audio as OGG Vorbis using quality-based Vorbis encoding. Your audio file is not uploaded to a conversion server."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does this converter create OGG Vorbis or Opus?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "It creates OGG Vorbis. Ogg is the container format; Vorbis and Opus are different audio codecs that can both be stored in Ogg containers. This page uses FFmpeg's libvorbis encoder, not Opus."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What OGG quality setting does IrisFiles use?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The converter uses FFmpeg libvorbis quality level 4. Vorbis quality mode is variable bitrate, so the final bitrate and file size depend on the source audio rather than being fixed to one kbps value."
           }
         },
         {
@@ -47,7 +63,7 @@
           "name": "Does converting MP3 to OGG affect audio quality?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Both MP3 and OGG are lossy formats, so re-encoding introduces a small generational quality loss. However, OGG Vorbis generally delivers better quality than MP3 at the same bitrate."
+            "text": "Yes. MP3 and OGG Vorbis are both lossy formats, so converting from one to the other creates another lossy generation. OGG may be required by a particular application, but conversion cannot restore detail already lost from the MP3."
           }
         },
         {
@@ -55,7 +71,7 @@
           "name": "Can I convert multiple MP3 files to OGG at once?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. Drop as many MP3 files as you like. IrisFiles processes them in parallel and lets you download all results as a single ZIP file."
+            "text": "Yes. IrisFiles accepts batches of up to 50 MP3 files and can package multiple completed OGG files into a ZIP download. FFmpeg conversions are serialized internally to keep the shared browser engine reliable."
           }
         }
       ]
@@ -76,8 +92,8 @@
 
   <main class="container">
     <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> Back</a>
-<div id="drop-zone" class="drop-zone">
-      <h1 class="drop-zone__title">MP3 to OGG privately.</h1>
+    <div id="drop-zone" class="drop-zone">
+      <h1 class="drop-zone__title">Convert MP3 to OGG privately.</h1>
       <p class="drop-zone__subtitle">Everything runs in your browser. Nothing is uploaded. Ever.</p>
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
       <p>Drop MP3 files here, or <strong>click to browse</strong></p>
@@ -91,6 +107,31 @@
       <button id="download-all" class="btn btn--primary" style="display:none">Download All as ZIP</button>
       <button id="clear-all" class="btn btn--secondary" style="display:none">Clear All</button>
     </div>
+
+    <section class="prose">
+      <h2>How to convert MP3 to OGG</h2>
+      <ol>
+        <li>Add one MP3 file or a batch of MP3 files.</li>
+        <li>IrisFiles loads its browser-based FFmpeg engine and converts each MP3 to OGG Vorbis locally.</li>
+        <li>Download the OGG files individually, or download a ZIP when several are finished.</li>
+      </ol>
+
+      <h2>Why convert MP3 to OGG?</h2>
+      <p>MP3 has broader playback support, while OGG Vorbis is common in open-source software, game engines, Linux workflows, and applications that explicitly request OGG audio. If the destination already accepts MP3, converting only for quality is usually unnecessary. Choose OGG when the format itself is useful for the next tool, platform, or project.</p>
+
+      <h2>OGG, Vorbis, and Opus are not the same thing</h2>
+      <p><strong>Ogg</strong> is a container format. <strong>Vorbis</strong> and <strong>Opus</strong> are different audio codecs that can both be stored in an Ogg container. This IrisFiles converter produces <strong>OGG Vorbis</strong> with FFmpeg's <code>libvorbis</code> encoder. It does not create Opus audio.</p>
+
+      <h2>MP3 to OGG conversion and audio quality</h2>
+      <p>MP3 and OGG Vorbis are both lossy codecs. IrisFiles must decode the MP3 and encode a new Vorbis stream, so there is some generational loss even when the output sounds very close to the source. The converter uses FFmpeg <strong>libvorbis quality level 4</strong>, a variable-bitrate quality mode. Actual bitrate and output size therefore depend on the audio instead of being locked to one bitrate.</p>
+      <p>If you need an uncompressed editing copy instead, use <a href="/mp3-to-wav">MP3 to WAV</a>. If you need to reverse the workflow for compatibility, use <a href="/ogg-to-mp3">OGG to MP3</a>.</p>
+
+      <h2>What about tags and metadata?</h2>
+      <p>Audio containers and codecs support different metadata fields. FFmpeg may carry compatible metadata into the OGG file, but IrisFiles does not promise that every MP3 tag will survive this format change. If artist, album, artwork, or custom tags matter to your workflow, verify the finished file before deleting the original.</p>
+
+      <h2>Private MP3 to OGG batch conversion</h2>
+      <p>You can queue up to 50 MP3 files. The FFmpeg WebAssembly engine runs inside the browser, and the source audio is written only into the engine's in-memory virtual file system for the conversion. IrisFiles does not send the MP3 to a remote conversion server. More implementation detail is available on the <a href="/about">About IrisFiles</a> page.</p>
+    </section>
 
     <div class="related-tools">
       <h2>Related Tools</h2>
@@ -106,19 +147,31 @@
       <div class="faq-item">
         <button class="faq-question">How does MP3 to OGG conversion work?</button>
         <div class="faq-answer">
-          <p>Your browser decodes the MP3 audio using the Web Audio API, then re-encodes it as OGG Vorbis. Everything happens locally, so your files never leave your device.</p>
+          <p>IrisFiles runs FFmpeg in WebAssembly inside your browser. FFmpeg decodes the MP3 and re-encodes the audio as OGG Vorbis using quality-based Vorbis encoding. Your audio file is not uploaded to a conversion server.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Does this converter create OGG Vorbis or Opus?</button>
+        <div class="faq-answer">
+          <p>It creates OGG Vorbis. Ogg is the container format; Vorbis and Opus are different audio codecs that can both be stored in Ogg containers. This page uses FFmpeg's libvorbis encoder, not Opus.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">What OGG quality setting does IrisFiles use?</button>
+        <div class="faq-answer">
+          <p>The converter uses FFmpeg libvorbis quality level 4. Vorbis quality mode is variable bitrate, so the final bitrate and file size depend on the source audio rather than being fixed to one kbps value.</p>
         </div>
       </div>
       <div class="faq-item">
         <button class="faq-question">Does converting MP3 to OGG affect audio quality?</button>
         <div class="faq-answer">
-          <p>Both MP3 and OGG are lossy formats, so re-encoding introduces a small generational quality loss. However, OGG Vorbis generally delivers better quality than MP3 at the same bitrate.</p>
+          <p>Yes. MP3 and OGG Vorbis are both lossy formats, so converting from one to the other creates another lossy generation. OGG may be required by a particular application, but conversion cannot restore detail already lost from the MP3.</p>
         </div>
       </div>
       <div class="faq-item">
         <button class="faq-question">Can I convert multiple MP3 files to OGG at once?</button>
         <div class="faq-answer">
-          <p>Yes. Drop as many MP3 files as you like. IrisFiles processes them in parallel and lets you download all results as a single ZIP file.</p>
+          <p>Yes. IrisFiles accepts batches of up to 50 MP3 files and can package multiple completed OGG files into a ZIP download. FFmpeg conversions are serialized internally to keep the shared browser engine reliable.</p>
         </div>
       </div>
     </section>
@@ -129,6 +182,7 @@
       <div class="footer-links">
         <a href="/">All Converters</a>
         <a href="/ogg-to-mp3">OGG to MP3</a>
+        <a href="/mp3-to-wav">MP3 to WAV</a>
         <a href="/about">About</a>
       </div>
       <p>IrisFiles. All processing happens in your browser.</p>
