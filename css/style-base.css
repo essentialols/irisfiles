@@ -473,6 +473,11 @@ body {
   overflow: hidden;
   transition: max-height .3s ease;
 }
+/* Pages whose UI module only toggles .open never set an inline max-height, so
+   without this the answer stays clipped to 0 and the accordion does nothing. */
+.faq-item.open .faq-answer {
+  max-height: 60rem;
+}
 .faq-answer p {
   padding: 0 0 1rem;
   color: var(--text-muted);
