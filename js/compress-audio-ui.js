@@ -11,6 +11,7 @@ let dropZone, fileInput, fileList, actionBtn, clearAllBtn;
 let qualitySelect;
 let currentFile = null;
 let converting = false;
+let generation = 0;
 
 export function init() {
   dropZone       = document.getElementById('drop-zone');
@@ -64,6 +65,7 @@ async function handleFile(files) {
 
   resetState();
   currentFile = file;
+  const fileGeneration = generation;
 
   if (file.size > MAX_AUDIO_SIZE) {
     showFileItem(file, null);
@@ -72,6 +74,7 @@ async function handleFile(files) {
   }
 
   const meta = await getAudioMetadata(file);
+  if (fileGeneration !== generation) return;
 
   if (meta.duration > 0 && meta.duration > MAX_AUDIO_DURATION) {
     showFileItem(file, meta);
@@ -89,6 +92,8 @@ async function handleFile(files) {
 async function startCompress() {
   if (!currentFile || converting) return;
   converting = true;
+  const file = currentFile;
+  const operationGeneration = generation;
   if (actionBtn) actionBtn.disabled = true;
 
   const quality = qualitySelect ? qualitySelect.value : 'medium';
@@ -98,11 +103,12 @@ async function startCompress() {
 
   try {
     const blob = await compressAudio(
-      currentFile,
+      file,
       { quality },
-      pct => setProgress(pct),
-      msg => setStatus(msg)
+      pct => { if (operationGeneration === generation) setProgress(pct); },
+      msg => { if (operationGeneration === generation) setStatus(msg); }
     );
+    if (operationGeneration !== generation) return;
 
     const ms = Math.round(performance.now() - t0);
     const dur = ms < 1000 ? ms + 'ms' : (ms / 1000).toFixed(1) + 's';
@@ -116,10 +122,10 @@ async function startCompress() {
 
     const meta = fileList.querySelector('.file-item__meta');
     if (meta) {
-      const saved = currentFile.size - blob.size;
-      const pctSaved = currentFile.size > 0 ? Math.round((saved / currentFile.size) * 100) : 0;
+      const saved = file.size - blob.size;
+      const pctSaved = file.size > 0 ? Math.round((saved / file.size) * 100) : 0;
       const parts = [
-        formatSize(currentFile.size) + ' \u2192 ' + formatSize(blob.size),
+        formatSize(file.size) + ' \u2192 ' + formatSize(blob.size),
       ];
       if (saved > 0) {
         parts.push(`(${pctSaved}% smaller)`);
@@ -132,7 +138,7 @@ async function startCompress() {
 
     if (actionBtn) actionBtn.style.display = 'none';
 
-    const outName = currentFile.name.replace(/\.[^.]+$/, '') + '-compressed.mp3';
+    const outName = file.name.replace(/\.[^.]+$/, '') + '-compressed.mp3';
     const actions = fileList.querySelector('.file-item__actions');
     if (actions) {
       actions.innerHTML = `
@@ -143,6 +149,7 @@ async function startCompress() {
       });
     }
   } catch (err) {
+    if (operationGeneration !== generation) return;
     converting = false;
     console.error('Audio compression error:', err);
 
@@ -203,6 +210,7 @@ function setStatus(msg) {
 }
 
 function resetState() {
+  generation++;
   currentFile = null;
   converting = false;
   fileList.innerHTML = '';
