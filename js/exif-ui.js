@@ -166,6 +166,8 @@ function renderMetadata() {
 
 async function handleSave() {
   if (!currentFile || !isJpegFile || processing) return;
+  const file = currentFile;
+  const token = selectionToken;
   processing = true;
   saveBtn.disabled = true;
   saveBtn.textContent = 'Saving...';
@@ -173,70 +175,84 @@ async function handleSave() {
   const changes = collectChanges(metadataPanel);
 
   if (Object.keys(changes).length === 0) {
-    saveBtn.disabled = false;
-    saveBtn.textContent = 'Save Changes';
-    processing = false;
+    if (token === selectionToken) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Changes';
+      processing = false;
+    }
     return;
   }
 
   try {
-    const blob = await editExifFields(currentFile, changes);
-    const base = currentFile.name.replace(/\.[^.]+$/, '');
-    const outName = base + '-metadata.jpg';
-    showResult(blob, outName);
+    const blob = await editExifFields(file, changes);
+    if (token === selectionToken) {
+      const base = file.name.replace(/\.[^.]+$/, '');
+      const outName = base + '-metadata.jpg';
+      showResult(blob, outName, file);
+    }
   } catch (err) {
-    setStatus('Error: ' + err.message);
+    if (token === selectionToken) setStatus('Error: ' + err.message);
   }
 
-  saveBtn.disabled = false;
-  saveBtn.textContent = 'Save Changes';
-  processing = false;
+  if (token === selectionToken) {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save Changes';
+    processing = false;
+  }
 }
 
 async function handleStripGps() {
   if (!currentFile || !isJpegFile || processing) return;
+  const file = currentFile;
+  const token = selectionToken;
   processing = true;
   if (stripGpsBtn) { stripGpsBtn.disabled = true; stripGpsBtn.textContent = 'Stripping GPS...'; }
 
   try {
-    const blob = await stripGpsOnly(currentFile);
-    const base = currentFile.name.replace(/\.[^.]+$/, '');
-    const outName = base + '-clean.jpg';
-    showResult(blob, outName);
+    const blob = await stripGpsOnly(file);
+    if (token === selectionToken) {
+      const base = file.name.replace(/\.[^.]+$/, '');
+      const outName = base + '-clean.jpg';
+      showResult(blob, outName, file);
+    }
   } catch (err) {
-    setStatus('Error: ' + err.message);
+    if (token === selectionToken) setStatus('Error: ' + err.message);
   }
 
-  if (stripGpsBtn) { stripGpsBtn.disabled = false; stripGpsBtn.textContent = 'Strip GPS Only'; }
-  processing = false;
+  if (token === selectionToken && stripGpsBtn) { stripGpsBtn.disabled = false; stripGpsBtn.textContent = 'Strip GPS Only'; }
+  if (token === selectionToken) processing = false;
 }
 
 async function handleStripAll() {
   if (!currentFile || processing) return;
+  const file = currentFile;
+  const token = selectionToken;
   processing = true;
   if (stripAllBtn) { stripAllBtn.disabled = true; stripAllBtn.textContent = 'Stripping...'; }
 
   try {
-    const blob = await stripAllMetadata(currentFile);
-    const base = currentFile.name.replace(/\.[^.]+$/, '');
-    const extByMime = {
-      'image/png': 'png',
-      'image/gif': 'gif',
-      'image/webp': 'webp',
-      'image/jpeg': 'jpg',
-    };
-    const ext = extByMime[blob.type] || 'jpg';
-    const outName = base + '-clean.' + ext;
-    showResult(blob, outName);
+    const blob = await stripAllMetadata(file);
+    if (token === selectionToken) {
+      const base = file.name.replace(/\.[^.]+$/, '');
+      const extByMime = {
+        'image/png': 'png',
+        'image/gif': 'gif',
+        'image/webp': 'webp',
+        'image/jpeg': 'jpg',
+      };
+      const ext = extByMime[blob.type] || 'jpg';
+      const outName = base + '-clean.' + ext;
+      showResult(blob, outName, file);
+    }
   } catch (err) {
-    setStatus('Error: ' + err.message);
+    if (token === selectionToken) setStatus('Error: ' + err.message);
   }
 
-  if (stripAllBtn) { stripAllBtn.disabled = false; stripAllBtn.textContent = 'Strip All Metadata'; }
-  processing = false;
+  if (token === selectionToken && stripAllBtn) { stripAllBtn.disabled = false; stripAllBtn.textContent = 'Strip All Metadata'; }
+  if (token === selectionToken) processing = false;
 }
 
-function showResult(blob, outName) {
+function showResult(blob, outName, sourceFile) {
   const div = document.querySelector('#exif-file');
   if (!div) return;
 
@@ -244,7 +260,7 @@ function showResult(blob, outName) {
   const actions = div.querySelector('.file-item__actions');
   div.classList.add('done');
 
-  const sizeBefore = formatSize(currentFile.size);
+  const sizeBefore = formatSize(sourceFile.size);
   const sizeAfter = formatSize(blob.size);
   meta.textContent = sizeBefore + ' \u2192 ' + sizeAfter;
 
