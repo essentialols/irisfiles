@@ -136,6 +136,24 @@ test.describe('Merge PDF', () => {
   });
 });
 
+test.describe('Merge PDF size limit', () => {
+  test('merging files over the 50MB total limit shows an error', async ({ page }) => {
+    await page.goto('/merge-pdf');
+    // Playwright's setInputFiles rejects buffers over 50MB combined, so the
+    // oversized files are built in-page instead of transferred over the protocol.
+    await page.evaluate(() => {
+      const padding = new Uint8Array(30 * 1024 * 1024);
+      const dt = new DataTransfer();
+      dt.items.add(new File([padding], 'big1.pdf', { type: 'application/pdf' }));
+      dt.items.add(new File([padding], 'big2.pdf', { type: 'application/pdf' }));
+      document.getElementById('file-input').files = dt.files;
+      document.getElementById('file-input').dispatchEvent(new Event('change'));
+    });
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#pdf-results .notice')).toContainText('exceeds 50MB limit', { timeout: 15000 });
+  });
+});
+
 test.describe('Split PDF', () => {
   test('upload PDF and split pages', async ({ page }) => {
     await page.goto('/split-pdf');
