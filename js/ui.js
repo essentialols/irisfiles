@@ -125,7 +125,7 @@ export function init() {
       });
       if (!isOpen && answer) {
         item.classList.add('open');
-        answer.style.maxHeight = answer.scrollHeight + 'px';
+        if (answer.scrollHeight) answer.style.maxHeight = answer.scrollHeight + 'px';
       }
     });
   });
