@@ -115,6 +115,17 @@ function htmlBodyToPlainText(root) {
   return text.replace(/\n{3,}/g, '\n\n').trim();
 }
 
+function resolveEpubPath(opfPath, href) {
+  try {
+    const base = new URL(opfPath, 'https://epub.invalid/');
+    const resolved = new URL(href, base);
+    if (resolved.origin !== base.origin) return null;
+    return resolved.pathname.replace(/^\//, '');
+  } catch {
+    return null;
+  }
+}
+
 /** Parse EPUB (ZIP) and extract chapter text in spine order. */
 async function extractEpubText(file, onProgress) {
   if (onProgress) onProgress(10);
@@ -152,9 +163,6 @@ async function extractEpubText(file, onProgress) {
     opfData = new TextDecoder().decode(zip[opfPath]);
   }
 
-  // Determine base directory of OPF
-  const opfDir = opfPath ? opfPath.replace(/[^/]*$/, '') : '';
-
   // Parse OPF to get spine order
   let orderedFiles = [];
   if (opfData) {
@@ -174,9 +182,11 @@ async function extractEpubText(file, onProgress) {
       const idref = ref.getAttribute('idref');
       if (idref && manifest[idref]) {
         const entry = manifest[idref];
+        const hrefPath = entry.href.split(/[?#]/, 1)[0];
         if (entry.mediaType.includes('html') || entry.mediaType.includes('xml') ||
-            entry.href.match(/\.(x?html?|xml)$/i)) {
-          orderedFiles.push(opfDir + entry.href);
+            hrefPath.match(/\.(x?html?|xml)$/i)) {
+          const path = resolveEpubPath(opfPath, entry.href);
+          if (path) orderedFiles.push(path);
         }
       }
     });
@@ -238,6 +248,21 @@ function parseRtf(rtfString) {
   let i = 0;
   const len = rtfString.length;
   let ansiDecoder = null;
+  let unicodeFallbackLength = 1;
+  let fallbackChars = 0;
+  const unicodeFallbackStack = [];
+
+  function appendTextCharacter(value) {
+    if (fallbackChars > 0) {
+      fallbackChars--;
+    } else {
+      text += value;
+    }
+  }
+
+  function appendControlCharacter(value) {
+    if (fallbackChars === 0) text += value;
+  }
 
   // Groups to skip entirely (metadata, headers, footers, etc.)
   const skipGroups = ['fonttbl', 'colortbl', 'stylesheet', 'info', 'header', 'footer',
@@ -248,6 +273,7 @@ function parseRtf(rtfString) {
     const ch = rtfString[i];
 
     if (ch === '{') {
+      unicodeFallbackStack.push(unicodeFallbackLength);
       depth++;
       i++;
       // Check if the group starts with a skip keyword
@@ -270,6 +296,7 @@ function parseRtf(rtfString) {
         skipGroup = 0;
       }
       depth--;
+      unicodeFallbackLength = unicodeFallbackStack.pop() ?? 1;
       i++;
       continue;
     }
@@ -284,21 +311,21 @@ function parseRtf(rtfString) {
       if (i >= len) break;
 
       // Special characters
-      if (rtfString[i] === '\\') { text += '\\'; i++; continue; }
-      if (rtfString[i] === '{') { text += '{'; i++; continue; }
-      if (rtfString[i] === '}') { text += '}'; i++; continue; }
-      if (rtfString[i] === '~') { text += '\u00A0'; i++; continue; } // non-breaking space
-      if (rtfString[i] === '-') { text += '\u00AD'; i++; continue; } // soft hyphen
-      if (rtfString[i] === '_') { text += '\u2011'; i++; continue; } // non-breaking hyphen
+      if (rtfString[i] === '\\') { appendTextCharacter('\\'); i++; continue; }
+      if (rtfString[i] === '{') { appendTextCharacter('{'); i++; continue; }
+      if (rtfString[i] === '}') { appendTextCharacter('}'); i++; continue; }
+      if (rtfString[i] === '~') { appendTextCharacter('\u00A0'); i++; continue; } // non-breaking space
+      if (rtfString[i] === '-') { appendTextCharacter('\u00AD'); i++; continue; } // soft hyphen
+      if (rtfString[i] === '_') { appendTextCharacter('\u2011'); i++; continue; } // non-breaking hyphen
 
       // Hex escape \'xx. These are bytes in the active RTF ANSI code page.
       if (rtfString[i] === '\'') {
         const hex = rtfString.substring(i + 1, i + 3);
         const code = parseInt(hex, 16);
         if (!isNaN(code)) {
-          text += ansiDecoder
+          appendTextCharacter(ansiDecoder
             ? ansiDecoder.decode(Uint8Array.of(code))
-            : String.fromCharCode(code);
+            : String.fromCharCode(code));
         }
         i += 3;
         continue;
@@ -321,8 +348,8 @@ function parseRtf(rtfString) {
         }
       }
 
-      // Consume optional trailing space
-      if (i < len && rtfString[i] === ' ') i++;
+      const hasDelimiter = i < len && rtfString[i] === ' ';
+      if (hasDelimiter) i++;
 
       // Handle known control words
       if (word === 'ansi') {
@@ -334,34 +361,34 @@ function parseRtf(rtfString) {
         ansiDecoder = codePage === 1252 ? new TextDecoder('windows-1252') : null;
       } else if (word === 'mac' || word === 'pc' || word === 'pca') {
         ansiDecoder = null;
+      } else if (word === 'uc') {
+        const count = parseInt(param, 10);
+        if (!isNaN(count) && count >= 0) unicodeFallbackLength = count;
       } else if (word === 'par' || word === 'line') {
-        text += '\n';
+        appendControlCharacter('\n');
       } else if (word === 'tab') {
-        text += '\t';
+        appendControlCharacter('\t');
       } else if (word === 'u') {
-        // Unicode escape: \uN followed by a replacement char to skip
         const code = parseInt(param, 10);
         if (!isNaN(code)) {
           text += String.fromCharCode(code < 0 ? code + 65536 : code);
         }
-        // Skip the replacement character (usually ?)
-        if (i < len && rtfString[i] !== '\\' && rtfString[i] !== '{' && rtfString[i] !== '}') {
-          i++;
-        }
+        fallbackChars = unicodeFallbackLength;
+        if (hasDelimiter && fallbackChars > 0) fallbackChars--;
       } else if (word === 'lquote') {
-        text += '\u2018';
+        appendControlCharacter('\u2018');
       } else if (word === 'rquote') {
-        text += '\u2019';
+        appendControlCharacter('\u2019');
       } else if (word === 'ldblquote') {
-        text += '\u201C';
+        appendControlCharacter('\u201C');
       } else if (word === 'rdblquote') {
-        text += '\u201D';
+        appendControlCharacter('\u201D');
       } else if (word === 'bullet') {
-        text += '\u2022';
+        appendControlCharacter('\u2022');
       } else if (word === 'endash') {
-        text += '\u2013';
+        appendControlCharacter('\u2013');
       } else if (word === 'emdash') {
-        text += '\u2014';
+        appendControlCharacter('\u2014');
       }
       // All other control words are ignored
       continue;
@@ -374,7 +401,7 @@ function parseRtf(rtfString) {
       continue;
     }
 
-    text += ch;
+    appendTextCharacter(ch);
     i++;
   }
 

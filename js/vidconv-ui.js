@@ -15,6 +15,7 @@ let sourceType = '';
 let dropZone, fileInput, fileList, actionBtn, clearAllBtn;
 let currentFile = null;
 let converting = false;
+let generation = 0;
 
 export function init() {
   const configEl = document.getElementById('converter-config');
@@ -76,6 +77,7 @@ async function handleFile(files) {
   // Replace any existing file (single file mode)
   resetState();
   currentFile = file;
+  const fileGeneration = generation;
 
   // Warn on large files
   if (file.size > WARN_VIDEO_SIZE) {
@@ -84,6 +86,7 @@ async function handleFile(files) {
 
   // Get duration and validate
   const duration = await getVideoDuration(file);
+  if (fileGeneration !== generation) return;
 
   if (duration > 0 && duration > MAX_DURATION) {
     showFileItem(file, duration);
@@ -106,6 +109,8 @@ async function handleFile(files) {
 async function startConversion() {
   if (!currentFile || converting) return;
   converting = true;
+  const file = currentFile;
+  const operationGeneration = generation;
 
   if (actionBtn) actionBtn.disabled = true;
 
@@ -115,11 +120,12 @@ async function startConversion() {
   try {
     const convertFn = sourceType === 'gif' ? gifToVideo : convertVideo;
     const blob = await convertFn(
-      currentFile,
+      file,
       targetFormat,
-      pct => setProgress(pct),
-      msg => setStatus(msg)
+      pct => { if (operationGeneration === generation) setProgress(pct); },
+      msg => { if (operationGeneration === generation) setStatus(msg); }
     );
+    if (operationGeneration !== generation) return;
 
     const durationMs = Math.round(performance.now() - t0);
     converting = false;
@@ -137,13 +143,13 @@ async function startConversion() {
       const dur = durationMs < 1000
         ? durationMs + 'ms'
         : (durationMs / 1000).toFixed(1) + 's';
-      meta.textContent = formatSize(currentFile.size) + ' \u2192 ' + formatSize(blob.size) + ' \u00b7 ' + dur;
+      meta.textContent = formatSize(file.size) + ' \u2192 ' + formatSize(blob.size) + ' \u00b7 ' + dur;
     }
 
     // Show download button, hide action button
     if (actionBtn) actionBtn.style.display = 'none';
 
-    const outputName = outputFilename(currentFile.name, targetFormat);
+    const outputName = outputFilename(file.name, targetFormat);
     const actions = fileList.querySelector('.file-item__actions');
     if (actions) {
       actions.innerHTML = `
@@ -154,6 +160,7 @@ async function startConversion() {
       });
     }
   } catch (err) {
+    if (operationGeneration !== generation) return;
     converting = false;
     console.error('Video conversion error:', err);
 
@@ -231,6 +238,7 @@ function handleClearAll() {
 }
 
 function resetState() {
+  generation++;
   currentFile = null;
   converting = false;
   fileList.innerHTML = '';

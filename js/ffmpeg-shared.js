@@ -9,12 +9,18 @@ let loadingPromise = null;
 const CDN = 'https://cdn.jsdelivr.net/npm';
 
 async function loadScript(url) {
-  if (document.querySelector(`script[src="${url}"]`)) return;
+  const existing = document.querySelector(`script[src="${url}"]`);
+  if (existing && window.FFmpegWASM) return;
+  if (existing) existing.remove();
+
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = url;
     s.onload = resolve;
-    s.onerror = () => reject(new Error('Failed to load video converter. Check your internet connection.'));
+    s.onerror = () => {
+      s.remove();
+      reject(new Error('Failed to load video converter. Check your internet connection.'));
+    };
     document.head.appendChild(s);
   });
 }

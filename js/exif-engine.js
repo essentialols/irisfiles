@@ -19,20 +19,29 @@ function loadScript(url) {
     const s = document.createElement('script');
     s.src = url;
     s.onload = resolve;
-    s.onerror = () => reject(new Error('Failed to load ' + url));
+    s.onerror = () => {
+      s.remove();
+      reject(new Error('Failed to load ' + url));
+    };
     document.head.appendChild(s);
   });
 }
 
 function ensureExifReader() {
   if (exifReaderReady) return exifReaderReady;
-  exifReaderReady = loadScript(EXIFREADER_CDN);
+  exifReaderReady = loadScript(EXIFREADER_CDN).catch(err => {
+    exifReaderReady = null;
+    throw err;
+  });
   return exifReaderReady;
 }
 
 function ensurePiexif() {
   if (piexifReady) return piexifReady;
-  piexifReady = loadScript(PIEXIFJS_CDN);
+  piexifReady = loadScript(PIEXIFJS_CDN).catch(err => {
+    piexifReady = null;
+    throw err;
+  });
   return piexifReady;
 }
 
@@ -264,11 +273,10 @@ function stripJpegMetadataBytes(input) {
 
   const chunks = [input.slice(0, 2)];
   let pos = 2;
+  let inScan = false;
 
   while (pos < input.length) {
-    // Bytes between markers are entropy-coded scan data. Find the next real marker,
-    // skipping byte-stuffed FF00 and restart markers, and preserve the scan verbatim.
-    if (input[pos] !== 0xff) {
+    if (inScan) {
       const start = pos;
       while (pos < input.length) {
         if (input[pos] !== 0xff) { pos++; continue; }
@@ -283,7 +291,8 @@ function stripJpegMetadataBytes(input) {
         break;
       }
       chunks.push(input.slice(start, pos));
-      continue;
+      if (pos >= input.length) break;
+      inScan = false;
     }
 
     const markerStart = pos;
@@ -337,6 +346,7 @@ function stripJpegMetadataBytes(input) {
     }
 
     pos = segmentEnd;
+    if (marker === 0xda) inScan = true;
   }
 
   const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);

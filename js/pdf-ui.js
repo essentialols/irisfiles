@@ -12,6 +12,8 @@ let mode = '';  // 'img-to-pdf', 'pdf-to-img', 'merge', 'split'
 let targetMime = '';
 let dropZone, fileInput, fileList, actionBtn, clearBtn, qualitySlider, qualityValue;
 const files = [];
+let operationActive = false;
+let operationToken = 0;
 
 export function init() {
   const configEl = document.getElementById('converter-config');
@@ -150,13 +152,14 @@ function setupDragReorder(el) {
 function updateControls() {
   if (actionBtn) {
     const minFiles = (mode === 'merge') ? 2 : 1;
-    actionBtn.disabled = files.length < minFiles;
+    actionBtn.disabled = operationActive || files.length < minFiles;
     actionBtn.style.display = files.length > 0 ? '' : 'none';
   }
   if (clearBtn) clearBtn.style.display = files.length > 0 ? '' : 'none';
 }
 
 function clearAll() {
+  operationToken++;
   files.length = 0;
   fileList.innerHTML = '';
   removeResults();
@@ -173,16 +176,20 @@ function getQuality() {
 }
 
 async function runAction() {
-  actionBtn.disabled = true;
+  if (operationActive) return;
+  operationActive = true;
+  const token = ++operationToken;
+  const inputFiles = [...files];
   const origText = actionBtn.textContent;
   actionBtn.textContent = 'Processing...';
+  updateControls();
   removeResults();
   const t0 = performance.now();
 
   try {
     if (mode === 'img-to-pdf') {
       const inputs = [];
-      for (const f of files) {
+      for (const f of inputFiles) {
         if (needsHeicDecoder(f.type)) {
           actionBtn.textContent = 'Decoding HEIC...';
           const decoded = await convertHeic(f, 'image/jpeg', 0.92, () => {});
@@ -193,36 +200,37 @@ async function runAction() {
       }
       const blob = await imagesToPdf(inputs, pct => { actionBtn.textContent = `Converting... ${pct}%`; });
       const dur = Math.round(performance.now() - t0);
-      showSingleResult(blob, 'converted.pdf', dur);
+      if (token === operationToken) showSingleResult(blob, 'converted.pdf', dur);
 
     } else if (mode === 'pdf-to-img') {
       const quality = getQuality();
       const allResults = [];
-      for (const f of files) {
+      for (const f of inputFiles) {
         const pages = await pdfToImages(f, targetMime, quality, pct => {
           actionBtn.textContent = `Rendering... ${pct}%`;
         });
         allResults.push(...pages);
       }
       const dur = Math.round(performance.now() - t0);
-      showMultiResult(allResults, dur);
+      if (token === operationToken) showMultiResult(allResults, dur);
 
     } else if (mode === 'merge') {
-      const blob = await mergePdfs(files, pct => { actionBtn.textContent = `Merging... ${pct}%`; });
+      const blob = await mergePdfs(inputFiles, pct => { actionBtn.textContent = `Merging... ${pct}%`; });
       const dur = Math.round(performance.now() - t0);
-      showSingleResult(blob, 'merged.pdf', dur);
+      if (token === operationToken) showSingleResult(blob, 'merged.pdf', dur);
 
     } else if (mode === 'split') {
-      const pages = await splitPdf(files[0], pct => { actionBtn.textContent = `Splitting... ${pct}%`; });
+      const pages = await splitPdf(inputFiles[0], pct => { actionBtn.textContent = `Splitting... ${pct}%`; });
       const dur = Math.round(performance.now() - t0);
-      showMultiResult(pages, dur);
+      if (token === operationToken) showMultiResult(pages, dur);
     }
   } catch (err) {
-    showError(err.message);
+    if (token === operationToken) showError(err.message);
+  } finally {
+    operationActive = false;
+    actionBtn.textContent = origText;
+    updateControls();
   }
-
-  actionBtn.textContent = origText;
-  actionBtn.disabled = false;
 }
 
 function showSingleResult(blob, name, durationMs) {

@@ -465,8 +465,9 @@ test.describe('UI Micro-Interactions', () => {
       const faqQuestion = page.locator('.faq-question').first();
       await faqQuestion.click();
       const faqAnswer = page.locator('.faq-answer').first();
-      const maxHeight = await faqAnswer.evaluate((el) => getComputedStyle(el).maxHeight);
-      expect(maxHeight).not.toBe('0px');
+      // The click does nothing until the page module has attached its handler,
+      // so a synchronous read can land while the answer is still clipped.
+      await expect(faqAnswer).not.toHaveCSS('max-height', '0px');
     });
 
     test('only one FAQ open at a time', async ({ page }) => {

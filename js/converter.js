@@ -112,6 +112,43 @@ export function validateDimensions(width, height) {
 
 export { MAX_BATCH_SIZE };
 
+let gifEncoderPromise = null;
+
+async function loadGifEncoder() {
+  if (globalThis.gifenc) return globalThis.gifenc;
+  if (!gifEncoderPromise) {
+    gifEncoderPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = '/js/gifenc.min.js';
+      script.onload = () => resolve(globalThis.gifenc);
+      script.onerror = () => reject(new Error('Failed to load GIF encoder'));
+      document.head.appendChild(script);
+    }).catch(error => {
+      gifEncoderPromise = null;
+      throw error;
+    });
+  }
+  return gifEncoderPromise;
+}
+
+async function encodeCanvasAsGif(canvas) {
+  const { GIFEncoder, quantize, applyPalette } = await loadGifEncoder();
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error('Could not get canvas context');
+  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const palette = quantize(pixels, 256, { format: 'rgba4444', oneBitAlpha: true });
+  const index = applyPalette(pixels, palette, 'rgba4444');
+  const transparentIndex = palette.findIndex(color => color[3] === 0);
+  const gif = GIFEncoder();
+  gif.writeFrame(index, canvas.width, canvas.height, {
+    palette,
+    transparent: transparentIndex !== -1,
+    transparentIndex: Math.max(0, transparentIndex),
+  });
+  gif.finish();
+  return new Blob([gif.bytes()], { type: 'image/gif' });
+}
+
 async function loadSvgImage(file) {
   const svgBlob = file.type === 'image/svg+xml'
     ? file
@@ -171,6 +208,8 @@ export async function convertWithCanvas(file, targetMime, quality) {
   } finally {
     cleanup();
   }
+
+  if (targetMime === 'image/gif') return encodeCanvasAsGif(canvas);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(

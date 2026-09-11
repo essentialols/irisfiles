@@ -164,6 +164,8 @@ function removeResults() {
 async function runConversion() {
   if (!currentFile || !mode) return;
 
+  const file = currentFile;
+  const token = selectionToken;
   actionBtn.disabled = true;
   const origText = actionBtn.textContent;
   actionBtn.textContent = 'Converting...';
@@ -172,13 +174,14 @@ async function runConversion() {
   const t0 = performance.now();
 
   try {
-    const blob = await mode.fn(currentFile, pct => {
-      actionBtn.textContent = `Converting... ${pct}%`;
+    const blob = await mode.fn(file, pct => {
+      if (token === selectionToken) actionBtn.textContent = `Converting... ${pct}%`;
     });
+    if (token !== selectionToken) return;
 
     const dur = Math.round(performance.now() - t0);
     const durStr = dur < 1000 ? dur + 'ms' : (dur / 1000).toFixed(1) + 's';
-    const outName = currentFile.name.replace(/\.[^.]+$/, '') + '.' + mode.outExt;
+    const outName = file.name.replace(/\.[^.]+$/, '') + '.' + mode.outExt;
 
     const div = makeResultsDiv();
     div.innerHTML = `
@@ -194,12 +197,15 @@ async function runConversion() {
     `;
     div.querySelector('#dl-doc').addEventListener('click', () => downloadBlob(blob, outName));
   } catch (err) {
+    if (token !== selectionToken) return;
     const div = makeResultsDiv();
     div.innerHTML = `<div class="notice">${esc(err.message)}</div>`;
+  } finally {
+    if (token === selectionToken) {
+      actionBtn.textContent = origText;
+      updateControls();
+    }
   }
-
-  actionBtn.textContent = origText;
-  actionBtn.disabled = false;
 }
 
 function makeResultsDiv() {

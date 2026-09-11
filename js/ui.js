@@ -418,14 +418,18 @@ async function handleDownloadAll() {
   downloadAllBtn.disabled = true;
   downloadAllBtn.textContent = 'Zipping...';
 
-  const entries = await Promise.all(doneFiles.map(async f => ({
-    name: f.outputName,
-    data: new Uint8Array(await f.outputBlob.arrayBuffer())
-  })));
-
-  await downloadAsZip(entries, 'irisfiles-batch.zip');
-  downloadAllBtn.disabled = false;
-  downloadAllBtn.textContent = 'Download All as ZIP';
+  try {
+    const entries = await Promise.all(doneFiles.map(async f => ({
+      name: f.outputName,
+      data: new Uint8Array(await f.outputBlob.arrayBuffer())
+    })));
+    await downloadAsZip(entries, 'irisfiles-batch.zip');
+  } catch (err) {
+    showNotice(err.message || 'Could not create ZIP. Please try again.');
+  } finally {
+    downloadAllBtn.disabled = false;
+    downloadAllBtn.textContent = 'Download All as ZIP';
+  }
 }
 
 function handleClearAll() {

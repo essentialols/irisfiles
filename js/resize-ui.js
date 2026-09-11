@@ -93,7 +93,7 @@ export function init() {
     resizeBtn.addEventListener('click', () => {
       if (!validateResizeSettings()) return;
       for (const entry of fileQueue) {
-        if (entry.status === 'pending' || entry.status === 'done' || entry.status === 'error') {
+        if (entry.status === 'pending' || entry.status === 'done' || (entry.status === 'error' && !entry.validationError)) {
           entry.outputBlob = null;
           entry.outputName = null;
           entry.status = 'queued';
@@ -288,6 +288,7 @@ function addFile(file) {
   } catch (err) {
     entry.status   = 'error';
     entry.errorMsg = err.message;
+    entry.validationError = true;
     fileQueue.push(entry);
     renderFileItem(entry);
     updateFileItem(entry);

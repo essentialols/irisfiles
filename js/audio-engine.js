@@ -55,8 +55,11 @@ function loadLame() {
     const script = document.createElement("script");
     script.src = LAMEJS_CDN;
     script.onload = resolve;
-    script.onerror = () =>
+    script.onerror = () => {
+      script.remove();
+      lameReady = null;
       reject(new Error("Failed to load MP3 encoder from CDN"));
+    };
     document.head.appendChild(script);
   });
   return lameReady;
