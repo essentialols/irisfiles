@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HEIC to PDF Converter - Free, Private, No Upload | IrisFiles</title>
-  <meta name="description" content="Convert iPhone HEIC photos to PDF in your browser. No upload needed. Combine multiple photos into one PDF. Files never leave your device.">
+  <meta name="description" content="Convert one or multiple HEIC photos to a PDF in your browser. Combine up to 50 iPhone HEIC or HEIF images into one PDF. Free, private, no upload.">
   <meta property="og:title" content="HEIC to PDF Converter - Free, Private, No Upload | IrisFiles">
-  <meta property="og:description" content="Convert iPhone HEIC photos to PDF in your browser. No upload needed. Combine multiple photos into one PDF. Files never leave your device.">
+  <meta property="og:description" content="Convert one or multiple HEIC photos to a PDF in your browser. Combine up to 50 iPhone HEIC or HEIF images into one PDF. Free, private, no upload.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://irisfiles.com/heic-to-pdf">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="HEIC to PDF Converter - Free, Private, No Upload | IrisFiles">
-  <meta name="twitter:description" content="Convert iPhone HEIC photos to PDF in your browser. No upload needed. Combine multiple photos into one PDF. Files never leave your device.">
+  <meta name="twitter:description" content="Convert one or multiple HEIC photos to a PDF in your browser. Combine up to 50 iPhone HEIC or HEIF images into one PDF. Free, private, no upload.">
   <meta property="og:image" content="https://irisfiles.com/img/og-default.png">
   <meta name="twitter:image" content="https://irisfiles.com/img/og-default.png">
   <link rel="canonical" href="https://irisfiles.com/heic-to-pdf">
@@ -26,7 +26,7 @@
       "@type": "WebApplication",
       "name": "HEIC to PDF Converter - IrisFiles",
       "url": "https://irisfiles.com/heic-to-pdf",
-      "description": "Convert iPhone HEIC photos to PDF entirely in your browser. No server upload. Combine multiple photos into one document. Private and free.",
+      "description": "Convert one or multiple iPhone HEIC photos to a PDF entirely in your browser. No server upload. Private and free.",
       "applicationCategory": "MultimediaApplication",
       "operatingSystem": "Any",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
@@ -37,10 +37,26 @@
       "mainEntity": [
         {
           "@type": "Question",
-          "name": "Can I convert iPhone photos directly to PDF?",
+          "name": "Can I convert multiple HEIC photos into one PDF?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. iPhones save photos in HEIC format. IrisFiles decodes HEIC using WebAssembly, then embeds the images into a PDF. Drop multiple photos to combine them into one document."
+            "text": "Yes. IrisFiles accepts up to 50 HEIC or HEIF photos and combines them into one PDF. Pages follow the order in which the files were added."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I reorder HEIC photos before converting them to PDF?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The PDF follows the order in which files were added. This page does not currently provide drag-to-reorder controls, so remove and re-add a file if you need to change its position before converting."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is the difference between HEIC and HEIF?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "HEIF is the High Efficiency Image File container format. HEIC is a common filename extension used for HEIF images encoded with HEVC. IrisFiles accepts both .heic and .heif files on this converter."
           }
         },
         {
@@ -48,15 +64,15 @@
           "name": "Are my photos uploaded to a server?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "No. IrisFiles decodes and converts your photos entirely inside your browser. Your files never leave your device."
+            "text": "No. HEIC decoding and PDF creation happen inside your browser. Your photos never leave your device."
           }
         },
         {
           "@type": "Question",
-          "name": "Does the conversion affect photo quality?",
+          "name": "Does HEIC to PDF conversion affect photo quality?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "HEIC photos are decoded to full-quality JPEG before being embedded in the PDF. The result is visually identical to the original."
+            "text": "HEIC is decoded to JPEG before it is placed in the PDF, so the conversion is not mathematically lossless. The original pixel dimensions are retained, but small compression differences are possible."
           }
         }
       ]
@@ -77,8 +93,8 @@
 
   <main class="container">
     <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> Back</a>
-<div id="drop-zone" class="drop-zone">
-      <h1 class="drop-zone__title">HEIC to PDF privately.</h1>
+    <div id="drop-zone" class="drop-zone">
+      <h1 class="drop-zone__title">Convert HEIC to PDF privately.</h1>
       <p class="drop-zone__subtitle">Everything runs in your browser. Nothing is uploaded. Ever.</p>
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
       <p>Drop HEIC photos here, or <strong>click to browse</strong></p>
@@ -93,6 +109,31 @@
       <button id="clear-all" class="btn btn--secondary" style="display:none">Clear All</button>
     </div>
 
+    <section class="prose">
+      <h2>How to convert HEIC to PDF</h2>
+      <ol>
+        <li>Add one or more HEIC or HEIF photos from your device.</li>
+        <li>Check that the photos appear in the order you want them in the PDF. Pages follow the order the files were added.</li>
+        <li>Click <strong>Convert to PDF</strong>, then download the finished document.</li>
+      </ol>
+
+      <h2>Combine multiple HEIC photos into one PDF</h2>
+      <p>IrisFiles can combine up to 50 HEIC photos in a single conversion. This is useful for turning a group of iPhone photos, scanned receipts, forms, or reference images into one document instead of creating a separate PDF for every photo. The current page does not offer drag-to-reorder controls: if you need a different page order, remove a file and add it again in the position you want before converting.</p>
+
+      <h2>HEIC, HEIF, and PDF are different kinds of formats</h2>
+      <p><strong>HEIF</strong> is an image-container format, while <strong>HEIC</strong> is a common extension for HEIF images encoded with HEVC. <strong>PDF</strong> is a document format that can contain one or many pages. IrisFiles accepts both <code>.heic</code> and <code>.heif</code> files here and turns each input image into one page of a single PDF.</p>
+
+      <h2>What happens to image quality and page size?</h2>
+      <p>HEIC images are decoded in your browser and converted to JPEG before they are embedded in the PDF. That means HEIC to PDF is not a lossless archival transformation and small compression differences are possible. IrisFiles keeps the decoded image's pixel dimensions, and each PDF page is sized to that image rather than forcing every photo onto A4 or US Letter paper.</p>
+      <p>The current converter does not add margins, rotate pages, or normalize them to a paper size. That makes it useful when you want the PDF page to follow the photo itself. If you need an editable image instead of a document, use <a href="/heic-to-jpg">HEIC to JPG</a> or <a href="/heic-to-png">HEIC to PNG</a>. If your photos are already JPG files, the dedicated <a href="/jpg-to-pdf">JPG to PDF converter</a> skips the HEIC decoding step.</p>
+
+      <h2>HEIC to PDF on iPhone, Mac, Windows, and Android</h2>
+      <p>The HEIC decoder runs with WebAssembly inside the browser, so the operating system does not need its own HEIC converter. A modern browser with WebAssembly support is required. The conversion itself stays on your device; the browser only downloads the open-source code needed to perform the work.</p>
+
+      <h2>How the private conversion works</h2>
+      <p>IrisFiles decodes HEIC in the tab, then uses a browser-loaded PDF library to create the document locally. Your source photo bytes are not posted to an IrisFiles conversion API. You can read more about the implementation and third-party libraries on the <a href="/about">About IrisFiles</a> page.</p>
+    </section>
+
     <div class="related-tools">
       <h2>Related Tools</h2>
       <div class="related-tools__links">
@@ -105,21 +146,33 @@
     <section class="faq">
       <h2>Frequently Asked Questions</h2>
       <div class="faq-item">
-        <button class="faq-question">Can I convert iPhone photos directly to PDF?</button>
+        <button class="faq-question">Can I convert multiple HEIC photos into one PDF?</button>
         <div class="faq-answer">
-          <p>Yes. iPhones save photos in HEIC format. IrisFiles decodes HEIC using WebAssembly, then embeds the images into a PDF. Drop multiple photos to combine them into one document.</p>
+          <p>Yes. IrisFiles accepts up to 50 HEIC or HEIF photos and combines them into one PDF. Pages follow the order in which the files were added.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Can I reorder HEIC photos before converting them to PDF?</button>
+        <div class="faq-answer">
+          <p>The PDF follows the order in which files were added. This page does not currently provide drag-to-reorder controls, so remove and re-add a file if you need to change its position before converting.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">What is the difference between HEIC and HEIF?</button>
+        <div class="faq-answer">
+          <p>HEIF is the High Efficiency Image File container format. HEIC is a common filename extension used for HEIF images encoded with HEVC. IrisFiles accepts both .heic and .heif files on this converter.</p>
         </div>
       </div>
       <div class="faq-item">
         <button class="faq-question">Are my photos uploaded to a server?</button>
         <div class="faq-answer">
-          <p>No. IrisFiles decodes and converts your photos entirely inside your browser. Your files never leave your device.</p>
+          <p>No. HEIC decoding and PDF creation happen inside your browser. Your photos never leave your device.</p>
         </div>
       </div>
       <div class="faq-item">
-        <button class="faq-question">Does the conversion affect photo quality?</button>
+        <button class="faq-question">Does HEIC to PDF conversion affect photo quality?</button>
         <div class="faq-answer">
-          <p>HEIC photos are decoded to full-quality JPEG before being embedded in the PDF. The result is visually identical to the original.</p>
+          <p>HEIC is decoded to JPEG before it is placed in the PDF, so the conversion is not mathematically lossless. The original pixel dimensions are retained, but small compression differences are possible.</p>
         </div>
       </div>
     </section>
