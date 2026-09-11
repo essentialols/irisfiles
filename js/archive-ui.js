@@ -164,7 +164,7 @@ function showExtractResults(entries, durationMs) {
   });
 
   if (entries.length >= 2) {
-    html += `<button class="btn btn--primary" id="dl-all" style="margin-top:0.75rem">Download All</button>`;
+    html += `<button class="btn btn--primary" id="dl-all" style="margin-top:0.75rem">Download All as ZIP</button>`;
   }
 
   div.innerHTML = html;
@@ -179,10 +179,16 @@ function showExtractResults(entries, durationMs) {
 
   const dlAllBtn = div.querySelector('#dl-all');
   if (dlAllBtn) {
-    dlAllBtn.addEventListener('click', () => {
-      for (const entry of entries) {
-        const filename = entry.name.includes('/') ? entry.name.split('/').pop() : entry.name;
-        downloadBlob(entry.blob, filename);
+    dlAllBtn.addEventListener('click', async () => {
+      dlAllBtn.disabled = true;
+      try {
+        const zipBlob = await createZip(entries, pct => {
+          dlAllBtn.textContent = `Zipping... ${pct}%`;
+        });
+        downloadBlob(zipBlob, 'irisfiles-extracted.zip');
+      } finally {
+        dlAllBtn.disabled = false;
+        dlAllBtn.textContent = 'Download All as ZIP';
       }
     });
   }

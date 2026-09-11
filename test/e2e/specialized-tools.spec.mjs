@@ -377,16 +377,40 @@ test.describe('Extract ZIP', () => {
     expect(count).toBeGreaterThan(0);
   });
 
-  test('download all button appears for multiple extracted files', async ({ page }) => {
-    await page.locator('#file-input').setInputFiles(fixture('sample.zip'));
+  test('download all preserves nested paths in one ZIP', async ({ page }) => {
+    await page.locator('#file-input').setInputFiles(fixture('nested.zip'));
     await page.locator('#action-btn').waitFor({ timeout: 5000 });
     await page.locator('#action-btn').click();
     await page.locator('#archive-results').waitFor({ timeout: 10000 });
-    const dlButtons = page.locator('.dl-btn');
-    const count = await dlButtons.count();
-    if (count >= 2) {
-      await expect(page.locator('#dl-all')).toBeVisible();
-    }
+
+    const downloads = [];
+    page.on('download', download => downloads.push(download.suggestedFilename()));
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('#dl-all').click(),
+    ]);
+    await page.waitForTimeout(200);
+
+    expect(download.suggestedFilename()).toBe('irisfiles-extracted.zip');
+    expect(downloads).toEqual(['irisfiles-extracted.zip']);
+
+    const output = await readFile(await download.path());
+    const contents = await page.evaluate(bytes => {
+      const unzipped = fflate.unzipSync(Uint8Array.from(bytes));
+      return Object.fromEntries(Object.entries(unzipped).map(([name, data]) => [
+        name,
+        new TextDecoder().decode(data),
+      ]));
+    }, Array.from(output));
+
+    expect(Object.keys(contents).sort()).toEqual([
+      'dir/inner.txt',
+      'dir/sub/deep.txt',
+      'top.txt',
+    ]);
+    expect(contents['top.txt']).toBe('top level\n');
+    expect(contents['dir/inner.txt']).toBe('nested one\n');
+    expect(contents['dir/sub/deep.txt']).toBe('nested two\n');
   });
 });
 
