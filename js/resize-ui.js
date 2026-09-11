@@ -91,6 +91,7 @@ export function init() {
   // Resize button: process pending files or re-process done files with current settings
   if (resizeBtn) {
     resizeBtn.addEventListener('click', () => {
+      if (!validateResizeSettings()) return;
       for (const entry of fileQueue) {
         if (entry.status === 'pending' || entry.status === 'done' || entry.status === 'error') {
           entry.outputBlob = null;
@@ -151,6 +152,35 @@ function currentMode() {
   return resizeMode.value || 'dimensions';
 }
 
+function validateResizeSettings() {
+  if (currentMode() !== 'percent') return true;
+  const percent = parseFloat(percentInput && percentInput.value);
+  const valid = Number.isFinite(percent) && percent >= 1 && percent <= 1000
+    && (!percentInput || percentInput.checkValidity());
+  if (valid) {
+    if (percentInput) percentInput.removeAttribute('aria-invalid');
+    hideResizeSettingsNotice();
+    return true;
+  }
+
+  if (percentInput) {
+    percentInput.setAttribute('aria-invalid', 'true');
+    percentInput.focus();
+  }
+  showPersistentNotice(dropZone, 'Enter a scale from 1% to 1000% before resizing.', {
+    id: 'resize-settings-notice',
+    kind: 'warning',
+  });
+  return false;
+}
+
+function hideResizeSettingsNotice() {
+  const notice = document.getElementById('resize-settings-notice');
+  if (!notice) return;
+  notice.style.display = 'none';
+  notice.setAttribute('aria-hidden', 'true');
+}
+
 // Build resize opts from current UI state.
 // With the aspect lock enabled, derive the second dimension from the current
 // file rather than the first file in the batch. This keeps mixed-ratio batches
@@ -159,7 +189,11 @@ function getResizeOpts(inputMime, dimensions = null) {
   const outputMime = inputMime === 'image/png' ? 'image/png' : 'image/jpeg';
   const opts = { outputMime };
   if (currentMode() === 'percent') {
-    opts.percent = parseFloat(percentInput && percentInput.value) || 100;
+    const percent = parseFloat(percentInput && percentInput.value);
+    if (!Number.isFinite(percent) || percent < 1 || percent > 1000) {
+      throw new Error('Resize scale must be between 1% and 1000%.');
+    }
+    opts.percent = percent;
   } else {
     const w = parseInt(widthInput && widthInput.value, 10);
     const h = parseInt(heightInput && heightInput.value, 10);
