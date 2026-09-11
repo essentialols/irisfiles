@@ -34,4 +34,28 @@ test.describe('Create ZIP result freshness', () => {
 
     expect(names).toEqual(['sample.pdf', 'sample.png', 'sample.txt']);
   });
+
+  test('does not publish an archive if the file list changes while zipping', async ({ page }) => {
+    await page.goto('/create-zip');
+    await page.locator('#file-input').setInputFiles([
+      fixture('sample.png'),
+      fixture('sample.pdf'),
+    ]);
+
+    await page.evaluate(() => {
+      const original = File.prototype.arrayBuffer;
+      File.prototype.arrayBuffer = async function () {
+        await new Promise(resolve => setTimeout(resolve, 250));
+        return original.call(this);
+      };
+    });
+
+    await page.locator('#action-btn').click();
+    await page.locator('#file-input').setInputFiles(fixture('sample.txt'));
+    await expect(page.locator('#file-list .file-item')).toHaveCount(3);
+
+    await page.waitForTimeout(700);
+    await expect(page.locator('#archive-results')).toHaveCount(0);
+    await expect(page.locator('#action-btn')).toBeEnabled();
+  });
 });
