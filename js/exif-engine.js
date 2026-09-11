@@ -252,15 +252,108 @@ export async function editExifFields(file, changes) {
 }
 
 /**
+ * Strip metadata-bearing JPEG marker segments without touching compressed pixels.
+ * Keep only the structural JFIF header (with any embedded thumbnail removed) and
+ * Adobe APP14 color-transform marker; all other APP markers and comments can carry
+ * EXIF, XMP, ICC, IPTC, vendor data, thumbnails, or other identifying metadata.
+ */
+function stripJpegMetadataBytes(input) {
+  if (input.length < 4 || input[0] !== 0xff || input[1] !== 0xd8) {
+    throw new Error('Could not decode JPEG. The file may be corrupted or unsupported.');
+  }
+
+  const chunks = [input.slice(0, 2)];
+  let pos = 2;
+
+  while (pos < input.length) {
+    // Bytes between markers are entropy-coded scan data. Find the next real marker,
+    // skipping byte-stuffed FF00 and restart markers, and preserve the scan verbatim.
+    if (input[pos] !== 0xff) {
+      const start = pos;
+      while (pos < input.length) {
+        if (input[pos] !== 0xff) { pos++; continue; }
+        let markerPos = pos + 1;
+        while (markerPos < input.length && input[markerPos] === 0xff) markerPos++;
+        if (markerPos >= input.length) { pos = input.length; break; }
+        const marker = input[markerPos];
+        if (marker === 0x00 || (marker >= 0xd0 && marker <= 0xd7)) {
+          pos = markerPos + 1;
+          continue;
+        }
+        break;
+      }
+      chunks.push(input.slice(start, pos));
+      continue;
+    }
+
+    const markerStart = pos;
+    while (pos < input.length && input[pos] === 0xff) pos++;
+    if (pos >= input.length) { chunks.push(input.slice(markerStart)); break; }
+    const marker = input[pos++];
+
+    // Standalone markers have no length field.
+    if (marker === 0xd8 || marker === 0xd9 || marker === 0x01 ||
+        (marker >= 0xd0 && marker <= 0xd7)) {
+      chunks.push(input.slice(markerStart, pos));
+      if (marker === 0xd9) break;
+      continue;
+    }
+
+    if (pos + 2 > input.length) {
+      throw new Error('Could not decode JPEG. The file may be corrupted or unsupported.');
+    }
+    const length = (input[pos] << 8) | input[pos + 1];
+    if (length < 2 || pos + length > input.length) {
+      throw new Error('Could not decode JPEG. The file may be corrupted or unsupported.');
+    }
+    const segmentEnd = pos + length;
+    const payloadStart = pos + 2;
+
+    const isApp = marker >= 0xe0 && marker <= 0xef;
+    const isComment = marker === 0xfe;
+    const isJfif = marker === 0xe0 && length >= 16 &&
+      input[payloadStart] === 0x4a && input[payloadStart + 1] === 0x46 &&
+      input[payloadStart + 2] === 0x49 && input[payloadStart + 3] === 0x46 &&
+      input[payloadStart + 4] === 0x00;
+    const isAdobeColor = marker === 0xee && length >= 14 &&
+      input[payloadStart] === 0x41 && input[payloadStart + 1] === 0x64 &&
+      input[payloadStart + 2] === 0x6f && input[payloadStart + 3] === 0x62 &&
+      input[payloadStart + 4] === 0x65;
+
+    if (isJfif) {
+      // JFIF's optional RGB thumbnail is metadata too. Keep the 14-byte JFIF
+      // descriptor for decoder compatibility, but explicitly remove its thumbnail.
+      const clean = new Uint8Array(18);
+      clean.set([0xff, 0xe0, 0x00, 0x10], 0);
+      clean.set(input.slice(payloadStart, payloadStart + 14), 4);
+      clean[16] = 0; // Xthumbnail
+      clean[17] = 0; // Ythumbnail
+      chunks.push(clean);
+    } else if (!isApp && !isComment) {
+      chunks.push(input.slice(markerStart, segmentEnd));
+    } else if (isAdobeColor) {
+      // APP14's transform flag affects how CMYK/YCCK JPEG pixels are interpreted.
+      chunks.push(input.slice(markerStart, segmentEnd));
+    }
+
+    pos = segmentEnd;
+  }
+
+  const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const output = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { output.set(chunk, offset); offset += chunk.length; }
+  return output;
+}
+
+/**
  * Strip all metadata from an image.
- * JPEG: lossless via piexifjs. Non-JPEG: Canvas re-encode via strip-engine.
+ * JPEG: remove metadata marker segments losslessly. Non-JPEG: Canvas re-encode.
  */
 export async function stripAllMetadata(file) {
   if (await isJpeg(file)) {
-    await ensurePiexif();
-    const dataUrl = await fileToDataUrl(file);
-    const cleanDataUrl = piexif.remove(dataUrl);
-    return dataUrlToBlob(cleanDataUrl);
+    const clean = stripJpegMetadataBytes(new Uint8Array(await file.arrayBuffer()));
+    return new Blob([clean], { type: 'image/jpeg' });
   }
   // Non-JPEG: delegate to Canvas re-encode
   return stripMetadata(file, () => {});
