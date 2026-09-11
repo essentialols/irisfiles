@@ -199,14 +199,38 @@ Rules:
 # Triage runs on GPT-6 Astra in the native Codex runtime. Finding a real bug
 # across these files is the step that most rewards model capability, so it does
 # not run on the cheapest model. read-only sandbox: triage must not edit.
-TRIAGE=$("$TRIAGE_RUNNER" \
-  --task "$TRIAGE_PROMPT" \
-  --cwd "$PROJECT_DIR" \
-  --model "$TRIAGE_MODEL" \
-  --sandbox read-only 2>>"$LOG") || {
-  echo "ERROR: Triage failed (see $LOG for details)" | tee -a "$LOG"
+TRIAGE=""
+TRIAGE_STDERR="$(mktemp)"
+triage_ok=false
+for attempt in 1 2 3; do
+  set +e
+  TRIAGE=$("$TRIAGE_RUNNER" \
+    --task "$TRIAGE_PROMPT" \
+    --cwd "$PROJECT_DIR" \
+    --model "$TRIAGE_MODEL" \
+    --sandbox read-only 2>"$TRIAGE_STDERR")
+  status=$?
+  set -e
+  cat "$TRIAGE_STDERR" >>"$LOG"
+  if [[ $status -eq 0 ]]; then
+    triage_ok=true
+    break
+  fi
+  # The runner reports why it failed on stdout, which the old redirect captured
+  # into $TRIAGE and then dropped, leaving a log that said only "Triage failed".
+  {
+    echo "Triage attempt $attempt failed (exit $status)"
+    echo "$TRIAGE"
+  } >>"$LOG"
+  if [[ $attempt -lt 3 ]]; then
+    sleep $((attempt * 30))
+  fi
+done
+rm -f "$TRIAGE_STDERR"
+if [[ "$triage_ok" != true ]]; then
+  echo "ERROR: Triage failed after 3 attempts (see $LOG for details)" | tee -a "$LOG"
   exit 1
-}
+fi
 
 echo "$TRIAGE" | tee -a "$LOG"
 
