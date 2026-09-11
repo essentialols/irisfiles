@@ -23,6 +23,7 @@ const progressDiv = document.getElementById('gif-progress');
 const resultDiv = document.getElementById('gif-result');
 
 const frames = []; // { id, file, thumbUrl }
+let draggedFrameId = null;
 
 // Drop zone
 dropZone.addEventListener('click', () => fileInput.click());
@@ -87,18 +88,25 @@ function renderFrames() {
 
     // Drag reorder
     div.addEventListener('dragstart', e => {
+      draggedFrameId = frame.id;
       e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', i.toString());
+      e.dataTransfer.setData('text/plain', frame.id);
       div.classList.add('dragging');
     });
-    div.addEventListener('dragend', () => div.classList.remove('dragging'));
+    div.addEventListener('dragend', () => {
+      draggedFrameId = null;
+      div.classList.remove('dragging');
+    });
     div.addEventListener('dragover', e => { e.preventDefault(); div.classList.add('drag-over'); });
     div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
     div.addEventListener('drop', e => {
       e.preventDefault();
       div.classList.remove('drag-over');
-      const from = parseInt(e.dataTransfer.getData('text/plain'));
-      const to = i;
+      const payload = e.dataTransfer.getData('text/plain');
+      const from = frames.findIndex(frame => frame.id === draggedFrameId);
+      const to = frames.indexOf(frame);
+      if (!draggedFrameId || payload !== draggedFrameId || from < 0 || to < 0) return;
+      draggedFrameId = null;
       if (from !== to) {
         const [moved] = frames.splice(from, 1);
         frames.splice(to, 0, moved);

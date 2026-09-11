@@ -61,8 +61,73 @@ const ROUTES = {
   'application/zip': [{ label: 'Extract Files', href: '/extract-zip' }],
 };
 
+function readFourCC(bytes, offset) {
+  if (offset + 4 > bytes.length) return '';
+  return String.fromCharCode(bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]);
+}
+
+function detectIsoBmff(bytes) {
+  if (bytes.length < 16 || readFourCC(bytes, 4) !== 'ftyp') return null;
+
+  const declaredSize = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(0);
+  const end = declaredSize >= 16 ? Math.min(declaredSize, bytes.length) : bytes.length;
+  const brands = [readFourCC(bytes, 8)];
+  for (let offset = 16; offset + 4 <= end; offset += 4) {
+    brands.push(readFourCC(bytes, offset));
+  }
+
+  if (brands.includes('avif') || brands.includes('avis')) {
+    return SIGS.find(s => s.mime === 'image/avif');
+  }
+  if (brands.some(brand => ['heic', 'heix', 'hevc', 'hevx', 'mif1', 'msf1', 'heif'].includes(brand))) {
+    return SIGS.find(s => s.mime === 'image/heic');
+  }
+  if (brands.some(brand => ['M4A ', 'M4B ', 'M4P ', 'M4R ', 'F4A ', 'F4B '].includes(brand))) {
+    return { mime: 'audio/mp4', ext: 'm4a', label: 'M4A' };
+  }
+  if (brands.includes('qt  ')) {
+    return { mime: 'video/quicktime', ext: 'mov', label: 'MOV' };
+  }
+  return SIGS.find(s => s.mime === 'video/mp4');
+}
+
+function readEbmlSize(bytes, offset) {
+  const first = bytes[offset];
+  if (!first) return null;
+  let length = 1;
+  while (length <= 8 && (first & (0x80 >> (length - 1))) === 0) length++;
+  if (length > 8 || offset + length > bytes.length) return null;
+
+  let value = first & (0xff >> length);
+  for (let i = 1; i < length; i++) value = value * 256 + bytes[offset + i];
+  return { length, value };
+}
+
+function detectEbml(bytes) {
+  if (bytes.length < 5 || ![0x1A,0x45,0xDF,0xA3].every((b, i) => bytes[i] === b)) return null;
+
+  const headerSize = readEbmlSize(bytes, 4);
+  const start = 4 + (headerSize?.length || 1);
+  const end = Math.min(bytes.length, start + (headerSize?.value || bytes.length));
+  for (let offset = start; offset + 3 <= end; offset++) {
+    if (bytes[offset] !== 0x42 || bytes[offset + 1] !== 0x82) continue;
+    const size = readEbmlSize(bytes, offset + 2);
+    if (!size) break;
+    const valueStart = offset + 2 + size.length;
+    const valueEnd = valueStart + size.value;
+    if (valueEnd > end) break;
+    const docType = new TextDecoder().decode(bytes.subarray(valueStart, valueEnd)).toLowerCase();
+    if (docType === 'matroska') return { mime: 'video/x-matroska', ext: 'mkv', label: 'MKV' };
+    if (docType === 'webm') return SIGS.find(s => s.mime === 'video/webm');
+  }
+  return SIGS.find(s => s.mime === 'video/webm');
+}
+
 async function detect(file) {
-  const buf = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const buf = new Uint8Array(await file.slice(0, 4096).arrayBuffer());
+  const container = detectIsoBmff(buf) || detectEbml(buf);
+  if (container) return container;
+
   for (const fmt of SIGS) {
     for (const [offset, sig] of fmt.offsets) {
       if (buf.length >= offset + sig.length && sig.every((b, i) => buf[offset + i] === b)) {
