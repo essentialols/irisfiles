@@ -14,6 +14,7 @@ let currentFile = null;
 let currentMetadata = null;
 let isJpegFile = false;
 let processing = false;
+let selectionToken = 0;
 
 export function init() {
   dropZone = document.getElementById('drop-zone');
@@ -71,6 +72,7 @@ async function handleFile(files) {
   if (!file) return;
 
   resetState();
+  const token = selectionToken;
   currentFile = file;
 
   try {
@@ -80,17 +82,22 @@ async function handleFile(files) {
     return;
   }
 
-  isJpegFile = await isJpeg(file);
+  const jpeg = await isJpeg(file);
+  if (token !== selectionToken) return;
+  isJpegFile = jpeg;
   dropZone.classList.add('compact');
   showFileItem(file, null);
   setStatus('Reading metadata...');
 
   try {
-    currentMetadata = await readMetadata(file);
+    const metadata = await readMetadata(file);
+    if (token !== selectionToken) return;
+    currentMetadata = metadata;
     renderMetadata();
     setStatus('Ready');
     showActions();
   } catch (err) {
+    if (token !== selectionToken) return;
     setStatus('Error: ' + err.message);
   }
 }
@@ -126,6 +133,7 @@ function showActions() {
 }
 
 function resetState() {
+  selectionToken++;
   currentFile = null;
   currentMetadata = null;
   isJpegFile = false;
@@ -211,7 +219,13 @@ async function handleStripAll() {
   try {
     const blob = await stripAllMetadata(currentFile);
     const base = currentFile.name.replace(/\.[^.]+$/, '');
-    const ext = isJpegFile ? 'jpg' : (currentFile.name.split('.').pop() || 'jpg');
+    const extByMime = {
+      'image/png': 'png',
+      'image/gif': 'gif',
+      'image/webp': 'webp',
+      'image/jpeg': 'jpg',
+    };
+    const ext = extByMime[blob.type] || 'jpg';
     const outName = base + '-clean.' + ext;
     showResult(blob, outName);
   } catch (err) {
