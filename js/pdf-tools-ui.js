@@ -1,0 +1,41 @@
+/** IrisFiles - PDF page/text/compression UI. */
+import {renderPdfThumbnails,rebuildPdf,extractPdfText,compressPdf} from './pdf-tools-engine.js';
+import {validateFile,formatSize,downloadBlob} from './converter.js';
+import {loadPendingFiles} from './smart-drop.js';
+import {checkWorkload} from './device-tier.js';
+import {showPersistentNotice} from './notice-ui.js';
+
+let mode='';let currentFile=null;let pages=[];let order=[];const selected=new Set();const rotations=new Map();
+let dropZone,fileInput,fileList,workspace,actionBtn,clearBtn;
+export function init(){
+  mode=document.getElementById('converter-config')?.dataset.pdfTool||'';dropZone=document.getElementById('drop-zone');fileInput=document.getElementById('file-input');fileList=document.getElementById('file-list');workspace=document.getElementById('pdf-workspace');actionBtn=document.getElementById('action-btn');clearBtn=document.getElementById('clear-all');if(!dropZone||!fileInput)return;
+  dropZone.addEventListener('click',()=>fileInput.click());dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('dragover')});dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('dragover');choose(e.dataTransfer.files)});fileInput.addEventListener('change',()=>{choose(fileInput.files);fileInput.value=''});actionBtn?.addEventListener('click',run);clearBtn?.addEventListener('click',clear);
+  document.querySelectorAll('.faq-question').forEach(btn=>btn.addEventListener('click',()=>btn.parentElement.classList.toggle('open')));loadPendingFiles().then(files=>{if(files?.length)choose(files)}).catch(()=>{});
+}
+function isPdf(file){return file?.type==='application/pdf'||/\.pdf$/i.test(file?.name||'')}
+async function choose(files_){const file=Array.from(files_).find(isPdf);if(!file)return notice('Choose a PDF file.');try{validateFile(file)}catch(err){return notice(err.message)}currentFile=file;pages=[];order=[];selected.clear();rotations.clear();removeResult();fileList.innerHTML=`<div class="file-item"><div class="file-item__info"><div class="file-item__name">${esc(file.name)}</div><div class="file-item__meta">${formatSize(file.size)}</div></div></div>`;actionBtn.style.display='';clearBtn.style.display='';
+  if(mode==='text'||mode==='compress'){workspace.innerHTML='';return}
+  actionBtn.disabled=true;const old=actionBtn.textContent;actionBtn.textContent='Loading pages...';try{pages=await renderPdfThumbnails(file,p=>actionBtn.textContent=`Loading pages... ${p}%`);order=pages.map(p=>p.index);renderPages()}catch(err){notice(err.message)}finally{actionBtn.disabled=false;actionBtn.textContent=old}
+}
+function renderPages(){if(!workspace)return;workspace.innerHTML='<div class="pdf-page-grid" id="pdf-page-grid"></div>';const grid=workspace.firstElementChild;for(const index of order){const info=pages.find(p=>p.index===index);const card=document.createElement('div');card.className='pdf-page-card'+(selected.has(index)?' selected':'');card.dataset.index=index;card.innerHTML=`<img src="${info.preview}" alt="Page ${info.pageNum} preview"><div class="pdf-page-card__footer"><span>Page ${info.pageNum}</span><span class="pdf-page-card__badge">${mode==='rotate'?(rotations.get(index)||0)+'°':mode==='reorder'?'Drag to move':selected.has(index)?'Selected':'Click to select'}</span></div>`;
+    if(mode==='rotate'){const b=document.createElement('button');b.className='btn btn--secondary';b.textContent='Rotate 90°';b.onclick=e=>{e.stopPropagation();rotations.set(index,((rotations.get(index)||0)+90)%360);renderPages()};card.querySelector('.pdf-page-card__footer').appendChild(b)}
+    if(mode==='delete'||mode==='extract')card.onclick=()=>{selected.has(index)?selected.delete(index):selected.add(index);renderPages()};
+    if(mode==='reorder'){
+      card.draggable=true;
+      card.addEventListener('dragstart',()=>{grid.querySelectorAll('[data-dragging]').forEach(el=>delete el.dataset.dragging);card.classList.add('dragging');card.dataset.dragging='1'});
+      card.addEventListener('dragend',()=>{card.classList.remove('dragging');delete card.dataset.dragging});
+      card.addEventListener('dragover',e=>e.preventDefault());
+      card.addEventListener('drop',e=>{e.preventDefault();const from=grid.querySelector('[data-dragging="1"]');if(!from)return;const fromIndex=Number(from.dataset.index),toIndex=Number(card.dataset.index),a=order.indexOf(fromIndex),b=order.indexOf(toIndex);if(a<0||b<0||a===b)return;order.splice(a,1);order.splice(b,0,fromIndex);renderPages()});
+    }
+    grid.appendChild(card)}
+}
+async function run(){if(!currentFile)return;const warn=checkWorkload({fileSizeMb:currentFile.size/1e6});if(warn)notice(warn);actionBtn.disabled=true;const old=actionBtn.textContent;removeResult();try{
+  if(mode==='text'){actionBtn.textContent='Extracting text...';const result=await extractPdfText(currentFile,p=>actionBtn.textContent=`Extracting text... ${p}%`);return showText(result.fullText)}
+  if(mode==='compress'){const preset=document.getElementById('compression-preset')?.value||'balanced';const settings={small:{quality:.52,scale:1},balanced:{quality:.7,scale:1.35},quality:{quality:.82,scale:1.65}}[preset];actionBtn.textContent='Compressing...';const result=await compressPdf(currentFile,settings,p=>actionBtn.textContent=`Compressing... ${p}%`);return showPdf(result.blob,currentFile.name.replace(/\.pdf$/i,'')+'-compressed.pdf',result.reduced?`Reduced ${formatSize(currentFile.size)} → ${formatSize(result.blob.size)} · pages flattened to images`:'This PDF was already smaller than the rasterized result, so IrisFiles returned the original unchanged.')}
+  let specs=order.map(index=>({index,rotation:rotations.get(index)||0}));if(mode==='delete'){specs=specs.filter(s=>!selected.has(s.index));if(!specs.length)throw new Error('You cannot delete every page.')}if(mode==='extract'){specs=specs.filter(s=>selected.has(s.index));if(!specs.length)throw new Error('Select at least one page to extract.')}actionBtn.textContent='Building PDF...';const blob=await rebuildPdf(currentFile,specs,p=>actionBtn.textContent=`Building PDF... ${p}%`);const suffix={delete:'pages-removed',extract:'extracted-pages',reorder:'reordered',rotate:'rotated'}[mode]||'edited';showPdf(blob,currentFile.name.replace(/\.pdf$/i,'')+`-${suffix}.pdf`,`${specs.length} page${specs.length===1?'':'s'} · ${formatSize(blob.size)}`)
+ }catch(err){notice(err.message||'PDF operation failed.')}finally{actionBtn.disabled=false;actionBtn.textContent=old}}
+function showPdf(blob,name,meta){const r=resultDiv();r.innerHTML=`<div class="file-item done"><div class="file-item__info"><div class="file-item__name">${esc(name)}</div><div class="file-item__meta">${esc(meta)}</div></div><div class="file-item__actions"><button class="btn btn--success" id="pdf-result-download">Download</button></div></div>`;r.querySelector('#pdf-result-download').onclick=()=>downloadBlob(blob,name)}
+function showText(text){const r=resultDiv();r.innerHTML=`<textarea class="text-result" id="pdf-text-result" readonly>${esc(text)}</textarea><div class="result-actions"><button class="btn btn--primary" id="copy-text">Copy Text</button><button class="btn btn--secondary" id="download-text">Download TXT</button></div>`;r.querySelector('#copy-text').onclick=()=>navigator.clipboard.writeText(text).then(()=>notice('Text copied to clipboard.'));r.querySelector('#download-text').onclick=()=>downloadBlob(new Blob([text],{type:'text/plain'}),currentFile.name.replace(/\.pdf$/i,'')+'.txt')}
+function resultDiv(){removeResult();const div=document.createElement('div');div.id='pdf-tool-result';workspace.parentElement.insertBefore(div,workspace.nextSibling);return div}function removeResult(){document.getElementById('pdf-tool-result')?.remove()}
+function clear(){currentFile=null;pages=[];order=[];selected.clear();rotations.clear();fileList.innerHTML='';workspace.innerHTML='';actionBtn.style.display=clearBtn.style.display='none';removeResult()}
+function notice(msg){showPersistentNotice(dropZone,msg,{id:'pdf-tools-notice',kind:'warning'})}function esc(v){const d=document.createElement('div');d.textContent=v;return d.innerHTML}

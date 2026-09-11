@@ -1,7 +1,9 @@
 import { applyPageUX } from './ux-page.js';
 import { initSmartDrop } from './smart-drop.js';
+import { enhanceLanding } from './high-value-landing.js';
 
 initSmartDrop();
+enhanceLanding();
 
 // FAQ accordion
 document.querySelectorAll('.faq-question').forEach(btn => {

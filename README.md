@@ -19,20 +19,22 @@ This makes it:
 
 ## Features
 
-131 tool pages, grouped on the landing page into the 7 categories below (134 HTML pages in total,
+151 tool pages, grouped on the landing page into the categories below (154 HTML pages in total,
 counting `index.html`, `about.html` and `privacy.html`):
 
 | Category | Tools |
 |----------|-------|
-| **Images** | HEIC, WebP, PNG, JPG, SVG, BMP, GIF, AVIF, TIFF, ICO (all cross-convert to JPG/PNG/WebP/PDF) |
-| **Image Tools** | Compress (quality slider), Resize, Strip EXIF (batch), Metadata Viewer/Editor (lossless JPEG), Images-to-GIF |
+| **Images** | HEIC, WebP, PNG, JPG, SVG, BMP, GIF, AVIF, TIFF, ICO (cross-convert to JPG/PNG/WebP/PDF), plus PNG-to-ICO |
+| **Image Tools** | Background Remover with local AI + edge refinement + manual mask cleanup, Compress, Resize, Strip EXIF, Metadata Viewer/Editor, Images-to-GIF, Image-to-Text OCR |
 | **Video** | MOV/AVI/MKV/WebM/MP4 cross-convert, Video-to-GIF, Compress, Speed, Metadata |
+| **Video → Audio** | MP4/MOV/WebM/AVI/MKV to MP3 or WAV, with browser decoding first and FFmpeg.wasm fallback |
 | **Audio** | MP3, WAV, OGG, FLAC, M4A, AAC cross-convert, Compress |
-| **Documents** | PDF-to-Image, Merge PDF, Split PDF, PDF OCR, EPUB/RTF/DOCX/MOBI to TXT and PDF |
+| **PDF** | PDF-to-Image, Merge, Split, OCR, Compress, Rotate, Delete Pages, Extract Pages, Reorder Pages, PDF-to-Text |
+| **Documents** | EPUB/RTF/DOCX/MOBI to TXT and PDF; self-contained HTML to PDF with scripts and remote resources blocked |
 | **Fonts** | TTF, OTF, WOFF cross-convert |
 | **Archives** | ZIP extract and create |
 
-Every tool includes batch processing (up to 50 files), ZIP download, drag-and-drop, and a smart landing page that auto-detects file type and routes to the right converter.
+Most conversion tools include batch processing (up to 50 files), ZIP download, and drag-and-drop. The landing page auto-detects common file types, suggests relevant tools, and hands dropped files to the selected converter without uploading them.
 
 ## Usage
 
@@ -43,7 +45,7 @@ npm install
 # Start local dev server
 npx serve . -p 3000
 
-# Run validation suite (134 pages, SEO meta, JSON-LD, internal links, sitemap)
+# Run validation suite (154 pages, SEO meta, JSON-LD, internal links, sitemap)
 npm test
 
 # Run the Playwright end-to-end suite (spins up a server on :3988)
@@ -62,14 +64,30 @@ No build step required for day-to-day development. Edit HTML/JS/CSS and refresh.
 
 - **Image encoding:** Browser Canvas API (`toBlob`)
 - **HEIC decoding:** [heic-to](https://github.com/nicolo-ribaudo/heic-to) (WebAssembly, libheif 1.21.2, lazy-loaded ~2.5MB)
+- **Background removal:** BiRefNet-lite 512 fp16/WebGPU best-quality path, U²-Netp ONNX/WASM fast fallback, guided-filter edge refinement, editable alpha matte, full-resolution compositing
 - **Video:** FFmpeg.wasm (lazy-loaded from jsDelivr CDN)
+- **Video-to-audio:** Web Audio API + lamejs/WAV fast path, FFmpeg.wasm fallback
 - **Audio:** lamejs for MP3 encoding, Web Audio API for decoding
 - **PDF:** pdf-lib, jsPDF, PDF.js (all lazy-loaded from CDN)
+- **OCR:** Tesseract.js with lazy-loaded language models
+- **HTML-to-PDF:** sanitized sandboxed HTML rendered with html2canvas + jsPDF; scripts and remote resources blocked
+- **ICO writing:** Browser-generated multi-resolution PNG payloads packed directly into an ICO container
 - **Metadata:** ExifReader (read all formats) + piexifjs (lossless JPEG write)
 - **ZIP:** fflate (~8KB gzipped)
 - **Format detection:** Magic bytes, not file extensions
 - **Framework:** None. Pure HTML + CSS + vanilla JS modules
 - **Hosting:** Vercel free tier, static files only
+
+## Background-removal model strategy
+
+`/background-remover` keeps the uploaded image local in every mode. Only model/runtime files are fetched.
+
+- **Auto** chooses the model based on browser/device capability.
+- **Best edges** uses the MIT-licensed browser-tuned BiRefNet-lite 512 model in fp16 on WebGPU. It is roughly 94 MB and is browser-cached after the first load.
+- **Fast** uses the Apache-2.0 U²-Netp ONNX model (~4.4 MB) through ONNX Runtime Web/WASM and works on a much wider range of devices.
+- The model matte is refined against original-image luminance with an edge-aware guided filter before the user sees it.
+- The editor provides Erase/Restore brushes with Undo/Reset, background previews, optional transparent-edge trimming, and transparent PNG or white-background JPG download.
+- Final compositing uses the original decoded pixels rather than the model input resolution.
 
 ## Support
 
@@ -95,39 +113,45 @@ URLs and breaking `sitemap.xml`.
 irisfiles/
   index.html              # Landing page with smart drop + tool matrix
   about.html, privacy.html
-  *.html                  # 131 tool pages (one per tool), 118 of them <from>-to-<to>
-  css/style.css           # All styles (CSS variables, responsive)
-  js/                     # 63 modules, flat, grouped by filename stem
+  *.html                  # 151 tool pages (one per tool), 132 of them <from>-to-<to>
+  css/style.css           # Main stylesheet shim (versioned imported sheets)
+  css/high-value-tools.css # Additional UI for PDF/high-value/background-removal tools
+  js/                     # Flat vanilla-JS modules grouped by filename stem
     converter.js          # Core: format detection, Canvas encode, download, ZIP
     ui.js                 # Image converter UI (drag-drop, queue, progress)
     heic-worker.js        # Lazy HEIC WASM loader
     smart-drop.js         # Landing page: magic byte detection, IndexedDB routing
-    ffmpeg-shared.js      # Shared FFmpeg.wasm loader for the video/audio tools
+    high-value-landing.js # Adds new tool rows + smart-drop destination handoff
+    background-removal-engine.js # BiRefNet/U²-Net inference, refinement, compositing, mask edits
+    background-removal-ui.js     # Background-removal editor and download flow
+    ffmpeg-shared.js      # Shared FFmpeg.wasm loader for video/audio tools
+    media-audio-engine.js # Video-to-MP3/WAV fast path + FFmpeg fallback
+    image-ocr-engine.js   # Image-to-text OCR preprocessing + Tesseract
+    ico-engine.js         # Multi-resolution ICO writer
+    pdf-tools-engine.js   # PDF page edits/text/compression
+    html-pdf-engine.js    # Sanitized local HTML-to-PDF rendering
     device-tier.js, meta-panel.js, notice-ui.js, ux-page.js, cities-geo.js
-    <tool>-engine.js      # 16 engines: pure conversion logic, no DOM
-    <tool>-ui.js          # 17 DOM controllers
-    <tool>-boot.js        # 18 per-page bootstrappers (2-3 lines each)
+    <tool>-engine.js      # Pure conversion logic where practical
+    <tool>-ui.js          # DOM controllers
+    <tool>-boot.js        # Per-page bootstrappers (usually 2 lines)
     fflate.min.js         # ZIP library (committed, third-party)
     gifenc.min.js         # GIF encoder (committed, third-party)
   wasm/heic/              # HEIC WASM binary (committed, ~2.5MB)
   data/file-signatures.json   # Magic-byte table, generated by scripts/build-file-sigs.js
   scripts/build-file-sigs.js  # Regenerates data/file-signatures.json
-  img/                    # og-default.png (social card, linked from every page),
-                          # favicon-source.png (source for favicon.png/.svg)
-  test/validate.mjs       # Validation suite (134 pages, 25000+ checks)
+  img/                    # og-default.png, favicon sources
+  test/validate.mjs       # Validation suite (154 pages, SEO/links/sitemap/CSP)
   test/e2e/               # Playwright specs, driven by playwright.config.mjs
-  reddit/                 # One-off 2026-03 launch promotion, not part of the site
-  patrol.sh, PATROL.md    # Automated Claude Code bug patrol; patrol.sh is invoked by
-                          # .git/hooks/pre-push, so it must stay at the repo root
+  reddit/                 # One-off launch promotion, not part of the site
+  patrol.sh, PATROL.md    # Automated code patrol support
   build.sh                # One-shot: copy WASM + bundle fflate from node_modules
-  vercel.json             # Clean URLs, CSP headers, WASM cache
-  serve.json              # Clean URLs for the local `npx serve` dev server
-  sitemap.xml             # 134 URLs
+  vercel.json             # Clean URLs, CSP headers, WASM/model CDN permissions
+  serve.json              # Clean URLs for local `npx serve`
+  sitemap.xml             # 154 URLs
   robots.txt
 ```
 
-Generated, gitignored, and safe to delete at any time: `test-results/` (Playwright), `.patrol/`
-(patrol run state), `.project-state/`, `.serena/`, `.claude/`, `.vercel/`, `.codegraph.db*`.
+Generated, gitignored, and safe to delete at any time: `test-results/`, `.patrol/`, `.project-state/`, `.serena/`, `.claude/`, `.vercel/`, `.codegraph.db*`.
 
 ## License
 
