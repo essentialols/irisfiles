@@ -227,12 +227,42 @@ export function downloadBlob(blob, filename) {
 export async function downloadAsZip(files, zipName) {
   // fflate is loaded as a global from fflate.min.js
   if (typeof fflate === 'undefined') throw new Error('ZIP library not loaded. Please reload the page.');
+  const zipInput = Object.create(null);
+  const usedNames = new Set();
+  for (const file of files) {
+    const name = uniqueDownloadName(file.name, usedNames);
+    zipInput[name] = file.data;
+  }
   const zipData = fflate.zipSync(
-    Object.fromEntries(files.map(f => [f.name, f.data])),
+    zipInput,
     { level: 0 } // images are already compressed, no point re-compressing
   );
   const blob = new Blob([zipData], { type: 'application/zip' });
   downloadBlob(blob, zipName);
+}
+
+function uniqueDownloadName(name, usedNames) {
+  if (!usedNames.has(name)) {
+    usedNames.add(name);
+    return name;
+  }
+
+  const slash = name.lastIndexOf('/');
+  const dir = slash === -1 ? '' : name.slice(0, slash + 1);
+  const filename = slash === -1 ? name : name.slice(slash + 1);
+  const dot = filename.lastIndexOf('.');
+  const stem = dot > 0 ? filename.slice(0, dot) : filename;
+  const ext = dot > 0 ? filename.slice(dot) : '';
+
+  let suffix = 2;
+  let candidate;
+  do {
+    candidate = `${dir}${stem} (${suffix})${ext}`;
+    suffix++;
+  } while (usedNames.has(candidate));
+
+  usedNames.add(candidate);
+  return candidate;
 }
 
 /**

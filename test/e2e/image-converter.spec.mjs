@@ -1,5 +1,37 @@
+import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 import { fixture } from './helpers.mjs';
+
+function zipCentralEntries(buffer) {
+  let eocd = -1;
+  for (let i = buffer.length - 22; i >= Math.max(0, buffer.length - 0xffff - 22); i--) {
+    if (buffer.readUInt32LE(i) === 0x06054b50) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd === -1) throw new Error('Expected ZIP end-of-central-directory record');
+
+  const count = buffer.readUInt16LE(eocd + 10);
+  let offset = buffer.readUInt32LE(eocd + 16);
+  const entries = [];
+  for (let i = 0; i < count; i++) {
+    if (buffer.readUInt32LE(offset) !== 0x02014b50) throw new Error('Expected ZIP central-directory entry');
+    const compressedSize = buffer.readUInt32LE(offset + 20);
+    const uncompressedSize = buffer.readUInt32LE(offset + 24);
+    const nameLength = buffer.readUInt16LE(offset + 28);
+    const extraLength = buffer.readUInt16LE(offset + 30);
+    const commentLength = buffer.readUInt16LE(offset + 32);
+    const nameStart = offset + 46;
+    entries.push({
+      name: buffer.subarray(nameStart, nameStart + nameLength).toString('utf8'),
+      compressedSize,
+      uncompressedSize,
+    });
+    offset = nameStart + nameLength + extraLength + commentLength;
+  }
+  return entries;
+}
 
 test.describe('PNG to JPG', () => {
   test.beforeEach(async ({ page }) => {
@@ -50,6 +82,26 @@ test.describe('PNG to JPG', () => {
       page.locator('#download-all').click(),
     ]);
     expect(dl.suggestedFilename()).toMatch(/\.zip$/);
+  });
+
+  test('Download All preserves outputs with duplicate filenames', async ({ page }) => {
+    const [first, second] = await Promise.all([
+      readFile(fixture('landscape.png')),
+      readFile(fixture('portrait.png')),
+    ]);
+    await page.locator('#file-input').setInputFiles([
+      { name: 'photo.png', mimeType: 'image/png', buffer: first },
+      { name: 'photo.png', mimeType: 'image/png', buffer: second },
+    ]);
+    await page.locator('.file-item.done').nth(1).waitFor({ timeout: 15000 });
+
+    const [dl] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('#download-all').click(),
+    ]);
+    const entries = zipCentralEntries(await readFile(await dl.path()));
+    expect(entries.map(entry => entry.name).sort()).toEqual(['photo (2).jpg', 'photo.jpg']);
+    expect(entries.every(entry => entry.uncompressedSize > 0 && entry.compressedSize > 0)).toBe(true);
   });
 
   test('Clear All empties file list', async ({ page }) => {
