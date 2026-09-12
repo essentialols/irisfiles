@@ -130,24 +130,28 @@ async function runAction() {
   const t0 = performance.now();
   const runRevision = inputRevision;
 
+  const current = () => runRevision === inputRevision;
+
   try {
     if (mode === 'extract') {
       const entries = await extractZip(files[0], pct => {
-        actionBtn.textContent = `Extracting... ${pct}%`;
+        if (current()) actionBtn.textContent = `Extracting... ${pct}%`;
       });
       const dur = Math.round(performance.now() - t0);
-      if (runRevision === inputRevision) showExtractResults(entries, dur);
+      if (current()) showExtractResults(entries, dur);
 
     } else if (mode === 'create') {
       const inputs = files.map(f => ({ name: f.name, blob: f }));
       const zipBlob = await createZip(inputs, pct => {
-        actionBtn.textContent = `Zipping... ${pct}%`;
+        if (current()) actionBtn.textContent = `Zipping... ${pct}%`;
       });
       const dur = Math.round(performance.now() - t0);
-      if (runRevision === inputRevision) showCreateResult(zipBlob, dur);
+      if (current()) showCreateResult(zipBlob, dur);
     }
   } catch (err) {
-    showError(err.message);
+    // showError() clears the results panel, so an obsolete failure would erase a
+    // newer run's download card and replace it with a stale message.
+    if (current()) showError(err.message);
   }
 
   actionBtn.textContent = origText;
