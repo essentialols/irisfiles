@@ -150,6 +150,20 @@ async function encodeCanvasAsGif(canvas) {
   return new Blob([gif.bytes()], { type: 'image/gif' });
 }
 
+// An SVG is resolution-independent, so a viewBox larger than the canvas budget
+// is rendered at the largest safe size instead of failing. A raster image of the
+// same pixel count still throws, because downscaling it would silently discard
+// the detail the user asked to convert.
+function clampToMaxPixels(width, height) {
+  const pixels = width * height;
+  if (!Number.isFinite(pixels) || pixels <= MAX_PIXELS) return { width, height };
+  const scale = Math.sqrt(MAX_PIXELS / pixels);
+  return {
+    width: Math.max(1, Math.floor(width * scale)),
+    height: Math.max(1, Math.floor(height * scale)),
+  };
+}
+
 function svgViewBoxDimensions(svgText) {
   const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml');
   const svg = doc.documentElement;
@@ -191,10 +205,14 @@ async function loadSvgImage(file) {
   try {
     await img.decode();
     const viewBoxSize = svgViewBoxDimensions(svgText);
+    const sized = clampToMaxPixels(
+      viewBoxSize?.width || img.naturalWidth,
+      viewBoxSize?.height || img.naturalHeight,
+    );
     return {
       image: img,
-      width: viewBoxSize?.width || img.naturalWidth,
-      height: viewBoxSize?.height || img.naturalHeight,
+      width: sized.width,
+      height: sized.height,
       cleanup: () => URL.revokeObjectURL(url),
     };
   } catch {

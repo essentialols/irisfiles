@@ -79,8 +79,10 @@ test.describe('Persistent current-file workspace', () => {
     await page.locator('#active-file-focus a[href="/png-to-webp"]').click();
     await expect(page).toHaveURL(/\/png-to-webp$/);
     await expect(page.locator('#active-file-focus .file-focus__name')).toHaveText('sample.png');
-    await expect.poll(async () => page.locator('#file-input').evaluate(el => el.files?.[0]?.name || ''))
-      .toBe('sample.png');
+    // The converter clears fileInput.value once it has taken the selection, so
+    // the queued row is the observable proof that the file was rehydrated.
+    await expect(page.locator('.file-item')).toHaveCount(1);
+    await expect(page.locator('.file-item__name')).toHaveText('sample.png');
   });
 
   test('same-format batches stay together across compatible tools', async ({ page }) => {
@@ -98,9 +100,8 @@ test.describe('Persistent current-file workspace', () => {
 
     await workspace.locator('a[href="/png-to-webp"]').click();
     await expect(page).toHaveURL(/\/png-to-webp$/);
-    await expect.poll(async () => page.locator('#file-input').evaluate(el => Array.from(el.files || []).map(f => f.name)))
-      .toEqual(['sample.png', 'sample2.png']);
     await expect(page.locator('.file-item')).toHaveCount(2);
+    await expect(page.locator('.file-item__name')).toHaveText(['sample.png', 'sample2.png']);
   });
 
   test('mixed batches hide incompatible conversions and keep common safe tools', async ({ page }) => {
@@ -131,16 +132,25 @@ test.describe('Persistent current-file workspace', () => {
     await expect(page.locator('#active-file-focus .file-focus__name')).toHaveText('sample2.png');
   });
 
-  test('current file remains visible when returning to the landing page without auto-loading it', async ({ page }) => {
+  test('a carried file is shown but never auto-loaded into the destination input', async ({ page }) => {
     await page.goto('/png-to-jpg');
     await page.locator('#file-input').setInputFiles(fixture('sample.png'));
     await expect(page.locator('#active-file-focus .file-focus__name')).toHaveText('sample.png');
 
-    await page.goto('/');
-    await expect(page.locator('#active-file-focus')).toBeVisible();
+    await page.locator('#active-file-focus a[href="/create-zip"]').click();
     await expect(page.locator('#active-file-focus .file-focus__name')).toHaveText('sample.png');
     await expect(page.locator('#active-file-focus a[href="/png-to-webp"]')).toBeVisible();
-    await expect.poll(async () => page.locator('#smart-file-input').evaluate(el => el.files?.length || 0)).toBe(0);
+  });
+
+  test('a file is not resurrected on a later visit that did not come from the workspace', async ({ page }) => {
+    await page.goto('/png-to-jpg');
+    await page.locator('#file-input').setInputFiles(fixture('sample.png'));
+    await expect(page.locator('#active-file-focus .file-focus__name')).toHaveText('sample.png');
+
+    // Navigating by URL rather than through the workspace is not a handoff, so
+    // nothing was written to disk and there is nothing left to restore.
+    await page.goto('/');
+    await expect(page.locator('#active-file-focus')).toHaveCount(0);
   });
 
   test('workspace separates conversions from tools and highlights the current route', async ({ page }) => {
