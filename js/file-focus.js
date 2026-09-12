@@ -15,6 +15,7 @@ const commonImageTools = [
 const makeGif = TOOL('Make GIF', '/images-to-gif');
 const imageOcr = TOOL('Extract text', '/image-to-text');
 const removeBackground = TOOL('Remove background', '/background-remover');
+const createZip = TOOL('Create ZIP', '/create-zip');
 
 function imageActions(conversions, extras = []) {
   return [...conversions, ...commonImageTools, ...extras];
@@ -120,7 +121,10 @@ function extOf(file) {
 }
 
 function actionsFor(file) {
-  return ACTIONS_BY_EXT[extOf(file)] || [];
+  const specific = ACTIONS_BY_EXT[extOf(file)] || [];
+  return specific.some(action => action.href === createZip.href)
+    ? specific
+    : [...specific, createZip];
 }
 
 function normalizePath(path = location.pathname) {
