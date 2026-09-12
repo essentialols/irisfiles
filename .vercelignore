@@ -1,0 +1,14 @@
+# Root is the deploy directory, so anything committed here is a live URL.
+# These are one-off, non-site working directories: keeping them in git is the
+# convention, serving them is not. docs/seo-six-page-experiment-2026-09.md was
+# publicly readable with its keyword targets and baseline rankings, and
+# reddit/reddit-post.py was served as plain text.
+docs
+reddit
+
+# Development-only; never part of the deployed site.
+test
+scripts
+patrol.sh
+PATROL.md
+playwright.config.mjs
