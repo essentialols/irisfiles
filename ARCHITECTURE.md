@@ -92,3 +92,19 @@ A privacy-first tool for viewing, editing, and stripping EXIF metadata from phot
 ## Deployment
 
 Static files on Vercel free tier. `vercel.json` handles clean URLs and WASM caching headers.
+
+Cloudflare fronts the domain, and its Browser Cache TTL **must stay "Respect Existing
+Headers"**. Set to a fixed value it overrides the `max-age=0, must-revalidate` that
+`vercel.json` sets for `/css/` and `/js/`, while HTML passes through untouched. It sat at
+14400 until 2026-09-12, which is why a stylesheet edit could be live and invisible to
+returning visitors for four hours, and why `scripts/css-version.mjs` exists at all.
+
+CSS survives a stale window because the fresh HTML carries a new `?v=` URL for it.
+**JS has no such cache-buster**, so that setting is the only thing keeping a JS fix from
+being delayed by the browser cache. `/wasm/` is unaffected either way: it declares its own
+one-year `immutable` header, which "respect existing headers" honours.
+
+`.vercelignore` keeps the working directories (`docs`, `reddit`, `scripts`, `test`) out of
+the deploy. Root is the output directory, so anything committed outside it is a live URL:
+the test fixtures and the SEO experiment write-up were both publicly readable until then.
+A test that needs a fixture must build it in-page rather than fetch it from the server.
