@@ -192,6 +192,10 @@ main.container { padding-top: clamp(1rem, 3vw, 2rem) !important; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* The label is "... or <strong>click to browse</strong>". Flex makes each of
+     those an item and drops the whitespace between them, so the word space has
+     to come back as a gap or it renders as "orclick to browse". */
+  gap: .28em;
   min-height: 48px;
   padding: .72rem 1.1rem;
   border-radius: 999px;
