@@ -83,6 +83,33 @@ test.describe('Persistent current-file workspace', () => {
       .toBe('sample.png');
   });
 
+  test('same-format batches stay together across compatible tools', async ({ page }) => {
+    await page.goto('/png-to-jpg');
+    await page.locator('#file-input').setInputFiles([fixture('sample.png'), fixture('sample2.png')]);
+
+    const workspace = page.locator('#active-file-focus');
+    await expect(workspace.locator('.file-focus__eyebrow')).toHaveText('Current files');
+    await expect(workspace.locator('.file-focus__count')).toHaveText('+1 more');
+    await expect(workspace.locator('a[href="/png-to-webp"]')).toBeVisible();
+
+    await workspace.locator('a[href="/png-to-webp"]').click();
+    await expect(page).toHaveURL(/\/png-to-webp$/);
+    await expect.poll(async () => page.locator('#file-input').evaluate(el => Array.from(el.files || []).map(f => f.name)))
+      .toEqual(['sample.png', 'sample2.png']);
+    await expect(page.locator('.file-item')).toHaveCount(2);
+  });
+
+  test('mixed batches hide incompatible conversions and keep common safe tools', async ({ page }) => {
+    await page.goto('/create-zip');
+    await page.locator('#file-input').setInputFiles([fixture('sample.png'), fixture('sample.txt')]);
+
+    const workspace = page.locator('#active-file-focus');
+    await expect(workspace.locator('.file-focus__eyebrow')).toHaveText('Current files');
+    await expect(workspace.locator('.file-focus__meta')).toContainText('Mixed formats');
+    await expect(workspace.locator('a[href="/create-zip"]')).toHaveClass(/is-current/);
+    await expect(workspace.locator('a[href="/png-to-webp"]')).toHaveCount(0);
+  });
+
   test('the original source stays active after a conversion completes', async ({ page }) => {
     await page.goto('/png-to-jpg');
     await page.locator('#file-input').setInputFiles(fixture('sample.png'));
@@ -100,7 +127,7 @@ test.describe('Persistent current-file workspace', () => {
     await expect(page.locator('#active-file-focus .file-focus__name')).toHaveText('sample2.png');
   });
 
-  test('current file remains visible when returning to the landing page', async ({ page }) => {
+  test('current file remains visible when returning to the landing page without auto-loading it', async ({ page }) => {
     await page.goto('/png-to-jpg');
     await page.locator('#file-input').setInputFiles(fixture('sample.png'));
     await expect(page.locator('#active-file-focus .file-focus__name')).toHaveText('sample.png');
@@ -109,6 +136,7 @@ test.describe('Persistent current-file workspace', () => {
     await expect(page.locator('#active-file-focus')).toBeVisible();
     await expect(page.locator('#active-file-focus .file-focus__name')).toHaveText('sample.png');
     await expect(page.locator('#active-file-focus a[href="/png-to-webp"]')).toBeVisible();
+    await expect.poll(async () => page.locator('#smart-file-input').evaluate(el => el.files?.length || 0)).toBe(0);
   });
 
   test('workspace separates conversions from tools and highlights the current route', async ({ page }) => {
