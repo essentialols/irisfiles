@@ -150,16 +150,53 @@ async function encodeCanvasAsGif(canvas) {
   return new Blob([gif.bytes()], { type: 'image/gif' });
 }
 
+function svgViewBoxDimensions(svgText) {
+  const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml');
+  const svg = doc.documentElement;
+  if (!svg || svg.localName !== 'svg') return null;
+
+  const hasFixedDimension = value => {
+    if (!value) return false;
+    const normalized = value.trim().toLowerCase();
+    return normalized !== '' && normalized !== 'auto' && !normalized.endsWith('%');
+  };
+
+  // Let the browser honor real width/height values (including physical units).
+  // Only replace its 300x150 default when the SVG relies on viewBox sizing.
+  if (hasFixedDimension(svg.getAttribute('width')) || hasFixedDimension(svg.getAttribute('height'))) {
+    return null;
+  }
+
+  const viewBox = (svg.getAttribute('viewBox') || '')
+    .trim()
+    .split(/[\s,]+/)
+    .map(Number);
+  if (viewBox.length !== 4 || !viewBox.every(Number.isFinite) || viewBox[2] <= 0 || viewBox[3] <= 0) {
+    return null;
+  }
+
+  return {
+    width: Math.max(1, Math.round(viewBox[2])),
+    height: Math.max(1, Math.round(viewBox[3])),
+  };
+}
+
 async function loadSvgImage(file) {
-  const svgBlob = file.type === 'image/svg+xml'
-    ? file
-    : new Blob([await file.arrayBuffer()], { type: 'image/svg+xml' });
+  const bytes = await file.arrayBuffer();
+  const svgBlob = new Blob([bytes], { type: 'image/svg+xml' });
+  const svgText = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
   const url = URL.createObjectURL(svgBlob);
   const img = new Image();
   img.src = url;
   try {
     await img.decode();
-    return { image: img, cleanup: () => URL.revokeObjectURL(url) };
+    const viewBoxSize = svgViewBoxDimensions(svgText);
+    return {
+      image: img,
+      width: viewBoxSize?.width || img.naturalWidth,
+      height: viewBoxSize?.height || img.naturalHeight,
+      cleanup: () => URL.revokeObjectURL(url),
+    };
   } catch {
     URL.revokeObjectURL(url);
     throw new Error('Could not decode image. The file may be corrupted or in an unsupported format.');
@@ -177,9 +214,13 @@ export async function convertWithCanvas(file, targetMime, quality) {
   // createImageBitmap with imageOrientation auto-corrects EXIF rotation from iPhone photos.
   // Chromium does not decode SVG blobs through createImageBitmap, so SVG uses an HTMLImageElement fallback.
   let source;
+  let width;
+  let height;
   let cleanup = () => {};
   try {
     source = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    width = source.width;
+    height = source.height;
     cleanup = () => source.close();
   } catch {
     const fmt = await detectFormat(file);
@@ -188,11 +229,10 @@ export async function convertWithCanvas(file, targetMime, quality) {
     }
     const loaded = await loadSvgImage(file);
     source = loaded.image;
+    width = loaded.width;
+    height = loaded.height;
     cleanup = loaded.cleanup;
   }
-
-  const width = source.width || source.naturalWidth;
-  const height = source.height || source.naturalHeight;
   let canvas;
   try {
     validateDimensions(width, height);
@@ -205,7 +245,7 @@ export async function convertWithCanvas(file, targetMime, quality) {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
-    ctx.drawImage(source, 0, 0);
+    ctx.drawImage(source, 0, 0, width, height);
   } finally {
     cleanup();
   }
