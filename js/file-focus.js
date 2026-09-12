@@ -4,59 +4,21 @@ const ACTIVE_KEY = 'current';
 const CSS_HREF = '/css/file-focus.css';
 
 const A = (label, href, kind = 'convert') => ({ label, href, kind });
-const imageTools = (extra = []) => [
-  ...extra,
-  A('Metadata', '/image-metadata', 'tool'),
-  A('Compress', '/compress', 'tool'),
-  A('Resize', '/resize-image', 'tool'),
-  A('Strip EXIF', '/strip-exif', 'tool'),
-  A('Make GIF', '/images-to-gif', 'tool'),
-  A('Extract text', '/image-to-text', 'tool'),
-];
-const bgTool = A('Remove background', '/background-remover', 'tool');
+const TOOL = (label, href) => A(label, href, 'tool');
 
-const ACTIONS_BY_EXT = {
-  heic: [A('JPG','/heic-to-jpg'),A('PNG','/heic-to-png'),A('WebP','/heic-to-webp'),A('PDF','/heic-to-pdf'),...imageTools()],
-  heif: [A('JPG','/heic-to-jpg'),A('PNG','/heic-to-png'),A('WebP','/heic-to-webp'),A('PDF','/heic-to-pdf'),...imageTools()],
-  jpg: [A('PNG','/jpg-to-png'),A('WebP','/jpg-to-webp'),A('GIF','/jpg-to-gif'),A('PDF','/jpg-to-pdf'),...imageTools([bgTool])],
-  jpeg: [A('PNG','/jpg-to-png'),A('WebP','/jpg-to-webp'),A('GIF','/jpg-to-gif'),A('PDF','/jpg-to-pdf'),...imageTools([bgTool])],
-  png: [A('JPG','/png-to-jpg'),A('WebP','/png-to-webp'),A('GIF','/png-to-gif'),A('PDF','/png-to-pdf'),A('ICO','/png-to-ico'),...imageTools([bgTool])],
-  webp: [A('JPG','/webp-to-jpg'),A('PNG','/webp-to-png'),A('GIF','/webp-to-gif'),A('PDF','/webp-to-pdf'),...imageTools([bgTool])],
-  gif: [A('JPG','/gif-to-jpg'),A('PNG','/gif-to-png'),A('WebP','/gif-to-webp'),A('PDF','/gif-to-pdf'),A('MP4','/gif-to-mp4'),A('WebM','/gif-to-webm'),A('MOV','/gif-to-mov'),A('AVI','/gif-to-avi'),A('MKV','/gif-to-mkv'),...imageTools()],
-  bmp: [A('JPG','/bmp-to-jpg'),A('PNG','/bmp-to-png'),A('WebP','/bmp-to-webp'),A('PDF','/bmp-to-pdf'),...imageTools([bgTool])],
-  avif: [A('JPG','/avif-to-jpg'),A('PNG','/avif-to-png'),A('WebP','/avif-to-webp'),A('PDF','/avif-to-pdf'),...imageTools()],
-  tif: [A('JPG','/tiff-to-jpg'),A('PNG','/tiff-to-png'),A('WebP','/tiff-to-webp'),A('PDF','/tiff-to-pdf'),...imageTools()],
-  tiff: [A('JPG','/tiff-to-jpg'),A('PNG','/tiff-to-png'),A('WebP','/tiff-to-webp'),A('PDF','/tiff-to-pdf'),...imageTools()],
-  ico: [A('JPG','/ico-to-jpg'),A('PNG','/ico-to-png'),A('WebP','/ico-to-webp'),A('PDF','/ico-to-pdf'),...imageTools()],
-  svg: [A('JPG','/svg-to-jpg'),A('PNG','/svg-to-png'),A('WebP','/svg-to-webp'),A('PDF','/svg-to-pdf'),...imageTools()],
-  pdf: [
-    A('JPG','/pdf-to-jpg'),A('PNG','/pdf-to-png'),A('Text','/pdf-to-text'),
-    A('OCR','/pdf-ocr','tool'),A('Compress','/compress-pdf','tool'),
-    A('Split','/split-pdf','tool'),A('Merge','/merge-pdf','tool'),
-    A('Rotate','/rotate-pdf','tool'),A('Reorder pages','/reorder-pdf-pages','tool'),
-    A('Delete pages','/delete-pdf-pages','tool'),A('Extract pages','/extract-pdf-pages','tool'),
-  ],
-  mp4: videoActions('mp4', ['webm','mov','avi','mkv']),
-  webm: videoActions('webm', ['mp4','mov','avi','mkv']),
-  mov: videoActions('mov', ['mp4','webm','avi','mkv']),
-  avi: videoActions('avi', ['mp4','webm','mov','mkv']),
-  mkv: videoActions('mkv', ['mp4','webm','mov','avi']),
-  mp3: audioActions('mp3', ['wav','ogg','flac','m4a','aac']),
-  wav: audioActions('wav', ['mp3','ogg','flac','m4a','aac']),
-  ogg: audioActions('ogg', ['wav','mp3','flac','m4a','aac']),
-  flac: audioActions('flac', ['wav','mp3','ogg','m4a','aac']),
-  m4a: audioActions('m4a', ['wav','mp3','ogg','flac','aac']),
-  aac: audioActions('aac', ['wav','mp3','ogg','flac','m4a']),
-  epub: [A('TXT','/epub-to-txt'),A('PDF','/epub-to-pdf')],
-  rtf: [A('TXT','/rtf-to-txt'),A('PDF','/rtf-to-pdf')],
-  docx: [A('TXT','/docx-to-txt'),A('PDF','/docx-to-pdf')],
-  mobi: [A('TXT','/mobi-to-txt'),A('PDF','/mobi-to-pdf')],
-  prc: [A('TXT','/mobi-to-txt'),A('PDF','/mobi-to-pdf')],
-  ttf: [A('OTF','/ttf-to-otf'),A('WOFF','/ttf-to-woff')],
-  otf: [A('TTF','/otf-to-ttf'),A('WOFF','/otf-to-woff')],
-  woff: [A('TTF','/woff-to-ttf'),A('OTF','/woff-to-otf')],
-  zip: [A('Extract files','/extract-zip','tool')],
-};
+const commonImageTools = [
+  TOOL('Metadata', '/image-metadata'),
+  TOOL('Compress', '/compress'),
+  TOOL('Resize', '/resize-image'),
+  TOOL('Strip EXIF', '/strip-exif'),
+];
+const makeGif = TOOL('Make GIF', '/images-to-gif');
+const imageOcr = TOOL('Extract text', '/image-to-text');
+const removeBackground = TOOL('Remove background', '/background-remover');
+
+function imageActions(conversions, extras = []) {
+  return [...conversions, ...commonImageTools, ...extras];
+}
 
 function videoActions(src, targets) {
   return [
@@ -64,18 +26,70 @@ function videoActions(src, targets) {
     A('GIF', `/${src}-to-gif`),
     A('MP3', `/${src}-to-mp3`),
     A('WAV', `/${src}-to-wav`),
-    A('Metadata','/video-metadata','tool'),
-    A('Compress','/compress-video','tool'),
-    A('Speed','/video-speed','tool'),
+    TOOL('Metadata', '/video-metadata'),
+    TOOL('Compress', '/compress-video'),
+    TOOL('Speed', '/video-speed'),
   ];
 }
 
 function audioActions(src, targets) {
   return [
     ...targets.map(ext => A(ext.toUpperCase(), `/${src}-to-${ext}`)),
-    A('Compress','/compress-audio','tool'),
+    TOOL('Compress', '/compress-audio'),
   ];
 }
+
+// Keep this list aligned with the routes that actually accept each source type.
+// Generic image tools come from Smart Drop's existing route matrix; specialized
+// tools are only exposed for the formats their page/engine explicitly supports.
+const ACTIONS_BY_EXT = {
+  heic: imageActions([A('JPG','/heic-to-jpg'),A('PNG','/heic-to-png'),A('WebP','/heic-to-webp'),A('PDF','/heic-to-pdf')]),
+  heif: imageActions([A('JPG','/heic-to-jpg'),A('PNG','/heic-to-png'),A('WebP','/heic-to-webp'),A('PDF','/heic-to-pdf')]),
+  jpg: imageActions([A('PNG','/jpg-to-png'),A('WebP','/jpg-to-webp'),A('GIF','/jpg-to-gif'),A('PDF','/jpg-to-pdf')],[removeBackground,makeGif,imageOcr]),
+  jpeg: imageActions([A('PNG','/jpg-to-png'),A('WebP','/jpg-to-webp'),A('GIF','/jpg-to-gif'),A('PDF','/jpg-to-pdf')],[removeBackground,makeGif,imageOcr]),
+  png: imageActions([A('JPG','/png-to-jpg'),A('WebP','/png-to-webp'),A('GIF','/png-to-gif'),A('PDF','/png-to-pdf'),A('ICO','/png-to-ico')],[removeBackground,makeGif,imageOcr]),
+  webp: imageActions([A('JPG','/webp-to-jpg'),A('PNG','/webp-to-png'),A('GIF','/webp-to-gif'),A('PDF','/webp-to-pdf')],[removeBackground,makeGif,imageOcr]),
+  gif: imageActions([A('JPG','/gif-to-jpg'),A('PNG','/gif-to-png'),A('WebP','/gif-to-webp'),A('PDF','/gif-to-pdf'),A('MP4','/gif-to-mp4'),A('WebM','/gif-to-webm'),A('MOV','/gif-to-mov'),A('AVI','/gif-to-avi'),A('MKV','/gif-to-mkv')],[makeGif]),
+  bmp: imageActions([A('JPG','/bmp-to-jpg'),A('PNG','/bmp-to-png'),A('WebP','/bmp-to-webp'),A('PDF','/bmp-to-pdf')],[removeBackground,makeGif,imageOcr]),
+  avif: imageActions([A('JPG','/avif-to-jpg'),A('PNG','/avif-to-png'),A('WebP','/avif-to-webp'),A('PDF','/avif-to-pdf')],[makeGif]),
+  tif: imageActions([A('JPG','/tiff-to-jpg'),A('PNG','/tiff-to-png'),A('WebP','/tiff-to-webp'),A('PDF','/tiff-to-pdf')]),
+  tiff: imageActions([A('JPG','/tiff-to-jpg'),A('PNG','/tiff-to-png'),A('WebP','/tiff-to-webp'),A('PDF','/tiff-to-pdf')]),
+  ico: imageActions([A('JPG','/ico-to-jpg'),A('PNG','/ico-to-png'),A('WebP','/ico-to-webp'),A('PDF','/ico-to-pdf')]),
+  svg: imageActions([A('JPG','/svg-to-jpg'),A('PNG','/svg-to-png'),A('WebP','/svg-to-webp'),A('PDF','/svg-to-pdf')]),
+
+  pdf: [
+    A('JPG','/pdf-to-jpg'), A('PNG','/pdf-to-png'), A('Text','/pdf-to-text'),
+    TOOL('OCR','/pdf-ocr'), TOOL('Compress','/compress-pdf'),
+    TOOL('Split','/split-pdf'), TOOL('Merge','/merge-pdf'),
+    TOOL('Rotate','/rotate-pdf'), TOOL('Reorder pages','/reorder-pdf-pages'),
+    TOOL('Delete pages','/delete-pdf-pages'), TOOL('Extract pages','/extract-pdf-pages'),
+  ],
+
+  mp4: videoActions('mp4', ['webm','mov','avi','mkv']),
+  webm: videoActions('webm', ['mp4','mov','avi','mkv']),
+  mov: videoActions('mov', ['mp4','webm','avi','mkv']),
+  avi: videoActions('avi', ['mp4','webm','mov','mkv']),
+  mkv: videoActions('mkv', ['mp4','webm','mov','avi']),
+
+  mp3: audioActions('mp3', ['wav','ogg','flac','m4a','aac']),
+  wav: audioActions('wav', ['mp3','ogg','flac','m4a','aac']),
+  ogg: audioActions('ogg', ['wav','mp3','flac','m4a','aac']),
+  flac: audioActions('flac', ['wav','mp3','ogg','m4a','aac']),
+  m4a: audioActions('m4a', ['wav','mp3','ogg','flac','aac']),
+  aac: audioActions('aac', ['wav','mp3','ogg','flac','m4a']),
+
+  epub: [A('TXT','/epub-to-txt'),A('PDF','/epub-to-pdf')],
+  rtf: [A('TXT','/rtf-to-txt'),A('PDF','/rtf-to-pdf')],
+  docx: [A('TXT','/docx-to-txt'),A('PDF','/docx-to-pdf')],
+  mobi: [A('TXT','/mobi-to-txt'),A('PDF','/mobi-to-pdf')],
+  prc: [A('TXT','/mobi-to-txt'),A('PDF','/mobi-to-pdf')],
+
+  ttf: [A('OTF','/ttf-to-otf'),A('WOFF','/ttf-to-woff')],
+  otf: [A('TTF','/otf-to-ttf'),A('WOFF','/otf-to-woff')],
+  woff: [A('TTF','/woff-to-ttf'),A('OTF','/woff-to-otf')],
+
+  zip: [TOOL('Extract files','/extract-zip')],
+};
 
 const MIME_EXT = {
   'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif',
@@ -149,7 +163,7 @@ async function setActiveFile(file) {
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error);
     });
-  } catch { /* best effort */ }
+  } catch { /* best effort: persistence is an enhancement */ }
 }
 
 async function peekPendingFile() {
@@ -166,28 +180,6 @@ async function peekPendingFile() {
     const keys = await reqResult(store.getAllKeys());
     return keys.length ? await reqResult(store.get(keys[0])) : null;
   } catch { return null; }
-}
-
-async function stageForNextPage(file) {
-  if (!file) return;
-  try {
-    const db = await new Promise((resolve, reject) => {
-      const req = indexedDB.open('irisfiles', 1);
-      req.onupgradeneeded = () => {
-        if (!req.result.objectStoreNames.contains('pending')) req.result.createObjectStore('pending');
-      };
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction('pending', 'readwrite');
-      const store = tx.objectStore('pending');
-      store.clear();
-      store.put(file, 0);
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error);
-    });
-  } catch { /* current active store still survives */ }
 }
 
 function prettySize(bytes) {
@@ -253,7 +245,7 @@ function render(file, dropZone) {
         <div class="file-focus__icon" aria-hidden="true">${iconFor(ext)}</div>
         <div class="file-focus__file">
           <div class="file-focus__eyebrow">Current file</div>
-          <div class="file-focus__name" title="${escapeHtml(file.name)}">${escapeHtml(file.name || 'Untitled file')}</div>
+          <div class="file-focus__name" title="${escapeHtml(file.name || '')}">${escapeHtml(file.name || 'Untitled file')}</div>
           <div class="file-focus__meta">${escapeHtml((ext || 'file').toUpperCase())}${file.size != null ? ` · ${prettySize(file.size)}` : ''}<span class="file-focus__kept"> · original stays active</span></div>
         </div>
       </div>
@@ -263,25 +255,38 @@ function render(file, dropZone) {
   `;
 
   panel.querySelector('#active-file-change')?.addEventListener('click', () => {
-    document.querySelector('#file-input')?.click();
-  });
-  panel.querySelectorAll('[data-file-focus-route]').forEach(link => {
-    link.addEventListener('click', () => { stageForNextPage(file); });
+    const selector = panel.dataset.inputSelector || '#file-input';
+    document.querySelector(selector)?.click();
   });
 
   document.documentElement.classList.add('has-active-file');
-  if (dropZone) dropZone.classList.add('compact');
+  dropZone?.classList.add('compact');
 }
 
 function pageAcceptsFile(file) {
-  const actions = actionsFor(file);
   const path = normalizePath();
-  return actions.some(action => normalizePath(action.href) === path);
+  return actionsFor(file).some(action => normalizePath(action.href) === path);
 }
 
-function hydrateInput(file, fileInput) {
-  if (!file || !fileInput || fileInput.files?.length || !pageAcceptsFile(file)) return false;
-  if (typeof DataTransfer !== 'function') return false;
+function fileAlreadyRendered(file, fileInput) {
+  if (fileInput?.files?.length) return true;
+  const expected = file?.name || '';
+  if (!expected) return false;
+  return Array.from(document.querySelectorAll('.file-item__name, .frame-item__name'))
+    .some(node => node.textContent?.trim() === expected);
+}
+
+async function hydrateWhenNeeded(file, fileInput) {
+  if (!file || !fileInput || !pageAcceptsFile(file) || typeof DataTransfer !== 'function') return false;
+
+  // Converter pages may already be consuming Smart Drop's pending-file handoff.
+  // Give that path a brief head start and do not inject the same file twice.
+  for (let i = 0; i < 5; i++) {
+    if (fileAlreadyRendered(file, fileInput)) return false;
+    await new Promise(resolve => setTimeout(resolve, 40));
+  }
+  if (fileAlreadyRendered(file, fileInput)) return false;
+
   try {
     const dt = new DataTransfer();
     dt.items.add(file);
@@ -296,8 +301,10 @@ function hydrateInput(file, fileInput) {
 export async function initPersistentFileFocus(options = {}) {
   ensureStylesheet();
 
-  const fileInput = document.querySelector(options.fileInputSelector || '#file-input');
-  const dropZone = document.querySelector(options.dropZoneSelector || '#drop-zone');
+  const fileInputSelector = options.fileInputSelector || '#file-input';
+  const dropZoneSelector = options.dropZoneSelector || '#drop-zone';
+  const fileInput = document.querySelector(fileInputSelector);
+  const dropZone = document.querySelector(dropZoneSelector);
   if (!fileInput || document.documentElement.dataset.fileFocusReady === '1') return;
   document.documentElement.dataset.fileFocusReady = '1';
 
@@ -310,7 +317,9 @@ export async function initPersistentFileFocus(options = {}) {
 
   if (active) {
     render(active, dropZone);
-    queueMicrotask(() => hydrateInput(active, fileInput));
+    const panel = document.querySelector('#active-file-focus');
+    if (panel) panel.dataset.inputSelector = fileInputSelector;
+    hydrateWhenNeeded(active, fileInput).catch(() => {});
   }
 
   fileInput.addEventListener('change', async () => {
@@ -318,6 +327,8 @@ export async function initPersistentFileFocus(options = {}) {
     if (!next) return;
     await setActiveFile(next);
     render(next, dropZone);
+    const panel = document.querySelector('#active-file-focus');
+    if (panel) panel.dataset.inputSelector = fileInputSelector;
   }, true);
 
   dropZone?.addEventListener('drop', async event => {
@@ -325,6 +336,8 @@ export async function initPersistentFileFocus(options = {}) {
     if (!next) return;
     await setActiveFile(next);
     render(next, dropZone);
+    const panel = document.querySelector('#active-file-focus');
+    if (panel) panel.dataset.inputSelector = fileInputSelector;
   }, true);
 }
 
