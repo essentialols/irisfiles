@@ -22,6 +22,12 @@ Each run measures a baseline on a pristine `origin/main` worktree, then runs the
 suite **inside each fix's own worktree, before anything is pushed**. `validate.mjs`
 alone cannot see a behavioural regression, so it is a precondition, not the gate.
 
+A finding whose file is already changed by an open PR is skipped and left in the
+log. Triage keeps re-finding a bug for as long as its fix sits unmerged: on
+2026-09-12 three findings came back against files the 09-11 PRs had already
+fixed, and the bot wrote a second, different fix for each. Merging or closing the
+queue is what actually clears those findings.
+
 ## Launching
 
 | How | Command | When |

@@ -222,6 +222,23 @@ async function globalChecks() {
   ok(stalePages.length === 0,
     `${stalePages.length} page(s) link a stale stylesheet version, e.g. ${stalePages[0]} (run: node scripts/css-version.mjs --write)`);
 
+  // Sheets linked directly rather than through the shim are served with the same
+  // max-age, so an unversioned one is invisible to returning visitors for hours.
+  const unversionedLinks = [];
+  for (const file of htmlFiles()) {
+    const src = readFileSync(join(ROOT, file), 'utf8');
+    for (const [match, , version] of src.matchAll(/href="css\/([a-z-]+\.css)(?:\?v=([^"]*))?"/g)) {
+      if (version !== expectedCssVersion) unversionedLinks.push(`${file}: ${match}`);
+    }
+  }
+  ok(unversionedLinks.length === 0,
+    `${unversionedLinks.length} stylesheet link(s) missing the current ?v=, e.g. ${unversionedLinks[0]} (run: node scripts/css-version.mjs --write)`);
+
+  const injectedHref = readFileSync(join(ROOT, 'js/file-focus.js'), 'utf8')
+    .match(/const CSS_HREF = '([^']+)'/)?.[1];
+  ok(injectedHref?.endsWith(`?v=${expectedCssVersion}`),
+    `js/file-focus.js injects ${injectedHref}, expected ?v=${expectedCssVersion} (run: node scripts/css-version.mjs --write)`);
+
   const vercelJson = JSON.parse(readFileSync(join(ROOT, 'vercel.json'), 'utf8'));
   const cspHeader = vercelJson.headers
     .find(h => h.source === '/(.*)')
