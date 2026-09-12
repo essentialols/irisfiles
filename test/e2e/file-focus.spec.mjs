@@ -121,6 +121,17 @@ test.describe('Persistent current-file workspace', () => {
     await expect(workspace.locator('a[href="/background-remover"]')).toBeVisible();
     await expect(workspace.locator('a[href="/image-to-text"]')).toBeVisible();
     await expect(workspace.locator('a[href="/png-to-ico"]')).toBeVisible();
+    await expect(workspace.locator('a[href="/create-zip"]')).toBeVisible();
+  });
+
+  test('even an otherwise unsupported file can stay active in Create ZIP', async ({ page }) => {
+    await page.goto('/create-zip');
+    await page.locator('#file-input').setInputFiles(fixture('sample.txt'));
+
+    const workspace = page.locator('#active-file-focus');
+    await expect(workspace).toBeVisible();
+    await expect(workspace.locator('.file-focus__name')).toHaveText('sample.txt');
+    await expect(workspace.locator('a[href="/create-zip"]')).toHaveClass(/is-current/);
   });
 
   test('mobile actions stay compact and horizontally scrollable', async ({ page }) => {
