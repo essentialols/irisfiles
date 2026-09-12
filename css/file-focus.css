@@ -1,0 +1,179 @@
+/* Persistent current-file workspace */
+.file-focus {
+  position: sticky;
+  top: 4.25rem;
+  z-index: 20;
+  margin: 1rem 0 1.1rem;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 14px;
+  background: var(--bg, #fff);
+  background: color-mix(in srgb, var(--bg, #fff) 94%, transparent);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+.file-focus__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+  padding: .78rem .9rem .68rem;
+}
+.file-focus__identity {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  min-width: 0;
+}
+.file-focus__icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 10px;
+  border: 1px solid var(--border, #e2e8f0);
+  background: var(--bg-secondary, #f8fafc);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  font-size: .72rem;
+  line-height: 1;
+  font-weight: 800;
+  color: var(--text-muted, #64748b);
+}
+.file-focus__file { min-width: 0; }
+.file-focus__eyebrow {
+  font-size: .64rem;
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: .075em;
+  font-weight: 700;
+  color: var(--text-muted, #64748b);
+  margin-bottom: .12rem;
+}
+.file-focus__name {
+  max-width: min(56vw, 34rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .92rem;
+  line-height: 1.25;
+  font-weight: 700;
+  color: var(--text, #0f172a);
+}
+.file-focus__count {
+  display: inline-flex;
+  margin-left: .4rem;
+  padding: .12rem .38rem;
+  border-radius: 999px;
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-muted, #64748b);
+  font-size: .66rem;
+  font-weight: 700;
+  vertical-align: .08rem;
+}
+.file-focus__meta {
+  margin-top: .08rem;
+  color: var(--text-muted, #64748b);
+  font-size: .7rem;
+  line-height: 1.3;
+}
+.file-focus__kept { white-space: nowrap; }
+.file-focus__change {
+  flex: 0 0 auto;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 9px;
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text, #0f172a);
+  padding: .43rem .68rem;
+  font: inherit;
+  font-size: .76rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.file-focus__change:hover { background: #f1f5f9; }
+.file-focus__workspace {
+  border-top: 1px solid var(--border, #e2e8f0);
+  padding: .6rem .9rem .75rem;
+  display: grid;
+  gap: .52rem;
+}
+.file-focus__group {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: .55rem;
+}
+.file-focus__group-label {
+  font-size: .69rem;
+  font-weight: 700;
+  color: var(--text-muted, #64748b);
+}
+.file-focus__actions {
+  display: flex;
+  align-items: center;
+  gap: .36rem;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  padding: .05rem .08rem .12rem;
+}
+.file-focus__action {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: .34rem .61rem;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 999px;
+  background: var(--bg, #fff);
+  color: var(--text, #0f172a);
+  text-decoration: none;
+  font-size: .75rem;
+  line-height: 1;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.file-focus__action:hover {
+  border-color: #94a3b8;
+  background: var(--bg-secondary, #f8fafc);
+}
+.file-focus__action.is-current {
+  border-color: var(--primary, #2563eb);
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 750;
+}
+.file-focus__empty {
+  font-size: .76rem;
+  line-height: 1.45;
+  color: var(--text-muted, #64748b);
+}
+
+@media (max-width: 640px) {
+  .file-focus {
+    top: 4rem;
+    margin-left: -.25rem;
+    margin-right: -.25rem;
+    border-radius: 12px;
+  }
+  .file-focus__top { padding: .68rem .72rem .58rem; }
+  .file-focus__icon { width: 2rem; height: 2rem; border-radius: 8px; }
+  .file-focus__name { max-width: 52vw; font-size: .86rem; }
+  .file-focus__count { font-size: .62rem; }
+  .file-focus__kept { display: none; }
+  .file-focus__change { padding: .4rem .55rem; font-size: .71rem; }
+  .file-focus__workspace { padding: .5rem .72rem .6rem; gap: .42rem; }
+  .file-focus__group { grid-template-columns: 1fr; gap: .22rem; }
+  .file-focus__group-label { font-size: .64rem; }
+  .file-focus__actions { margin-right: -.72rem; padding-right: .72rem; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .file-focus {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--bg, #fff);
+  }
+}

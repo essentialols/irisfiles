@@ -1,3 +1,5 @@
+import { initPersistentFileFocus } from './file-focus.js';
+
 export function enableKeyboardDropZone(dropZoneSelector = '#drop-zone', fileInputSelector = '#file-input') {
   const dropZone = typeof dropZoneSelector === 'string'
     ? document.querySelector(dropZoneSelector)
@@ -110,4 +112,5 @@ export function applyPageUX(options = {}) {
   enhanceFaqSemantics(document);
   normalizeActionLabels(document);
   injectPreflightBadge(options);
+  initPersistentFileFocus(options).catch(() => {});
 }
