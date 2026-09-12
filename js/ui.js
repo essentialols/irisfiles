@@ -340,14 +340,19 @@ function updateFileItem(entry) {
       ${isImage ? '<button class="btn btn--secondary btn-details" style="padding:0.4rem 0.8rem;font-size:0.8rem">Details</button>' : ''}
       <button class="btn btn--danger btn-remove">Remove</button>
     `;
-    actions.querySelector('.btn-download').addEventListener('click', () => {
+    const downloadBtn = actions.querySelector('.btn-download');
+    downloadBtn.setAttribute('aria-label', `Download ${entry.outputName}`);
+    downloadBtn.addEventListener('click', () => {
       downloadBlob(entry.outputBlob, entry.outputName);
     });
     const detailsBtn = actions.querySelector('.btn-details');
     if (detailsBtn) {
+      detailsBtn.setAttribute('aria-label', `Show details for ${entry.file.name}`);
       detailsBtn.addEventListener('click', () => toggleMetaPanel(entry, div, detailsBtn));
     }
-    actions.querySelector('.btn-remove').addEventListener('click', () => {
+    const removeBtn = actions.querySelector('.btn-remove');
+    removeBtn.setAttribute('aria-label', `Remove ${entry.file.name}`);
+    removeBtn.addEventListener('click', () => {
       removeFile(entry.id);
     });
   } else if (entry.status === 'error') {
@@ -356,7 +361,9 @@ function updateFileItem(entry) {
       <span class="file-item__status error">${escapeHtml(entry.errorMsg || 'Error')}</span>
       <button class="btn btn--danger btn-remove">Remove</button>
     `;
-    actions.querySelector('.btn-remove').addEventListener('click', () => {
+    const removeBtn = actions.querySelector('.btn-remove');
+    removeBtn.setAttribute('aria-label', `Remove ${entry.file.name}`);
+    removeBtn.addEventListener('click', () => {
       removeFile(entry.id);
     });
   }
@@ -368,9 +375,11 @@ async function toggleMetaPanel(entry, fileDiv, btn) {
     const isHidden = existingPanel.style.display === 'none';
     existingPanel.style.display = isHidden ? '' : 'none';
     btn.textContent = isHidden ? 'Hide Details' : 'Details';
+    btn.setAttribute('aria-label', `${isHidden ? 'Hide' : 'Show'} details for ${entry.file.name}`);
     return;
   }
   btn.textContent = 'Loading...';
+  btn.setAttribute('aria-label', `Loading details for ${entry.file.name}`);
   btn.disabled = true;
   try {
     const { createMetadataPanel } = await import('./meta-panel.js');
@@ -378,9 +387,11 @@ async function toggleMetaPanel(entry, fileDiv, btn) {
     fileDiv.after(container);
     await promise;
     btn.textContent = 'Hide Details';
+    btn.setAttribute('aria-label', `Hide details for ${entry.file.name}`);
   } catch (err) {
     console.error('Metadata panel error:', err);
     btn.textContent = 'Details';
+    btn.setAttribute('aria-label', `Show details for ${entry.file.name}`);
   }
   btn.disabled = false;
 }
