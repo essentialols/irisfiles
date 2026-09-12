@@ -442,7 +442,7 @@ function removeFile(id) {
 
 function updateBatchActions() {
   const doneFiles = fileQueue.filter(f => f.status === 'done');
-  const actionable = fileQueue.filter(f => f.status === 'pending' || f.status === 'done');
+  const actionable = fileQueue.filter(f => f.status === 'pending' || f.status === 'done' || (f.status === 'error' && !f.validationError));
   if (resizeBtn) {
     resizeBtn.style.display = actionable.length > 0 ? '' : 'none';
   }
