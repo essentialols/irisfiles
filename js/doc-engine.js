@@ -378,7 +378,6 @@ function parseRtf(rtfString) {
           text += String.fromCharCode(code < 0 ? code + 65536 : code);
         }
         fallbackChars = unicodeFallbackLength;
-        if (hasDelimiter && fallbackChars > 0) fallbackChars--;
       } else if (word === 'lquote') {
         appendControlCharacter('\u2018');
       } else if (word === 'rquote') {
