@@ -1,54 +1,125 @@
 const ACTIVE_DB = 'irisfiles-active-file';
 const ACTIVE_STORE = 'active';
 const ACTIVE_KEY = 'current';
+const CSS_HREF = '/css/file-focus.css';
 
-const ROUTES_BY_EXT = {
-  heic: [['JPG','/heic-to-jpg'],['PNG','/heic-to-png'],['WebP','/heic-to-webp'],['PDF','/heic-to-pdf'],['Metadata','/image-metadata'],['Compress','/compress'],['Resize','/resize-image'],['Strip EXIF','/strip-exif']],
-  heif: [['JPG','/heic-to-jpg'],['PNG','/heic-to-png'],['WebP','/heic-to-webp'],['PDF','/heic-to-pdf'],['Metadata','/image-metadata'],['Compress','/compress'],['Resize','/resize-image'],['Strip EXIF','/strip-exif']],
-  jpg: [['PNG','/jpg-to-png'],['WebP','/jpg-to-webp'],['GIF','/jpg-to-gif'],['PDF','/jpg-to-pdf'],['Metadata','/image-metadata'],['Compress','/compress'],['Resize','/resize-image'],['Strip EXIF','/strip-exif']],
-  jpeg: [['PNG','/jpg-to-png'],['WebP','/jpg-to-webp'],['GIF','/jpg-to-gif'],['PDF','/jpg-to-pdf'],['Metadata','/image-metadata'],['Compress','/compress'],['Resize','/resize-image'],['Strip EXIF','/strip-exif']],
-  png: [['JPG','/png-to-jpg'],['WebP','/png-to-webp'],['GIF','/png-to-gif'],['PDF','/png-to-pdf'],['Metadata','/image-metadata'],['Compress','/compress'],['Resize','/resize-image'],['Strip EXIF','/strip-exif']],
-  webp: [['JPG','/webp-to-jpg'],['PNG','/webp-to-png'],['GIF','/webp-to-gif'],['PDF','/webp-to-pdf'],['Metadata','/image-metadata'],['Compress','/compress'],['Resize','/resize-image'],['Strip EXIF','/strip-exif']],
-  gif: [['JPG','/gif-to-jpg'],['PNG','/gif-to-png'],['WebP','/gif-to-webp'],['PDF','/gif-to-pdf'],['MP4','/gif-to-mp4'],['WebM','/gif-to-webm'],['MOV','/gif-to-mov'],['AVI','/gif-to-avi'],['MKV','/gif-to-mkv']],
-  bmp: [['JPG','/bmp-to-jpg'],['PNG','/bmp-to-png'],['WebP','/bmp-to-webp'],['PDF','/bmp-to-pdf'],['Metadata','/image-metadata'],['Compress','/compress'],['Resize','/resize-image']],
-  avif: [['JPG','/avif-to-jpg'],['PNG','/avif-to-png'],['WebP','/avif-to-webp'],['PDF','/avif-to-pdf'],['Metadata','/image-metadata'],['Compress','/compress'],['Resize','/resize-image']],
-  tif: [['JPG','/tiff-to-jpg'],['PNG','/tiff-to-png'],['WebP','/tiff-to-webp'],['PDF','/tiff-to-pdf'],['Metadata','/image-metadata'],['Compress','/compress'],['Resize','/resize-image']],
-  tiff: [['JPG','/tiff-to-jpg'],['PNG','/tiff-to-png'],['WebP','/tiff-to-webp'],['PDF','/tiff-to-pdf'],['Metadata','/image-metadata'],['Compress','/compress'],['Resize','/resize-image']],
-  ico: [['JPG','/ico-to-jpg'],['PNG','/ico-to-png'],['WebP','/ico-to-webp'],['PDF','/ico-to-pdf'],['Metadata','/image-metadata']],
-  svg: [['JPG','/svg-to-jpg'],['PNG','/svg-to-png'],['WebP','/svg-to-webp'],['PDF','/svg-to-pdf'],['Metadata','/image-metadata']],
-  pdf: [['JPG','/pdf-to-jpg'],['PNG','/pdf-to-png'],['Split','/split-pdf'],['Merge','/merge-pdf'],['OCR','/pdf-ocr']],
-  mp4: [['WebM','/mp4-to-webm'],['MOV','/mp4-to-mov'],['AVI','/mp4-to-avi'],['MKV','/mp4-to-mkv'],['GIF','/mp4-to-gif'],['Metadata','/video-metadata'],['Compress','/compress-video'],['Speed','/video-speed']],
-  webm: [['MP4','/webm-to-mp4'],['MOV','/webm-to-mov'],['AVI','/webm-to-avi'],['MKV','/webm-to-mkv'],['GIF','/webm-to-gif'],['Metadata','/video-metadata'],['Compress','/compress-video'],['Speed','/video-speed']],
-  mov: [['MP4','/mov-to-mp4'],['WebM','/mov-to-webm'],['AVI','/mov-to-avi'],['MKV','/mov-to-mkv'],['GIF','/mov-to-gif'],['Metadata','/video-metadata'],['Compress','/compress-video'],['Speed','/video-speed']],
-  avi: [['MP4','/avi-to-mp4'],['WebM','/avi-to-webm'],['MOV','/avi-to-mov'],['MKV','/avi-to-mkv'],['GIF','/avi-to-gif'],['Metadata','/video-metadata'],['Compress','/compress-video'],['Speed','/video-speed']],
-  mkv: [['MP4','/mkv-to-mp4'],['WebM','/mkv-to-webm'],['MOV','/mkv-to-mov'],['AVI','/mkv-to-avi'],['GIF','/mkv-to-gif'],['Metadata','/video-metadata'],['Compress','/compress-video'],['Speed','/video-speed']],
-  mp3: [['WAV','/mp3-to-wav'],['OGG','/mp3-to-ogg'],['FLAC','/mp3-to-flac'],['M4A','/mp3-to-m4a'],['AAC','/mp3-to-aac'],['Compress','/compress-audio']],
-  wav: [['MP3','/wav-to-mp3'],['OGG','/wav-to-ogg'],['FLAC','/wav-to-flac'],['M4A','/wav-to-m4a'],['AAC','/wav-to-aac'],['Compress','/compress-audio']],
-  ogg: [['WAV','/ogg-to-wav'],['MP3','/ogg-to-mp3'],['FLAC','/ogg-to-flac'],['M4A','/ogg-to-m4a'],['AAC','/ogg-to-aac'],['Compress','/compress-audio']],
-  flac: [['WAV','/flac-to-wav'],['MP3','/flac-to-mp3'],['OGG','/flac-to-ogg'],['M4A','/flac-to-m4a'],['AAC','/flac-to-aac'],['Compress','/compress-audio']],
-  m4a: [['WAV','/m4a-to-wav'],['MP3','/m4a-to-mp3'],['OGG','/m4a-to-ogg'],['FLAC','/m4a-to-flac'],['AAC','/m4a-to-aac'],['Compress','/compress-audio']],
-  aac: [['WAV','/aac-to-wav'],['MP3','/aac-to-mp3'],['OGG','/aac-to-ogg'],['FLAC','/aac-to-flac'],['M4A','/aac-to-m4a'],['Compress','/compress-audio']],
-  epub: [['TXT','/epub-to-txt'],['PDF','/epub-to-pdf']],
-  rtf: [['TXT','/rtf-to-txt'],['PDF','/rtf-to-pdf']],
-  docx: [['TXT','/docx-to-txt'],['PDF','/docx-to-pdf']],
-  mobi: [['TXT','/mobi-to-txt'],['PDF','/mobi-to-pdf']],
-  prc: [['TXT','/mobi-to-txt'],['PDF','/mobi-to-pdf']],
-  ttf: [['OTF','/ttf-to-otf'],['WOFF','/ttf-to-woff']],
-  otf: [['TTF','/otf-to-ttf'],['WOFF','/otf-to-woff']],
-  woff: [['TTF','/woff-to-ttf'],['OTF','/woff-to-otf']],
-  zip: [['Extract','/extract-zip']],
+const A = (label, href, kind = 'convert') => ({ label, href, kind });
+const imageTools = (extra = []) => [
+  ...extra,
+  A('Metadata', '/image-metadata', 'tool'),
+  A('Compress', '/compress', 'tool'),
+  A('Resize', '/resize-image', 'tool'),
+  A('Strip EXIF', '/strip-exif', 'tool'),
+  A('Make GIF', '/images-to-gif', 'tool'),
+  A('Extract text', '/image-to-text', 'tool'),
+];
+const bgTool = A('Remove background', '/background-remover', 'tool');
+
+const ACTIONS_BY_EXT = {
+  heic: [A('JPG','/heic-to-jpg'),A('PNG','/heic-to-png'),A('WebP','/heic-to-webp'),A('PDF','/heic-to-pdf'),...imageTools()],
+  heif: [A('JPG','/heic-to-jpg'),A('PNG','/heic-to-png'),A('WebP','/heic-to-webp'),A('PDF','/heic-to-pdf'),...imageTools()],
+  jpg: [A('PNG','/jpg-to-png'),A('WebP','/jpg-to-webp'),A('GIF','/jpg-to-gif'),A('PDF','/jpg-to-pdf'),...imageTools([bgTool])],
+  jpeg: [A('PNG','/jpg-to-png'),A('WebP','/jpg-to-webp'),A('GIF','/jpg-to-gif'),A('PDF','/jpg-to-pdf'),...imageTools([bgTool])],
+  png: [A('JPG','/png-to-jpg'),A('WebP','/png-to-webp'),A('GIF','/png-to-gif'),A('PDF','/png-to-pdf'),A('ICO','/png-to-ico'),...imageTools([bgTool])],
+  webp: [A('JPG','/webp-to-jpg'),A('PNG','/webp-to-png'),A('GIF','/webp-to-gif'),A('PDF','/webp-to-pdf'),...imageTools([bgTool])],
+  gif: [A('JPG','/gif-to-jpg'),A('PNG','/gif-to-png'),A('WebP','/gif-to-webp'),A('PDF','/gif-to-pdf'),A('MP4','/gif-to-mp4'),A('WebM','/gif-to-webm'),A('MOV','/gif-to-mov'),A('AVI','/gif-to-avi'),A('MKV','/gif-to-mkv'),...imageTools()],
+  bmp: [A('JPG','/bmp-to-jpg'),A('PNG','/bmp-to-png'),A('WebP','/bmp-to-webp'),A('PDF','/bmp-to-pdf'),...imageTools([bgTool])],
+  avif: [A('JPG','/avif-to-jpg'),A('PNG','/avif-to-png'),A('WebP','/avif-to-webp'),A('PDF','/avif-to-pdf'),...imageTools()],
+  tif: [A('JPG','/tiff-to-jpg'),A('PNG','/tiff-to-png'),A('WebP','/tiff-to-webp'),A('PDF','/tiff-to-pdf'),...imageTools()],
+  tiff: [A('JPG','/tiff-to-jpg'),A('PNG','/tiff-to-png'),A('WebP','/tiff-to-webp'),A('PDF','/tiff-to-pdf'),...imageTools()],
+  ico: [A('JPG','/ico-to-jpg'),A('PNG','/ico-to-png'),A('WebP','/ico-to-webp'),A('PDF','/ico-to-pdf'),...imageTools()],
+  svg: [A('JPG','/svg-to-jpg'),A('PNG','/svg-to-png'),A('WebP','/svg-to-webp'),A('PDF','/svg-to-pdf'),...imageTools()],
+  pdf: [
+    A('JPG','/pdf-to-jpg'),A('PNG','/pdf-to-png'),A('Text','/pdf-to-text'),
+    A('OCR','/pdf-ocr','tool'),A('Compress','/compress-pdf','tool'),
+    A('Split','/split-pdf','tool'),A('Merge','/merge-pdf','tool'),
+    A('Rotate','/rotate-pdf','tool'),A('Reorder pages','/reorder-pdf-pages','tool'),
+    A('Delete pages','/delete-pdf-pages','tool'),A('Extract pages','/extract-pdf-pages','tool'),
+  ],
+  mp4: videoActions('mp4', ['webm','mov','avi','mkv']),
+  webm: videoActions('webm', ['mp4','mov','avi','mkv']),
+  mov: videoActions('mov', ['mp4','webm','avi','mkv']),
+  avi: videoActions('avi', ['mp4','webm','mov','mkv']),
+  mkv: videoActions('mkv', ['mp4','webm','mov','avi']),
+  mp3: audioActions('mp3', ['wav','ogg','flac','m4a','aac']),
+  wav: audioActions('wav', ['mp3','ogg','flac','m4a','aac']),
+  ogg: audioActions('ogg', ['wav','mp3','flac','m4a','aac']),
+  flac: audioActions('flac', ['wav','mp3','ogg','m4a','aac']),
+  m4a: audioActions('m4a', ['wav','mp3','ogg','flac','aac']),
+  aac: audioActions('aac', ['wav','mp3','ogg','flac','m4a']),
+  epub: [A('TXT','/epub-to-txt'),A('PDF','/epub-to-pdf')],
+  rtf: [A('TXT','/rtf-to-txt'),A('PDF','/rtf-to-pdf')],
+  docx: [A('TXT','/docx-to-txt'),A('PDF','/docx-to-pdf')],
+  mobi: [A('TXT','/mobi-to-txt'),A('PDF','/mobi-to-pdf')],
+  prc: [A('TXT','/mobi-to-txt'),A('PDF','/mobi-to-pdf')],
+  ttf: [A('OTF','/ttf-to-otf'),A('WOFF','/ttf-to-woff')],
+  otf: [A('TTF','/otf-to-ttf'),A('WOFF','/otf-to-woff')],
+  woff: [A('TTF','/woff-to-ttf'),A('OTF','/woff-to-otf')],
+  zip: [A('Extract files','/extract-zip','tool')],
 };
+
+function videoActions(src, targets) {
+  return [
+    ...targets.map(ext => A(ext.toUpperCase(), `/${src}-to-${ext}`)),
+    A('GIF', `/${src}-to-gif`),
+    A('MP3', `/${src}-to-mp3`),
+    A('WAV', `/${src}-to-wav`),
+    A('Metadata','/video-metadata','tool'),
+    A('Compress','/compress-video','tool'),
+    A('Speed','/video-speed','tool'),
+  ];
+}
+
+function audioActions(src, targets) {
+  return [
+    ...targets.map(ext => A(ext.toUpperCase(), `/${src}-to-${ext}`)),
+    A('Compress','/compress-audio','tool'),
+  ];
+}
+
+const MIME_EXT = {
+  'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif',
+  'image/bmp':'bmp','image/avif':'avif','image/heic':'heic','image/heif':'heif',
+  'image/tiff':'tiff','image/x-icon':'ico','image/svg+xml':'svg',
+  'application/pdf':'pdf','video/mp4':'mp4','video/webm':'webm','video/quicktime':'mov',
+  'video/x-msvideo':'avi','video/x-matroska':'mkv','audio/mpeg':'mp3',
+  'audio/wav':'wav','audio/ogg':'ogg','audio/flac':'flac','audio/mp4':'m4a',
+  'audio/aac':'aac','application/epub+zip':'epub','application/rtf':'rtf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document':'docx',
+  'application/x-mobipocket-ebook':'mobi','font/ttf':'ttf','font/otf':'otf',
+  'font/woff':'woff','application/zip':'zip',
+};
+
+function ensureStylesheet() {
+  if (document.querySelector(`link[href="${CSS_HREF}"]`)) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = CSS_HREF;
+  document.head.appendChild(link);
+}
 
 function extOf(file) {
   const name = file?.name || '';
   const dot = name.lastIndexOf('.');
-  return dot >= 0 ? name.slice(dot + 1).toLowerCase() : '';
+  const fromName = dot >= 0 ? name.slice(dot + 1).toLowerCase() : '';
+  return fromName || MIME_EXT[file?.type] || '';
+}
+
+function actionsFor(file) {
+  return ACTIONS_BY_EXT[extOf(file)] || [];
+}
+
+function normalizePath(path = location.pathname) {
+  const trimmed = path.replace(/\/+$/, '');
+  return trimmed || '/';
 }
 
 function openActiveDb() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(ACTIVE_DB, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(ACTIVE_STORE);
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains(ACTIVE_STORE)) req.result.createObjectStore(ACTIVE_STORE);
+    };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
@@ -72,8 +143,12 @@ async function setActiveFile(file) {
   if (!file) return;
   try {
     const db = await openActiveDb();
-    const tx = db.transaction(ACTIVE_STORE, 'readwrite');
-    tx.objectStore(ACTIVE_STORE).put(file, ACTIVE_KEY);
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(ACTIVE_STORE, 'readwrite');
+      tx.objectStore(ACTIVE_STORE).put(file, ACTIVE_KEY);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
   } catch { /* best effort */ }
 }
 
@@ -81,7 +156,9 @@ async function peekPendingFile() {
   try {
     const db = await new Promise((resolve, reject) => {
       const req = indexedDB.open('irisfiles', 1);
-      req.onupgradeneeded = () => req.result.createObjectStore('pending');
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains('pending')) req.result.createObjectStore('pending');
+      };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
@@ -91,6 +168,28 @@ async function peekPendingFile() {
   } catch { return null; }
 }
 
+async function stageForNextPage(file) {
+  if (!file) return;
+  try {
+    const db = await new Promise((resolve, reject) => {
+      const req = indexedDB.open('irisfiles', 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains('pending')) req.result.createObjectStore('pending');
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('pending', 'readwrite');
+      const store = tx.objectStore('pending');
+      store.clear();
+      store.put(file, 0);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch { /* current active store still survives */ }
+}
+
 function prettySize(bytes) {
   if (!Number.isFinite(bytes)) return '';
   if (bytes < 1024) return `${bytes} B`;
@@ -98,88 +197,135 @@ function prettySize(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function render(file) {
-  const dropZone = document.querySelector('#drop-zone');
-  if (!dropZone || !file) return;
-  const routes = ROUTES_BY_EXT[extOf(file)] || [];
-  if (!routes.length) return;
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function iconFor(ext) {
+  if (['jpg','jpeg','png','webp','gif','bmp','avif','tif','tiff','ico','svg','heic','heif'].includes(ext)) return '▧';
+  if (['mp4','webm','mov','avi','mkv'].includes(ext)) return '▶';
+  if (['mp3','wav','ogg','flac','m4a','aac'].includes(ext)) return '♪';
+  if (ext === 'pdf') return 'PDF';
+  if (['ttf','otf','woff'].includes(ext)) return 'Aa';
+  if (ext === 'zip') return 'ZIP';
+  return 'FILE';
+}
+
+function renderGroup(title, actions, path) {
+  if (!actions.length) return '';
+  const links = actions.map(action => {
+    const active = path === normalizePath(action.href);
+    return `<a class="file-focus__action${active ? ' is-current' : ''}" href="${action.href}" data-file-focus-route="${action.href}"${active ? ' aria-current="page"' : ''}>${escapeHtml(action.label)}</a>`;
+  }).join('');
+  return `<div class="file-focus__group"><span class="file-focus__group-label">${title}</span><div class="file-focus__actions">${links}</div></div>`;
+}
+
+function insertionAnchor(dropZone) {
+  return dropZone || document.querySelector('#file-list') || document.querySelector('main .container') || document.querySelector('main');
+}
+
+function render(file, dropZone) {
+  if (!file) return;
+  const ext = extOf(file);
+  const actions = actionsFor(file);
+  const converts = actions.filter(a => a.kind === 'convert');
+  const tools = actions.filter(a => a.kind === 'tool');
+  const path = normalizePath();
 
   let panel = document.querySelector('#active-file-focus');
   if (!panel) {
     panel = document.createElement('section');
     panel.id = 'active-file-focus';
-    panel.setAttribute('aria-label', 'Active file');
-    dropZone.insertAdjacentElement('beforebegin', panel);
+    panel.className = 'file-focus';
+    panel.setAttribute('aria-label', 'Current file workspace');
+    const anchor = insertionAnchor(dropZone);
+    if (!anchor) return;
+    anchor.insertAdjacentElement('beforebegin', panel);
   }
 
-  const path = location.pathname.replace(/\/$/, '') || '/';
-  const buttons = routes.map(([label, href]) => {
-    const active = path === href;
-    return `<a href="${href}" style="display:inline-flex;align-items:center;padding:.5rem .7rem;border:1px solid var(--border,#d9dde5);border-radius:.55rem;text-decoration:none;font-size:.82rem;${active ? 'font-weight:700;background:var(--surface-2,#f3f5f8);' : ''}"${active ? ' aria-current="page"' : ''}>${label}</a>`;
-  }).join('');
+  const available = actions.length
+    ? `${renderGroup('Convert to', converts, path)}${renderGroup('Tools', tools, path)}`
+    : `<p class="file-focus__empty">This file stays selected. IrisFiles does not have another tool for this format yet.</p>`;
 
   panel.innerHTML = `
-    <div style="border:1px solid var(--border,#d9dde5);border-radius:.85rem;padding:.85rem 1rem;margin:0 0 1rem;background:var(--surface,#fff)">
-      <div style="display:flex;gap:.75rem;align-items:center;justify-content:space-between;flex-wrap:wrap">
-        <div style="min-width:0">
-          <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;opacity:.62;margin-bottom:.15rem">Working on</div>
-          <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:min(70vw,42rem)">${escapeHtml(file.name)}</div>
-          <div style="font-size:.78rem;opacity:.64;margin-top:.1rem">${extOf(file).toUpperCase()} · ${prettySize(file.size)} · stays selected until you choose another file</div>
+    <div class="file-focus__top">
+      <div class="file-focus__identity">
+        <div class="file-focus__icon" aria-hidden="true">${iconFor(ext)}</div>
+        <div class="file-focus__file">
+          <div class="file-focus__eyebrow">Current file</div>
+          <div class="file-focus__name" title="${escapeHtml(file.name)}">${escapeHtml(file.name || 'Untitled file')}</div>
+          <div class="file-focus__meta">${escapeHtml((ext || 'file').toUpperCase())}${file.size != null ? ` · ${prettySize(file.size)}` : ''}<span class="file-focus__kept"> · original stays active</span></div>
         </div>
-        <button type="button" id="active-file-change" class="btn btn--secondary" style="white-space:nowrap">Choose another file</button>
       </div>
-      <div style="font-size:.75rem;font-weight:600;margin-top:.8rem;margin-bottom:.4rem">Other things you can do with this file</div>
-      <div style="display:flex;gap:.4rem;flex-wrap:wrap">${buttons}</div>
-    </div>`;
+      <button type="button" id="active-file-change" class="file-focus__change">Choose another</button>
+    </div>
+    <div class="file-focus__workspace">${available}</div>
+  `;
 
-  panel.querySelector('#active-file-change')?.addEventListener('click', () => document.querySelector('#file-input')?.click());
+  panel.querySelector('#active-file-change')?.addEventListener('click', () => {
+    document.querySelector('#file-input')?.click();
+  });
+  panel.querySelectorAll('[data-file-focus-route]').forEach(link => {
+    link.addEventListener('click', () => { stageForNextPage(file); });
+  });
+
+  document.documentElement.classList.add('has-active-file');
+  if (dropZone) dropZone.classList.add('compact');
 }
 
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+function pageAcceptsFile(file) {
+  const actions = actionsFor(file);
+  const path = normalizePath();
+  return actions.some(action => normalizePath(action.href) === path);
 }
 
-function injectActiveFile(fileInput, file) {
+function hydrateInput(file, fileInput) {
+  if (!file || !fileInput || fileInput.files?.length || !pageAcceptsFile(file)) return false;
+  if (typeof DataTransfer !== 'function') return false;
   try {
-    const transfer = new DataTransfer();
-    transfer.items.add(file);
-    fileInput.files = transfer.files;
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    fileInput.files = dt.files;
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
   } catch {
-    // Some older browsers do not allow assigning FileList. The focus bar still works,
-    // and choosing the file manually replaces the active file normally.
+    return false;
   }
 }
 
 export async function initPersistentFileFocus(options = {}) {
+  ensureStylesheet();
+
   const fileInput = document.querySelector(options.fileInputSelector || '#file-input');
   const dropZone = document.querySelector(options.dropZoneSelector || '#drop-zone');
-  if (!fileInput || !dropZone || document.documentElement.dataset.fileFocusReady === '1') return;
+  if (!fileInput || document.documentElement.dataset.fileFocusReady === '1') return;
   document.documentElement.dataset.fileFocusReady = '1';
 
-  const pending = await peekPendingFile();
   let active = await getActiveFile();
-  if (!active && pending) {
+  const pending = await peekPendingFile();
+  if (pending) {
     active = pending;
-    await setActiveFile(active);
+    await setActiveFile(pending);
   }
-  if (active) render(active);
 
-  // The first converter reached from Smart Drop consumes its pending handoff itself.
-  // On later tool switches, rehydrate the same source file into the converter input.
-  if (active && !pending) injectActiveFile(fileInput, active);
+  if (active) {
+    render(active, dropZone);
+    queueMicrotask(() => hydrateInput(active, fileInput));
+  }
 
   fileInput.addEventListener('change', async () => {
     const next = fileInput.files?.[0];
     if (!next) return;
     await setActiveFile(next);
-    render(next);
+    render(next, dropZone);
   }, true);
 
-  dropZone.addEventListener('drop', async event => {
+  dropZone?.addEventListener('drop', async event => {
     const next = event.dataTransfer?.files?.[0];
     if (!next) return;
     await setActiveFile(next);
-    render(next);
+    render(next, dropZone);
   }, true);
 }
+
+export { ACTIONS_BY_EXT, actionsFor };
