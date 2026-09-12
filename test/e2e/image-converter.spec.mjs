@@ -178,6 +178,39 @@ test.describe('JPG to PNG', () => {
   });
 });
 
+test.describe('AVIF to PNG action accessibility', () => {
+  test('batch actions name the file they affect', async ({ page }) => {
+    const avif = await readFile(fixture('sample.avif'));
+    await page.goto('/avif-to-png');
+    await page.locator('#file-input').setInputFiles([
+      { name: 'alpha.avif', mimeType: 'image/avif', buffer: avif },
+      { name: 'beta.avif', mimeType: 'image/avif', buffer: avif },
+    ]);
+    await page.locator('.file-item.done').nth(1).waitFor({ timeout: 15000 });
+
+    const alpha = page.locator('.file-item').filter({ hasText: 'alpha.avif' });
+    const beta = page.locator('.file-item').filter({ hasText: 'beta.avif' });
+    await expect(alpha.getByRole('button', { name: 'Download alpha.png' })).toBeVisible();
+    await expect(alpha.getByRole('button', { name: 'Show details for alpha.avif' })).toBeVisible();
+    await expect(alpha.getByRole('button', { name: 'Remove alpha.avif' })).toBeVisible();
+    await expect(beta.getByRole('button', { name: 'Download beta.png' })).toBeVisible();
+    await expect(beta.getByRole('button', { name: 'Show details for beta.avif' })).toBeVisible();
+    await expect(beta.getByRole('button', { name: 'Remove beta.avif' })).toBeVisible();
+  });
+
+  test('error remove action names the rejected file', async ({ page }) => {
+    await page.goto('/avif-to-png');
+    await page.locator('#file-input').setInputFiles({
+      name: 'not-an-avif.png',
+      mimeType: 'image/png',
+      buffer: await readFile(fixture('sample.png')),
+    });
+    const item = page.locator('.file-item').filter({ hasText: 'not-an-avif.png' });
+    await expect(item.locator('.file-item__status.error')).toBeVisible({ timeout: 10000 });
+    await expect(item.getByRole('button', { name: 'Remove not-an-avif.png' })).toBeVisible();
+  });
+});
+
 test.describe('JPG to WebP', () => {
   test('converts and shows done', async ({ page }) => {
     await page.goto('/jpg-to-webp');
