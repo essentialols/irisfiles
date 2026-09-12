@@ -60,6 +60,17 @@
   font-weight: 700;
   color: var(--text, #0f172a);
 }
+.file-focus__count {
+  display: inline-flex;
+  margin-left: .4rem;
+  padding: .12rem .38rem;
+  border-radius: 999px;
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-muted, #64748b);
+  font-size: .66rem;
+  font-weight: 700;
+  vertical-align: .08rem;
+}
 .file-focus__meta {
   margin-top: .08rem;
   color: var(--text-muted, #64748b);
@@ -150,6 +161,7 @@
   .file-focus__top { padding: .68rem .72rem .58rem; }
   .file-focus__icon { width: 2rem; height: 2rem; border-radius: 8px; }
   .file-focus__name { max-width: 52vw; font-size: .86rem; }
+  .file-focus__count { font-size: .62rem; }
   .file-focus__kept { display: none; }
   .file-focus__change { padding: .4rem .55rem; font-size: .71rem; }
   .file-focus__workspace { padding: .5rem .72rem .6rem; gap: .42rem; }
