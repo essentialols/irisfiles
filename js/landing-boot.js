@@ -1,6 +1,7 @@
 import { applyPageUX } from './ux-page.js';
 import { initSmartDrop } from './smart-drop.js';
 import { enhanceLanding } from './high-value-landing.js';
+import { initLandingFileWorkspace } from './landing-file-workspace.js';
 
 // The extended file-signature catalog is imported reference data and includes a
 // handful of historical vendor-name typos. Keep detection data untouched while
@@ -38,6 +39,7 @@ if (pickerPanel) {
 
 initSmartDrop();
 enhanceLanding();
+initLandingFileWorkspace();
 
 // FAQ accordion
 document.querySelectorAll('.faq-question').forEach(btn => {
