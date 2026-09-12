@@ -151,7 +151,6 @@ body {
   margin-bottom: 1.5rem;
 }
 .drop-zone p { color: var(--text-muted); }
-.drop-zone strong { color: var(--primary); }
 .drop-zone__disclaimer {
   font-size: 0.75rem;
   color: var(--text-muted);
