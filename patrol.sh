@@ -296,6 +296,20 @@ if grep -q "PW_REPORT_UNREADABLE" "$BASELINE_FILE"; then
 fi
 echo "Baseline: $(wc -l < "$BASELINE_FILE" | tr -d ' ') failing test(s) on origin/main." | tee -a "$LOG"
 
+# Files an open PR already changes. Triage re-finds a bug for as long as its fix
+# sits unmerged, so on 2026-09-12 three findings were re-reported against files
+# the 09-11 PRs had already fixed, and the bot wrote a second, different fix for
+# each. Skipping those keeps one finding to one open PR.
+COVERED_FILES=$(mktemp)
+if gh pr list --state open --limit 100 --json files \
+     --jq '.[].files[].path' 2>/dev/null | sort -u > "$COVERED_FILES"; then
+  echo "Open PRs already cover $(wc -l < "$COVERED_FILES" | tr -d ' ') file(s)." | tee -a "$LOG"
+else
+  # A gh failure must not silently disable the check and look like a clean run.
+  : > "$COVERED_FILES"
+  echo "WARNING: could not list open PRs; duplicate findings will not be skipped." | tee -a "$LOG"
+fi
+
 # Write issues to temp file to avoid pipeline subshell
 ISSUES_FILE=$(mktemp)
 echo "$ISSUES" | python3 -c "
@@ -307,6 +321,11 @@ while IFS='|' read -r idx file severity desc fix; do
   if [[ "$FIXED" -ge "$MAX_FIXES" ]]; then
     echo "Reached PATROL_MAX_FIXES=$MAX_FIXES; remaining issues stay in $LOG." | tee -a "$LOG"
     break
+  fi
+  if grep -qxF -- "$file" "$COVERED_FILES"; then
+    echo "--- Skip $idx ($severity): $file is already changed by an open PR ---" | tee -a "$LOG"
+    echo "Finding stays in $LOG: $desc" | tee -a "$LOG"
+    continue
   fi
   FIX_BRANCH="patrol/${TIMESTAMP}-${idx}"
 
