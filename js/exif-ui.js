@@ -140,9 +140,12 @@ function resetState() {
   processing = false;
   fileList.innerHTML = '';
   if (metadataPanel) metadataPanel.innerHTML = '';
-  if (saveBtn) saveBtn.style.display = 'none';
-  if (stripGpsBtn) stripGpsBtn.style.display = 'none';
-  if (stripAllBtn) stripAllBtn.style.display = 'none';
+  // A superseded operation's cleanup is skipped by the selectionToken guard, so
+  // the button it disabled must be restored here or the next file inherits it
+  // disabled and still labelled 'Saving...' / 'Stripping...'.
+  if (saveBtn) { saveBtn.style.display = 'none'; saveBtn.disabled = false; saveBtn.textContent = 'Save Changes'; }
+  if (stripGpsBtn) { stripGpsBtn.style.display = 'none'; stripGpsBtn.disabled = false; stripGpsBtn.textContent = 'Strip GPS Only'; }
+  if (stripAllBtn) { stripAllBtn.style.display = 'none'; stripAllBtn.disabled = false; stripAllBtn.textContent = 'Strip All Metadata'; }
   if (clearAllBtn) clearAllBtn.style.display = 'none';
   if (dropZone) dropZone.classList.remove('compact');
 }

@@ -3,6 +3,9 @@ const ACTIVE_STORE = 'active';
 const ACTIVE_KEY = 'current';
 const CSS_HREF = '/css/file-focus.css';
 
+// The live selection lives in memory; it reaches disk only for a tool-to-tool hop.
+let activeSelection = [];
+
 const A = (label, href, kind = 'convert') => ({ label, href, kind });
 const TOOL = (label, href) => A(label, href, 'tool');
 
@@ -174,12 +177,28 @@ function normalizeFiles(value) {
   return [value];
 }
 
-async function getActiveFiles() {
+// The handoff store is read once and emptied immediately, the same discipline
+// smart-drop.js uses for its pending store. The carried files stay on disk only
+// for the duration of a navigation, never after the tab is closed.
+async function takeActiveFiles() {
   try {
     const db = await openActiveDb();
     const value = await reqResult(db.transaction(ACTIVE_STORE, 'readonly').objectStore(ACTIVE_STORE).get(ACTIVE_KEY));
+    await clearActiveFiles();
     return normalizeFiles(value);
   } catch { return []; }
+}
+
+async function clearActiveFiles() {
+  try {
+    const db = await openActiveDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(ACTIVE_STORE, 'readwrite');
+      tx.objectStore(ACTIVE_STORE).clear();
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch { /* best effort */ }
 }
 
 async function setActiveFiles(files) {
@@ -327,8 +346,9 @@ async function hydrateWhenNeeded(files, fileInput) {
   const selection = normalizeFiles(files);
   if (!selection.length || !fileInput || !pageAcceptsSelection(selection) || typeof DataTransfer !== 'function') return false;
 
-  // Converter pages may already be consuming Smart Drop's pending-file handoff.
-  // Give that path a brief head start and do not inject the same selection twice.
+  // The caller's pageOwnsInjection check rules out the Smart Drop handoff, but
+  // this still has to outlast the page's own boot: a converter that resets
+  // fileInput.value while initializing would otherwise discard an early inject.
   for (let i = 0; i < 5; i++) {
     if (selectionAlreadyRendered(selection, fileInput)) return false;
     await new Promise(resolve => setTimeout(resolve, 40));
@@ -356,37 +376,50 @@ export async function initPersistentFileFocus(options = {}) {
   if (!fileInput || document.documentElement.dataset.fileFocusReady === '1') return;
   document.documentElement.dataset.fileFocusReady = '1';
 
-  let activeFiles = await getActiveFiles();
+  let activeFiles = await takeActiveFiles();
   const pendingFiles = await peekPendingFiles();
-  if (pendingFiles.length) {
-    activeFiles = pendingFiles;
-    await setActiveFiles(pendingFiles);
-  }
+  // Smart Drop's own pending handoff owns injection on this page, so file-focus
+  // only renders the panel. Deciding this up front replaces the timing poll that
+  // previously guessed whether the page had already inserted the same files.
+  const pageOwnsInjection = pendingFiles.length > 0;
+  if (pageOwnsInjection) activeFiles = pendingFiles;
+
+  const setSelection = files => {
+    activeSelection = files;
+    render(files, dropZone);
+    const panel = document.querySelector('#active-file-focus');
+    if (panel) panel.dataset.inputSelector = fileInputSelector;
+  };
 
   if (activeFiles.length) {
-    render(activeFiles, dropZone);
-    const panel = document.querySelector('#active-file-focus');
-    if (panel) panel.dataset.inputSelector = fileInputSelector;
-    hydrateWhenNeeded(activeFiles, fileInput).catch(() => {});
+    setSelection(activeFiles);
+    if (!pageOwnsInjection) hydrateWhenNeeded(activeFiles, fileInput).catch(() => {});
   }
 
-  fileInput.addEventListener('change', async () => {
+  fileInput.addEventListener('change', () => {
     const next = Array.from(fileInput.files || []);
-    if (!next.length) return;
-    await setActiveFiles(next);
-    render(next, dropZone);
-    const panel = document.querySelector('#active-file-focus');
-    if (panel) panel.dataset.inputSelector = fileInputSelector;
+    if (next.length) setSelection(next);
   }, true);
 
-  dropZone?.addEventListener('drop', async event => {
+  dropZone?.addEventListener('drop', event => {
     const next = Array.from(event.dataTransfer?.files || []);
-    if (!next.length) return;
-    await setActiveFiles(next);
-    render(next, dropZone);
-    const panel = document.querySelector('#active-file-focus');
-    if (panel) panel.dataset.inputSelector = fileInputSelector;
+    if (next.length) setSelection(next);
   }, true);
+
+  // The files are written only here, when the user actually carries them to
+  // another tool, and the destination empties the store as soon as it reads it.
+  document.addEventListener('click', async event => {
+    const link = event.target.closest?.('[data-file-focus-route]');
+    if (!link || !activeSelection.length) return;
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      setActiveFiles(activeSelection);  // opening a new tab: cannot await, write best-effort
+      return;
+    }
+    event.preventDefault();
+    await setActiveFiles(activeSelection);
+    location.href = link.getAttribute('href');
+  });
 }
 
 export { ACTIONS_BY_EXT, actionsFor, actionsForSelection };
