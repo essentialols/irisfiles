@@ -10,6 +10,12 @@ Privacy-first client-side file converter. See [README.md](README.md) for project
 - `git push origin main` - Deploy (Vercel auto-deploy). Pushing to main also triggers
   `patrol.sh` via `.git/hooks/pre-push`.
 
+## Visual verification
+
+| Option | What it tests | Fidelity |
+| --- | --- | --- |
+| 🥇 **Materialize the relevant repo files locally + Playwright** | Actual HTML/CSS/JS, screenshots, interactions | Very high |
+
 ## Conventions
 - One HTML page per tool, unique SEO meta, shared JS via ES module imports
 - Format detection uses magic bytes, not file extensions
