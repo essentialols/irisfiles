@@ -81,16 +81,32 @@ test.describe('High-value tool expansion', () => {
     await expect(page.locator('.file-item__name')).toContainText('sample.png');
   });
 
-  test('rotate PDF preserves the page workflow and produces a new PDF', async ({ page }) => {
+  test('rotate PDF previews rotation, preserves focus, and avoids no-op saves', async ({ page }) => {
     await page.goto('/rotate-pdf');
     await page.locator('#file-input').setInputFiles(fixture('sample.pdf'));
 
     const firstPage = page.locator('.pdf-page-card').first();
+    const actionBtn = page.locator('#action-btn');
     await expect(firstPage).toBeVisible({ timeout: 15_000 });
-    await firstPage.getByRole('button', { name: 'Rotate 90°' }).click();
-    await expect(firstPage.locator('.pdf-page-card__badge')).toContainText('90°');
+    await expect(actionBtn).toBeDisabled();
 
-    await page.locator('#action-btn').click();
+    const rotateButton = firstPage.getByRole('button', { name: /Rotate page 1 90 degrees clockwise/ });
+    await rotateButton.focus();
+    await rotateButton.press('Enter');
+    await expect(rotateButton).toBeFocused();
+    await expect(firstPage.locator('.pdf-page-card__badge')).toHaveText('90°');
+    await expect(rotateButton).toHaveAttribute('aria-label', /Current rotation 90 degrees/);
+    expect(await firstPage.locator('img').evaluate(img => img.style.transform)).toBe('rotate(90deg)');
+    await expect(actionBtn).toBeEnabled();
+
+    for (let i = 0; i < 3; i++) await rotateButton.press('Enter');
+    await expect(rotateButton).toBeFocused();
+    await expect(firstPage.locator('.pdf-page-card__badge')).toHaveText('0°');
+    expect(await firstPage.locator('img').evaluate(img => img.style.transform)).toBe('rotate(0deg)');
+    await expect(actionBtn).toBeDisabled();
+
+    await rotateButton.press('Enter');
+    await actionBtn.click();
     await expect(page.locator('#pdf-tool-result .btn--success')).toBeVisible({ timeout: 15_000 });
   });
 
