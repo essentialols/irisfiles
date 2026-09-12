@@ -33,7 +33,11 @@ test.describe('Landing active-file workspace', () => {
     await zip.click();
 
     await expect(page).toHaveURL(/\/create-zip$/);
-    await expect(page.locator('#active-file-focus .file-focus__name')).toHaveText('sample.mp4');
+    // Assert the file itself arrived, not the file-focus panel. The destination's
+    // own loadPendingFiles() clears the pending store as it consumes it, so
+    // file-focus's peek finds nothing and never renders a panel here.
+    await expect(page.locator('.file-item')).toHaveCount(1);
+    await expect(page.locator('.file-item__name')).toHaveText('sample.mp4');
   });
 
   test('dismissing the active file restores the landing picker', async ({ page }) => {
