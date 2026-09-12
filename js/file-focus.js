@@ -127,6 +127,15 @@ function actionsFor(file) {
     : [...specific, createZip];
 }
 
+function actionsForSelection(files) {
+  const selection = normalizeFiles(files);
+  if (!selection.length) return [];
+  const first = actionsFor(selection[0]);
+  if (selection.length === 1) return first;
+  const commonHrefs = selection.slice(1).map(file => new Set(actionsFor(file).map(action => action.href)));
+  return first.filter(action => commonHrefs.every(hrefs => hrefs.has(action.href)));
+}
+
 function normalizePath(path = location.pathname) {
   const trimmed = path.replace(/\/+$/, '');
   return trimmed || '/';
@@ -150,27 +159,35 @@ function reqResult(req) {
   });
 }
 
-async function getActiveFile() {
-  try {
-    const db = await openActiveDb();
-    return await reqResult(db.transaction(ACTIVE_STORE, 'readonly').objectStore(ACTIVE_STORE).get(ACTIVE_KEY));
-  } catch { return null; }
+function normalizeFiles(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return [value];
 }
 
-async function setActiveFile(file) {
-  if (!file) return;
+async function getActiveFiles() {
+  try {
+    const db = await openActiveDb();
+    const value = await reqResult(db.transaction(ACTIVE_STORE, 'readonly').objectStore(ACTIVE_STORE).get(ACTIVE_KEY));
+    return normalizeFiles(value);
+  } catch { return []; }
+}
+
+async function setActiveFiles(files) {
+  const selection = Array.from(files || []).filter(Boolean);
+  if (!selection.length) return;
   try {
     const db = await openActiveDb();
     await new Promise((resolve, reject) => {
       const tx = db.transaction(ACTIVE_STORE, 'readwrite');
-      tx.objectStore(ACTIVE_STORE).put(file, ACTIVE_KEY);
+      tx.objectStore(ACTIVE_STORE).put(selection, ACTIVE_KEY);
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error);
     });
   } catch { /* best effort: persistence is an enhancement */ }
 }
 
-async function peekPendingFile() {
+async function peekPendingFiles() {
   try {
     const db = await new Promise((resolve, reject) => {
       const req = indexedDB.open('irisfiles', 1);
@@ -182,8 +199,14 @@ async function peekPendingFile() {
     });
     const store = db.transaction('pending', 'readonly').objectStore('pending');
     const keys = await reqResult(store.getAllKeys());
-    return keys.length ? await reqResult(store.get(keys[0])) : null;
-  } catch { return null; }
+    if (!keys.length) return [];
+    const files = [];
+    for (const key of keys) {
+      const file = await reqResult(store.get(key));
+      if (file) files.push(file);
+    }
+    return files;
+  } catch { return []; }
 }
 
 function prettySize(bytes) {
@@ -220,13 +243,18 @@ function insertionAnchor(dropZone) {
   return dropZone || document.querySelector('#file-list') || document.querySelector('main .container') || document.querySelector('main');
 }
 
-function render(file, dropZone) {
-  if (!file) return;
+function render(files, dropZone) {
+  const selection = normalizeFiles(files);
+  if (!selection.length) return;
+  const file = selection[0];
   const ext = extOf(file);
-  const actions = actionsFor(file);
+  const extensions = [...new Set(selection.map(extOf).filter(Boolean))];
+  const actions = actionsForSelection(selection);
   const converts = actions.filter(a => a.kind === 'convert');
   const tools = actions.filter(a => a.kind === 'tool');
   const path = normalizePath();
+  const extraCount = selection.length - 1;
+  const multiple = selection.length > 1;
 
   let panel = document.querySelector('#active-file-focus');
   if (!panel) {
@@ -241,16 +269,20 @@ function render(file, dropZone) {
 
   const available = actions.length
     ? `${renderGroup('Convert to', converts, path)}${renderGroup('Tools', tools, path)}`
-    : `<p class="file-focus__empty">This file stays selected. IrisFiles does not have another tool for this format yet.</p>`;
+    : `<p class="file-focus__empty">This selection stays active. IrisFiles does not have another shared tool for these formats yet.</p>`;
+  const formatText = extensions.length === 1 ? extensions[0].toUpperCase() : 'Mixed formats';
+  const countText = multiple ? ` · ${selection.length} files` : '';
+  const keepText = multiple ? ' · originals stay active' : ' · original stays active';
+  const fileTitle = selection.map(item => item.name || 'Untitled file').join('\n');
 
   panel.innerHTML = `
     <div class="file-focus__top">
       <div class="file-focus__identity">
         <div class="file-focus__icon" aria-hidden="true">${iconFor(ext)}</div>
         <div class="file-focus__file">
-          <div class="file-focus__eyebrow">Current file</div>
-          <div class="file-focus__name" title="${escapeHtml(file.name || '')}">${escapeHtml(file.name || 'Untitled file')}</div>
-          <div class="file-focus__meta">${escapeHtml((ext || 'file').toUpperCase())}${file.size != null ? ` · ${prettySize(file.size)}` : ''}<span class="file-focus__kept"> · original stays active</span></div>
+          <div class="file-focus__eyebrow">${multiple ? 'Current files' : 'Current file'}</div>
+          <div class="file-focus__name" title="${escapeHtml(fileTitle)}">${escapeHtml(file.name || 'Untitled file')}${extraCount ? `<span class="file-focus__count">+${extraCount} more</span>` : ''}</div>
+          <div class="file-focus__meta">${escapeHtml(formatText)}${countText}${file.size != null && !multiple ? ` · ${prettySize(file.size)}` : ''}<span class="file-focus__kept">${keepText}</span></div>
         </div>
       </div>
       <button type="button" id="active-file-change" class="file-focus__change">Choose another</button>
@@ -267,33 +299,36 @@ function render(file, dropZone) {
   dropZone?.classList.add('compact');
 }
 
-function pageAcceptsFile(file) {
+function pageAcceptsSelection(files) {
   const path = normalizePath();
-  return actionsFor(file).some(action => normalizePath(action.href) === path);
+  return actionsForSelection(files).some(action => normalizePath(action.href) === path);
 }
 
-function fileAlreadyRendered(file, fileInput) {
-  if (fileInput?.files?.length) return true;
-  const expected = file?.name || '';
-  if (!expected) return false;
-  return Array.from(document.querySelectorAll('.file-item__name, .frame-item__name'))
-    .some(node => node.textContent?.trim() === expected);
+function selectionAlreadyRendered(files, fileInput) {
+  const selection = normalizeFiles(files);
+  if (!selection.length) return false;
+  const inputFiles = Array.from(fileInput?.files || []);
+  if (inputFiles.length === selection.length && selection.every((file, index) => inputFiles[index]?.name === file.name)) return true;
+  const rendered = new Set(Array.from(document.querySelectorAll('.file-item__name, .frame-item__name'))
+    .map(node => node.textContent?.trim()).filter(Boolean));
+  return selection.every(file => rendered.has(file.name));
 }
 
-async function hydrateWhenNeeded(file, fileInput) {
-  if (!file || !fileInput || !pageAcceptsFile(file) || typeof DataTransfer !== 'function') return false;
+async function hydrateWhenNeeded(files, fileInput) {
+  const selection = normalizeFiles(files);
+  if (!selection.length || !fileInput || !pageAcceptsSelection(selection) || typeof DataTransfer !== 'function') return false;
 
   // Converter pages may already be consuming Smart Drop's pending-file handoff.
-  // Give that path a brief head start and do not inject the same file twice.
+  // Give that path a brief head start and do not inject the same selection twice.
   for (let i = 0; i < 5; i++) {
-    if (fileAlreadyRendered(file, fileInput)) return false;
+    if (selectionAlreadyRendered(selection, fileInput)) return false;
     await new Promise(resolve => setTimeout(resolve, 40));
   }
-  if (fileAlreadyRendered(file, fileInput)) return false;
+  if (selectionAlreadyRendered(selection, fileInput)) return false;
 
   try {
     const dt = new DataTransfer();
-    dt.items.add(file);
+    for (const file of selection) dt.items.add(file);
     fileInput.files = dt.files;
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
     return true;
@@ -312,37 +347,37 @@ export async function initPersistentFileFocus(options = {}) {
   if (!fileInput || document.documentElement.dataset.fileFocusReady === '1') return;
   document.documentElement.dataset.fileFocusReady = '1';
 
-  let active = await getActiveFile();
-  const pending = await peekPendingFile();
-  if (pending) {
-    active = pending;
-    await setActiveFile(pending);
+  let activeFiles = await getActiveFiles();
+  const pendingFiles = await peekPendingFiles();
+  if (pendingFiles.length) {
+    activeFiles = pendingFiles;
+    await setActiveFiles(pendingFiles);
   }
 
-  if (active) {
-    render(active, dropZone);
+  if (activeFiles.length) {
+    render(activeFiles, dropZone);
     const panel = document.querySelector('#active-file-focus');
     if (panel) panel.dataset.inputSelector = fileInputSelector;
-    hydrateWhenNeeded(active, fileInput).catch(() => {});
+    hydrateWhenNeeded(activeFiles, fileInput).catch(() => {});
   }
 
   fileInput.addEventListener('change', async () => {
-    const next = fileInput.files?.[0];
-    if (!next) return;
-    await setActiveFile(next);
+    const next = Array.from(fileInput.files || []);
+    if (!next.length) return;
+    await setActiveFiles(next);
     render(next, dropZone);
     const panel = document.querySelector('#active-file-focus');
     if (panel) panel.dataset.inputSelector = fileInputSelector;
   }, true);
 
   dropZone?.addEventListener('drop', async event => {
-    const next = event.dataTransfer?.files?.[0];
-    if (!next) return;
-    await setActiveFile(next);
+    const next = Array.from(event.dataTransfer?.files || []);
+    if (!next.length) return;
+    await setActiveFiles(next);
     render(next, dropZone);
     const panel = document.querySelector('#active-file-focus');
     if (panel) panel.dataset.inputSelector = fileInputSelector;
   }, true);
 }
 
-export { ACTIONS_BY_EXT, actionsFor };
+export { ACTIONS_BY_EXT, actionsFor, actionsForSelection };
