@@ -16,6 +16,8 @@ let targetFormat = 'ttf';
 let dropZone, fileInput, fileList, actionBtn, clearBtn;
 const files = [];
 const results = []; // { name, blob }
+let generation = 0;
+let activeOperation = false;
 
 export function init() {
   const configEl = document.getElementById('converter-config');
@@ -110,13 +112,14 @@ function renderFileEntry(file) {
 
 function updateControls() {
   if (actionBtn) {
-    actionBtn.disabled = files.length < 1;
+    actionBtn.disabled = activeOperation || files.length < 1;
     actionBtn.style.display = files.length > 0 ? '' : 'none';
   }
   if (clearBtn) clearBtn.style.display = files.length > 0 ? '' : 'none';
 }
 
 function clearAll() {
+  generation++;
   files.length = 0;
   results.length = 0;
   fileList.innerHTML = '';
@@ -130,31 +133,39 @@ function removeResults() {
 }
 
 async function runConversion() {
+  const myGen = generation;
+  activeOperation = true;
   actionBtn.disabled = true;
   const origText = actionBtn.textContent;
   removeResults();
-  results.length = 0;
+  const snapshot = files.slice();
+  const localResults = [];
   const t0 = performance.now();
 
   try {
-    for (let i = 0; i < files.length; i++) {
-      const f = files[i];
-      actionBtn.textContent = `Converting ${i + 1}/${files.length}...`;
+    for (let i = 0; i < snapshot.length; i++) {
+      const f = snapshot[i];
+      actionBtn.textContent = `Converting ${i + 1}/${snapshot.length}...`;
       const blob = await convertFont(f, targetFormat, pct => {
-        actionBtn.textContent = `Converting ${i + 1}/${files.length}... ${pct}%`;
+        actionBtn.textContent = `Converting ${i + 1}/${snapshot.length}... ${pct}%`;
       });
       const outName = f.name.replace(/\.[^.]+$/, '') + '.' + targetFormat;
-      results.push({ name: outName, blob });
+      localResults.push({ name: outName, blob });
     }
 
-    const dur = Math.round(performance.now() - t0);
-    showResults(dur);
+    if (myGen === generation) {
+      results.length = 0;
+      results.push(...localResults);
+      const dur = Math.round(performance.now() - t0);
+      showResults(dur);
+    }
   } catch (err) {
-    showError(err.message);
+    if (myGen === generation) showError(err.message);
   }
 
-  actionBtn.textContent = origText;
-  actionBtn.disabled = false;
+  activeOperation = false;
+  if (myGen === generation) actionBtn.textContent = origText;
+  updateControls();
 }
 
 function showResults(durationMs) {
