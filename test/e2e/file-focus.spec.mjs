@@ -91,6 +91,10 @@ test.describe('Persistent current-file workspace', () => {
     await expect(workspace.locator('.file-focus__eyebrow')).toHaveText('Current files');
     await expect(workspace.locator('.file-focus__count')).toHaveText('+1 more');
     await expect(workspace.locator('a[href="/png-to-webp"]')).toBeVisible();
+    await expect(workspace.locator('a[href="/png-to-ico"]')).toBeVisible();
+    await expect(workspace.locator('a[href="/background-remover"]')).toHaveCount(0);
+    await expect(workspace.locator('a[href="/image-to-text"]')).toHaveCount(0);
+    await expect(workspace.locator('a[href="/image-metadata"]')).toHaveCount(0);
 
     await workspace.locator('a[href="/png-to-webp"]').click();
     await expect(page).toHaveURL(/\/png-to-webp$/);
