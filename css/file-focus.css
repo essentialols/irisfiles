@@ -1,7 +1,7 @@
 /* Persistent current-file workspace */
 .file-focus {
   position: sticky;
-  top: .65rem;
+  top: 4.25rem;
   z-index: 20;
   margin: 1rem 0 1.1rem;
   border: 1px solid var(--border, #e2e8f0);
@@ -142,7 +142,7 @@
 
 @media (max-width: 640px) {
   .file-focus {
-    top: .35rem;
+    top: 4rem;
     margin-left: -.25rem;
     margin-right: -.25rem;
     border-radius: 12px;
