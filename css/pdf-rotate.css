@@ -1,0 +1,7 @@
+.pdf-page-grid--rotate .pdf-page-card img {
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+  transform-origin: center;
+  transition: transform .18s ease;
+}
