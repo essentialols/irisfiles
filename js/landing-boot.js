@@ -2,6 +2,40 @@ import { applyPageUX } from './ux-page.js';
 import { initSmartDrop } from './smart-drop.js';
 import { enhanceLanding } from './high-value-landing.js';
 
+// The extended file-signature catalog is imported reference data and includes a
+// handful of historical vendor-name typos. Keep detection data untouched while
+// normalizing those strings anywhere the picker presents them to users.
+const PICKER_COPY_FIXES = [
+  ['CANNON EOS JPEG FILE', 'CANON EOS JPEG FILE'],
+  ['Symantex Ghost image file', 'Symantec Ghost image file'],
+  ['Quatro Pro for Windows 7.0', 'Quattro Pro for Windows 7.0'],
+  ['ZoneAlam data file', 'ZoneAlarm data file'],
+];
+
+function correctPickerCopy(value) {
+  return PICKER_COPY_FIXES.reduce((text, [wrong, right]) => text.replaceAll(wrong, right), value || '');
+}
+
+function normalizePickerCopy(root) {
+  if (!root) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let node;
+  while ((node = walker.nextNode())) {
+    const corrected = correctPickerCopy(node.nodeValue);
+    if (corrected !== node.nodeValue) node.nodeValue = corrected;
+  }
+  root.querySelectorAll('[title]').forEach((element) => {
+    const corrected = correctPickerCopy(element.getAttribute('title'));
+    if (corrected !== element.getAttribute('title')) element.setAttribute('title', corrected);
+  });
+}
+
+const pickerPanel = document.getElementById('route-panel');
+if (pickerPanel) {
+  new MutationObserver(() => normalizePickerCopy(pickerPanel))
+    .observe(pickerPanel, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['title'] });
+}
+
 initSmartDrop();
 enhanceLanding();
 
