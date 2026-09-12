@@ -127,13 +127,22 @@ function actionsFor(file) {
     : [...specific, createZip];
 }
 
+function isBatchSafeAction(action) {
+  const href = action?.href || '';
+  if (['/create-zip','/compress','/resize-image','/strip-exif','/images-to-gif','/pdf-to-jpg','/pdf-to-png','/merge-pdf'].includes(href)) return true;
+  if (/^\/(?:heic|jpg|png|webp|gif|bmp|avif|tiff|ico|svg)-to-(?:jpg|png|webp|gif|pdf|ico)$/.test(href)) return true;
+  if (/^\/(?:mp3|wav|ogg|flac|m4a|aac)-to-(?:mp3|wav|ogg|flac|m4a|aac)$/.test(href)) return true;
+  if (/^\/(?:ttf|otf|woff)-to-(?:ttf|otf|woff)$/.test(href)) return true;
+  return false;
+}
+
 function actionsForSelection(files) {
   const selection = normalizeFiles(files);
   if (!selection.length) return [];
   const first = actionsFor(selection[0]);
   if (selection.length === 1) return first;
   const commonHrefs = selection.slice(1).map(file => new Set(actionsFor(file).map(action => action.href)));
-  return first.filter(action => commonHrefs.every(hrefs => hrefs.has(action.href)));
+  return first.filter(action => commonHrefs.every(hrefs => hrefs.has(action.href)) && isBatchSafeAction(action));
 }
 
 function normalizePath(path = location.pathname) {
