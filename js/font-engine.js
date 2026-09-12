@@ -199,6 +199,9 @@ function wrapAsWoff(sfnt) {
   // Read sfnt header
   const sfntFlavor = view.getUint32(0); // 0x00010000 for TrueType, 'OTTO' for CFF
   const numTables = view.getUint16(4);
+  if (!numTables || 12 + numTables * 16 > sfnt.byteLength) {
+    throw new Error('Could not parse font file. It may be corrupted or unsupported.');
+  }
 
   // Read table directory (starts at offset 12 in sfnt)
   const tables = [];
@@ -208,6 +211,9 @@ function wrapAsWoff(sfnt) {
     const checksum = view.getUint32(dirOffset + 4);
     const offset = view.getUint32(dirOffset + 8);
     const length = view.getUint32(dirOffset + 12);
+    if (offset + length > sfnt.byteLength) {
+      throw new Error('Could not parse font file. It may be corrupted or unsupported.');
+    }
     const rawData = sfnt.slice(offset, offset + length);
     tables.push({ tag, checksum, origLength: length, rawData });
   }
