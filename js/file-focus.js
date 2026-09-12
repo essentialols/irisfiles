@@ -139,18 +139,35 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
 
+function injectActiveFile(fileInput, file) {
+  try {
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    fileInput.files = transfer.files;
+    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+  } catch {
+    // Some older browsers do not allow assigning FileList. The focus bar still works,
+    // and choosing the file manually replaces the active file normally.
+  }
+}
+
 export async function initPersistentFileFocus(options = {}) {
   const fileInput = document.querySelector(options.fileInputSelector || '#file-input');
   const dropZone = document.querySelector(options.dropZoneSelector || '#drop-zone');
   if (!fileInput || !dropZone || document.documentElement.dataset.fileFocusReady === '1') return;
   document.documentElement.dataset.fileFocusReady = '1';
 
+  const pending = await peekPendingFile();
   let active = await getActiveFile();
-  if (!active) {
-    active = await peekPendingFile();
-    if (active) await setActiveFile(active);
+  if (!active && pending) {
+    active = pending;
+    await setActiveFile(active);
   }
   if (active) render(active);
+
+  // The first converter reached from Smart Drop consumes its pending handoff itself.
+  // On later tool switches, rehydrate the same source file into the converter input.
+  if (active && !pending) injectActiveFile(fileInput, active);
 
   fileInput.addEventListener('change', async () => {
     const next = fileInput.files?.[0];
