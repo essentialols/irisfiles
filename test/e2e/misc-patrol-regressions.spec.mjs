@@ -65,7 +65,12 @@ test.describe('PDF operations remain consistent during file-list changes', () =>
 test('resize does not retry a file rejected by size validation', async ({ page }) => {
   await page.goto('/resize-image');
   await page.evaluate(async () => {
-    const png = await fetch('/test/fixtures/sample.png').then(response => response.arrayBuffer());
+    // Generated in-page rather than fetched from /test/fixtures, which is not part
+    // of the deployed site, so this test also works against a real deployment.
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 8;
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    const png = await blob.arrayBuffer();
     const oversized = new File([png], 'oversized.png', { type: 'image/png' });
     Object.defineProperty(oversized, 'size', { value: 101 * 1024 * 1024 });
     const valid = new File([png], 'valid.png', { type: 'image/png' });
