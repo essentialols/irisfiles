@@ -11,6 +11,7 @@ import { loadPendingFiles } from './smart-drop.js';
 let mode = '';  // 'extract' or 'create'
 let dropZone, fileInput, fileList, actionBtn, clearBtn;
 const files = [];
+let inputRevision = 0;
 
 export function init() {
   const configEl = document.getElementById('converter-config');
@@ -56,14 +57,19 @@ export function init() {
 
 function addFiles(fileList_) {
   const maxFiles = mode === 'extract' ? 1 : 50;
-  if (mode === 'extract' && files.length > 0) {
+  const incoming = Array.from(fileList_);
+  if (mode === 'extract' && files.length > 0 && incoming.length > 0) {
     // Replace the existing ZIP in extract mode
     files.length = 0;
     fileList.innerHTML = '';
+  }
+
+  const toAdd = incoming.slice(0, Math.max(0, maxFiles - files.length));
+  if (toAdd.length > 0) {
+    inputRevision++;
     removeResults();
   }
-  for (const f of fileList_) {
-    if (files.length >= maxFiles) break;
+  for (const f of toAdd) {
     files.push(f);
     renderFileEntry(f);
   }
@@ -84,7 +90,10 @@ function renderFileEntry(file) {
   `;
   div.querySelector('.btn-remove').addEventListener('click', () => {
     const idx = files.indexOf(file);
-    if (idx !== -1) files.splice(idx, 1);
+    if (idx !== -1) {
+      files.splice(idx, 1);
+      inputRevision++;
+    }
     div.remove();
     removeResults();
     updateControls();
@@ -101,6 +110,7 @@ function updateControls() {
 }
 
 function clearAll() {
+  if (files.length > 0) inputRevision++;
   files.length = 0;
   fileList.innerHTML = '';
   removeResults();
@@ -118,6 +128,7 @@ async function runAction() {
   actionBtn.textContent = 'Processing...';
   removeResults();
   const t0 = performance.now();
+  const runRevision = inputRevision;
 
   try {
     if (mode === 'extract') {
@@ -125,7 +136,7 @@ async function runAction() {
         actionBtn.textContent = `Extracting... ${pct}%`;
       });
       const dur = Math.round(performance.now() - t0);
-      showExtractResults(entries, dur);
+      if (runRevision === inputRevision) showExtractResults(entries, dur);
 
     } else if (mode === 'create') {
       const inputs = files.map(f => ({ name: f.name, blob: f }));
@@ -133,7 +144,7 @@ async function runAction() {
         actionBtn.textContent = `Zipping... ${pct}%`;
       });
       const dur = Math.round(performance.now() - t0);
-      showCreateResult(zipBlob, dur);
+      if (runRevision === inputRevision) showCreateResult(zipBlob, dur);
     }
   } catch (err) {
     showError(err.message);
