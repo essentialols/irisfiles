@@ -60,7 +60,7 @@ test.describe('High-value tool expansion', () => {
     await page.locator('#file-input').setInputFiles(inputs);
 
     await expect(page.locator('.file-item')).toHaveCount(50);
-    await expect(page.locator('#ico-notice')).toHaveText('Only added 50 of 51 files (batch limit: 50).');
+    await expect(page.locator('#ico-notice .notice__text')).toHaveText('Only added 50 of 51 files (batch limit: 50).');
   });
 
   test('background remover exposes quality, refinement, and manual cleanup UI', async ({ page }) => {
