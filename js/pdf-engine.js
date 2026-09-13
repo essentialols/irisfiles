@@ -70,7 +70,7 @@ export async function imagesToPdf(files, onProgress, quality = 0.92) {
 
     let canvas;
     try {
-      if (!first) doc.addPage([w, h]);
+      if (!first) doc.addPage([w, h], w > h ? 'landscape' : 'portrait');
       else doc.internal.pageSize.width = w;
       if (first) doc.internal.pageSize.height = h;
       first = false;
