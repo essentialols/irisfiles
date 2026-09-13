@@ -303,7 +303,8 @@ function encodeWav(audioBuffer, onProgress) {
 /**
  * Fold a multichannel AudioBuffer down to stereo. Uses the Web Audio spec's
  * standard downmix formulas for quad (4) and 5.1 (6) layouts, so surround
- * and center-channel content survives instead of being dropped.
+ * and center-channel content survives instead of being dropped, then scales
+ * the pair back under full scale if the sum overshot.
  * @param {AudioBuffer} audioBuffer
  * @returns {[Float32Array, Float32Array]}
  */
@@ -328,16 +329,34 @@ function downmixToStereo(audioBuffer) {
       right[i] = ch[1][i] + 0.7071 * (ch[2][i] + ch[5][i]);
     }
   } else {
-    // Unknown layout: fold all channels evenly into left/right
+    // Unknown layout: the front pair keeps unit gain and every other channel
+    // folds into both sides equally. Splitting by even/odd index instead would
+    // send the center of a 3ch L/R/C source to the left only, and halve one
+    // side's gain but not the other.
     for (let i = 0; i < length; i++) {
-      let l = 0,
-        r = 0;
-      for (let c = 0; c < n; c++) {
-        if (c % 2 === 0) l += ch[c][i];
-        else r += ch[c][i];
-      }
-      left[i] = l / Math.ceil(n / 2);
-      right[i] = r / Math.max(1, Math.floor(n / 2));
+      let extra = 0;
+      for (let c = 2; c < n; c++) extra += ch[c][i];
+      extra *= 0.7071;
+      left[i] = ch[0][i] + extra;
+      right[i] = ch[1][i] + extra;
+    }
+  }
+
+  // Summing channels overshoots full scale: 5.1 at 0.75 per channel reaches
+  // 1.81, which the Int16 clamp in encodeMp3 would turn into hard clipping.
+  // One shared factor keeps the stereo image and relative dynamics intact.
+  let peak = 0;
+  for (let i = 0; i < length; i++) {
+    const l = Math.abs(left[i]);
+    const r = Math.abs(right[i]);
+    if (l > peak) peak = l;
+    if (r > peak) peak = r;
+  }
+  if (peak > 1) {
+    const gain = 1 / peak;
+    for (let i = 0; i < length; i++) {
+      left[i] *= gain;
+      right[i] *= gain;
     }
   }
 
