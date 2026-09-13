@@ -6,7 +6,11 @@
  * - PDF.js: PDF-to-image (render pages to Canvas)
  */
 
-import { loadSvgImage } from './converter.js';
+import { loadSvgImage, validateDimensions } from './converter.js';
+
+// jsPDF caps a page at 14400 PDF units. The px_scaling hotfix makes one CSS px
+// 0.75 units, so this is the largest page side expressible in px.
+const MAX_PAGE_PX = 19200;
 
 // CDN URLs (zero Vercel bandwidth)
 const LIBS = {
@@ -66,6 +70,19 @@ export async function imagesToPdf(files, onProgress, quality = 0.92) {
       try { img = await loadImage(url); } finally { URL.revokeObjectURL(url); }
       w = img.naturalWidth;
       h = img.naturalHeight;
+      // An SVG is resolution-independent and loadSvgImage already fits it to the
+      // pixel budget. A raster has a fixed size, so an oversized one is an error
+      // rather than something to silently downscale.
+      validateDimensions(w, h);
+    }
+
+    // jsPDF refuses a page larger than 14400 PDF units and clamps it silently,
+    // while addImage would still draw at the size asked for, cropping the
+    // overflow. One proportional factor keeps page and image the same size.
+    const overPageLimit = Math.max(w / MAX_PAGE_PX, h / MAX_PAGE_PX, 1);
+    if (overPageLimit > 1) {
+      w = Math.max(1, Math.round(w / overPageLimit));
+      h = Math.max(1, Math.round(h / overPageLimit));
     }
 
     let canvas;
