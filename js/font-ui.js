@@ -145,9 +145,13 @@ async function runConversion() {
   try {
     for (let i = 0; i < snapshot.length; i++) {
       const f = snapshot[i];
+      // Cleared: stop converting a batch whose results will be discarded anyway.
+      // break, not return: the tail below resets activeOperation, and returning
+      // past it would leave the button disabled for good.
+      if (myGen !== generation) break;
       actionBtn.textContent = `Converting ${i + 1}/${snapshot.length}...`;
       const blob = await convertFont(f, targetFormat, pct => {
-        actionBtn.textContent = `Converting ${i + 1}/${snapshot.length}... ${pct}%`;
+        if (myGen === generation) actionBtn.textContent = `Converting ${i + 1}/${snapshot.length}... ${pct}%`;
       });
       const outName = f.name.replace(/\.[^.]+$/, '') + '.' + targetFormat;
       localResults.push({ name: outName, blob });
@@ -164,7 +168,10 @@ async function runConversion() {
   }
 
   activeOperation = false;
-  if (myGen === generation) actionBtn.textContent = origText;
+  // Restored unconditionally: updateControls() keeps the button disabled for the
+  // whole run, so no second run can be in flight to own the label. Guarding this
+  // left a cleared batch showing "Converting 2/2... 100%" on an enabled button.
+  actionBtn.textContent = origText;
   updateControls();
 }
 
