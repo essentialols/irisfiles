@@ -3,6 +3,8 @@
  * Detects file types via magic bytes, stores in IndexedDB, routes to the right converter.
  */
 
+import { storePendingFiles, takePendingFiles, clearPendingFiles } from './pending-store.js';
+
 const SIGS = [
   { mime: 'image/heic', ext: 'heic', label: 'HEIC', offsets: [[4,[0x66,0x74,0x79,0x70,0x68,0x65,0x69,0x63]],[4,[0x66,0x74,0x79,0x70,0x68,0x65,0x69,0x78]],[4,[0x66,0x74,0x79,0x70,0x68,0x65,0x76,0x63]],[4,[0x66,0x74,0x79,0x70,0x6d,0x69,0x66,0x31]],[4,[0x66,0x74,0x79,0x70,0x6d,0x73,0x66,0x31]],[4,[0x66,0x74,0x79,0x70,0x68,0x65,0x69,0x66]],[4,[0x66,0x74,0x79,0x70,0x68,0x65,0x76,0x78]]] },
   { mime: 'image/avif', ext: 'avif', label: 'AVIF', offsets: [[4,[0x66,0x74,0x79,0x70,0x61,0x76,0x69,0x66]],[4,[0x66,0x74,0x79,0x70,0x61,0x76,0x69,0x73]]] },
@@ -217,55 +219,9 @@ async function identifyFileType(file) {
   return null;
 }
 
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open('irisfiles', 1);
-    req.onupgradeneeded = () => req.result.createObjectStore('pending');
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function storeFiles(files) {
-  const db = await openDB();
-  const tx = db.transaction('pending', 'readwrite');
-  const store = tx.objectStore('pending');
-  store.clear();
-  for (let i = 0; i < files.length; i++) {
-    store.put(files[i], i);
-  }
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-// Exported for converter pages to pick up stored files
+// Kept as the name 23 UI modules already import.
 export async function loadPendingFiles() {
-  try {
-    const db = await openDB();
-    const tx = db.transaction('pending', 'readonly');
-    const store = tx.objectStore('pending');
-    const keys = await idbRequest(store.getAllKeys());
-    if (keys.length === 0) return null;
-    const files = [];
-    for (const k of keys) {
-      files.push(await idbRequest(store.get(k)));
-    }
-    // Clear after reading
-    const tx2 = db.transaction('pending', 'readwrite');
-    tx2.objectStore('pending').clear();
-    return files;
-  } catch {
-    return null;
-  }
-}
-
-function idbRequest(req) {
-  return new Promise((resolve, reject) => {
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
+  return takePendingFiles();
 }
 
 function formatSize(bytes) {
@@ -2223,9 +2179,18 @@ export function initSmartDrop() {
         if (resolved) {
           runInlineConversion(files[0], dominant, resolved, routePanel, clearDroppedFiles);
         } else {
+          const token = selectionToken;
           btn.textContent = 'Loading...';
           btn.disabled = true;
-          await storeFiles(files);
+          await storePendingFiles(files, btn.dataset.href);
+          // A new drop or a dismissal while the write was in flight means these
+          // files are not what the user wants any more. Navigating would carry
+          // the old selection, and leaving the rows behind would hand them to
+          // whichever page loads next, so drop them instead.
+          if (token !== selectionToken) {
+            await clearPendingFiles();
+            return;
+          }
           window.location.href = btn.dataset.href;
         }
       });
