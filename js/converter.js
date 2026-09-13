@@ -195,7 +195,7 @@ function svgViewBoxDimensions(svgText) {
   };
 }
 
-async function loadSvgImage(file) {
+export async function loadSvgImage(file) {
   const bytes = await file.arrayBuffer();
   const svgBlob = new Blob([bytes], { type: 'image/svg+xml' });
   const svgText = new TextDecoder('utf-8', { fatal: false }).decode(bytes);

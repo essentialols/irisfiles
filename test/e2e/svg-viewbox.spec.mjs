@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { PDFDocument } from 'pdf-lib';
 import { test, expect } from '@playwright/test';
 import { fixture } from './helpers.mjs';
 
@@ -47,6 +48,59 @@ test.describe('SVG raster dimensions', () => {
     `);
 
     expect(dimensions).toEqual({ width: 120, height: 80 });
+  });
+
+  test('SVG to PDF uses viewBox sizing while keeping explicit dimensions authoritative', async ({ page }) => {
+    await page.goto('/svg-to-pdf');
+    await page.locator('#file-input').setInputFiles([
+      {
+        name: 'viewbox-only.svg',
+        mimeType: 'image/svg+xml',
+        buffer: Buffer.from(`
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+            <rect width="800" height="400" fill="#0f172a"/>
+            <circle cx="200" cy="200" r="120" fill="#22c55e"/>
+          </svg>
+        `),
+      },
+      {
+        name: 'explicit-landscape.svg',
+        mimeType: 'image/svg+xml',
+        buffer: Buffer.from(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="120" height="80" viewBox="0 0 600 400">
+            <rect width="600" height="400" fill="#ef4444"/>
+          </svg>
+        `),
+      },
+      {
+        name: 'explicit-portrait.svg',
+        mimeType: 'image/svg+xml',
+        buffer: Buffer.from(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="80" height="120" viewBox="0 0 400 600">
+            <rect width="400" height="600" fill="#3b82f6"/>
+          </svg>
+        `),
+      },
+    ]);
+
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#pdf-results .file-item.done')).toBeVisible({ timeout: 30_000 });
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('#dl-single').click(),
+    ]);
+
+    const pdf = await PDFDocument.load(await readFile(await download.path()));
+    const sizes = pdf.getPages().map(pdfPage => pdfPage.getSize());
+
+    // jsPDF's px_scaling hotfix maps CSS px to PDF points at 72/96.
+    expect(sizes).toHaveLength(3);
+    expect(sizes[0].width).toBeCloseTo(600, 1);
+    expect(sizes[0].height).toBeCloseTo(300, 1);
+    expect(sizes[1].width).toBeCloseTo(90, 1);
+    expect(sizes[1].height).toBeCloseTo(60, 1);
+    expect(sizes[2].width).toBeCloseTo(60, 1);
+    expect(sizes[2].height).toBeCloseTo(90, 1);
   });
 
   // Rasterizing at the viewBox size sent that size straight into
