@@ -1880,7 +1880,9 @@ export function initSmartDrop() {
 
   // Track blob URLs for cleanup
   let prevBlobUrls = [];
+  let selectionToken = 0;
   function clearDroppedFiles() {
+    selectionToken++;
     for (const u of prevBlobUrls) URL.revokeObjectURL(u);
     prevBlobUrls = [];
     routePanel.innerHTML = '';
@@ -1934,6 +1936,8 @@ export function initSmartDrop() {
     const files = Array.from(fileList);
     if (files.length === 0) return;
 
+    const token = ++selectionToken;
+
     // Revoke previous blob URLs
     for (const u of prevBlobUrls) URL.revokeObjectURL(u);
     prevBlobUrls = [];
@@ -1943,10 +1947,12 @@ export function initSmartDrop() {
     dropZone.classList.add('compact');
 
     const detected = await Promise.all(files.map(f => detect(f)));
+    if (token !== selectionToken) return;
     const known = detected.filter(Boolean);
 
     if (known.length === 0) {
       const typeInfo = await identifyFileType(files[0]);
+      if (token !== selectionToken) return;
       if (typeInfo) {
         showFileTypeInfo(files[0], typeInfo);
       } else {
@@ -1965,6 +1971,7 @@ export function initSmartDrop() {
 
     if (!routes) {
       const typeInfo = await identifyFileType(files[0]);
+      if (token !== selectionToken) return;
       if (typeInfo) {
         showFileTypeInfo(files[0], typeInfo);
       } else {
