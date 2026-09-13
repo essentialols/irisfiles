@@ -180,35 +180,41 @@ function normalizeFiles(value) {
 // The handoff store is read once and emptied immediately, the same discipline
 // smart-drop.js uses for its pending store. The carried files stay on disk only
 // for the duration of a navigation, never after the tab is closed.
+//
+// The row is only honoured by the page it was written for. A user who leaves
+// before the destination boots (closing the tab, or a second navigation) never
+// gives it the chance to consume the row, and it would otherwise be picked up
+// by whatever tool page loaded next, showing a file the user had moved on from.
+// Deleting unconditionally while returning only a matching row covers both.
 async function takeActiveFiles() {
   try {
     const db = await openActiveDb();
-    const value = await reqResult(db.transaction(ACTIVE_STORE, 'readonly').objectStore(ACTIVE_STORE).get(ACTIVE_KEY));
-    await clearActiveFiles();
-    return normalizeFiles(value);
+    const tx = db.transaction(ACTIVE_STORE, 'readwrite');
+    const store = tx.objectStore(ACTIVE_STORE);
+    // Both requests are issued before any await, so the transaction cannot go
+    // inactive between them and the delete is queued even if the read is slow.
+    const read = store.get(ACTIVE_KEY);
+    store.delete(ACTIVE_KEY);
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+    const record = read.result;
+    if (!record || record.dest !== normalizePath()) return [];
+    return normalizeFiles(record.files);
   } catch { return []; }
 }
 
-async function clearActiveFiles() {
-  try {
-    const db = await openActiveDb();
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction(ACTIVE_STORE, 'readwrite');
-      tx.objectStore(ACTIVE_STORE).clear();
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error);
-    });
-  } catch { /* best effort */ }
-}
-
-async function setActiveFiles(files) {
+async function setActiveFiles(files, destination) {
   const selection = Array.from(files || []).filter(Boolean);
-  if (!selection.length) return;
+  if (!selection.length || !destination) return;
+  const dest = normalizePath(new URL(destination, location.href).pathname);
   try {
     const db = await openActiveDb();
     await new Promise((resolve, reject) => {
       const tx = db.transaction(ACTIVE_STORE, 'readwrite');
-      tx.objectStore(ACTIVE_STORE).put(selection, ACTIVE_KEY);
+      tx.objectStore(ACTIVE_STORE).put({ files: selection, dest }, ACTIVE_KEY);
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error);
     });
@@ -412,13 +418,14 @@ export async function initPersistentFileFocus(options = {}) {
     const link = event.target.closest?.('[data-file-focus-route]');
     if (!link || !activeSelection.length) return;
     if (event.defaultPrevented || event.button !== 0) return;
+    const href = link.getAttribute('href');
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-      setActiveFiles(activeSelection);  // opening a new tab: cannot await, write best-effort
+      setActiveFiles(activeSelection, href);  // opening a new tab: cannot await, write best-effort
       return;
     }
     event.preventDefault();
-    await setActiveFiles(activeSelection);
-    location.href = link.getAttribute('href');
+    await setActiveFiles(activeSelection, href);
+    location.href = href;
   });
 }
 
