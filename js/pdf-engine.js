@@ -6,6 +6,8 @@
  * - PDF.js: PDF-to-image (render pages to Canvas)
  */
 
+import { loadSvgImage } from './converter.js';
+
 // CDN URLs (zero Vercel bandwidth)
 const LIBS = {
   pdfLib: {
@@ -48,27 +50,47 @@ export async function imagesToPdf(files, onProgress, quality = 0.92) {
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    const url = URL.createObjectURL(file.blob);
     let img;
-    try { img = await loadImage(url); } finally { URL.revokeObjectURL(url); }
+    let w;
+    let h;
+    let cleanup = () => {};
 
-    const w = img.naturalWidth;
-    const h = img.naturalHeight;
+    if (file.mime === 'image/svg+xml') {
+      const loaded = await loadSvgImage(file.blob);
+      img = loaded.image;
+      w = loaded.width;
+      h = loaded.height;
+      cleanup = loaded.cleanup;
+    } else {
+      const url = URL.createObjectURL(file.blob);
+      try { img = await loadImage(url); } finally { URL.revokeObjectURL(url); }
+      w = img.naturalWidth;
+      h = img.naturalHeight;
+    }
 
-    if (!first) doc.addPage([w, h]);
-    else doc.internal.pageSize.width = w;
-    if (first) doc.internal.pageSize.height = h;
-    first = false;
+    let canvas;
+    try {
+      if (!first) doc.addPage([w, h], w > h ? 'landscape' : 'portrait');
+      else doc.internal.pageSize.width = w;
+      if (first) doc.internal.pageSize.height = h;
+      first = false;
 
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Could not get canvas context');
-    ctx.drawImage(img, 0, 0);
-    const isPng = file.mime === 'image/png';
-    const dataUrl = canvas.toDataURL(isPng ? 'image/png' : 'image/jpeg', isPng ? undefined : quality);
-    doc.addImage(dataUrl, isPng ? 'PNG' : 'JPEG', 0, 0, w, h);
+      canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not get canvas context');
+      ctx.drawImage(img, 0, 0, w, h);
+      const isPng = file.mime === 'image/png';
+      const dataUrl = canvas.toDataURL(isPng ? 'image/png' : 'image/jpeg', isPng ? undefined : quality);
+      doc.addImage(dataUrl, isPng ? 'PNG' : 'JPEG', 0, 0, w, h);
+    } finally {
+      cleanup();
+      if (canvas) {
+        canvas.width = 1;
+        canvas.height = 1;
+      }
+    }
     if (onProgress) onProgress(Math.round(((i + 1) / files.length) * 100));
   }
 
