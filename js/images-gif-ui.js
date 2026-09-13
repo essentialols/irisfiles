@@ -24,6 +24,8 @@ const resultDiv = document.getElementById('gif-result');
 
 const frames = []; // { id, file, thumbUrl }
 let draggedFrameId = null;
+let conversionActive = false;
+let opToken = 0;
 
 // Drop zone
 dropZone.addEventListener('click', () => fileInput.click());
@@ -121,7 +123,7 @@ function renderFrames() {
 function updateUI() {
   const hasFrames = frames.length >= 2;
   controls.style.display = frames.length > 0 ? '' : 'none';
-  convertBtn.disabled = !hasFrames;
+  convertBtn.disabled = !hasFrames || conversionActive;
   clearBtn.style.display = frames.length > 0 ? '' : 'none';
   if (frames.length === 1) {
     convertBtn.textContent = 'Need at least 2 images';
@@ -131,6 +133,7 @@ function updateUI() {
 }
 
 function clearAll() {
+  opToken++;
   for (const f of frames) URL.revokeObjectURL(f.thumbUrl);
   frames.length = 0;
   frameList.innerHTML = '';
@@ -140,8 +143,12 @@ function clearAll() {
 }
 
 async function convert() {
-  if (frames.length < 2) return;
-  convertBtn.disabled = true;
+  if (frames.length < 2 || conversionActive) return;
+  conversionActive = true;
+  const token = ++opToken;
+  const snapshot = frames.map(f => f.file);
+  const frameCount = snapshot.length;
+  updateUI();
   progressDiv.style.display = '';
   progressDiv.textContent = 'Starting...';
   resultDiv.innerHTML = '';
@@ -149,16 +156,19 @@ async function convert() {
   const t0 = performance.now();
   try {
     const blob = await imagesToGif(
-      frames.map(f => f.file),
+      snapshot,
       {
         delay: parseInt(delaySlider.value),
         maxWidth: parseInt(widthSlider.value),
         onProgress: (pct, msg) => {
+          if (token !== opToken) return;
           progressDiv.textContent = msg;
           progressDiv.style.background = `linear-gradient(90deg, #dbeafe ${pct}%, var(--bg-secondary) ${pct}%)`;
         },
       }
     );
+
+    if (token !== opToken) return;
 
     const dur = Math.round(performance.now() - t0);
     const durStr = dur < 1000 ? dur + 'ms' : (dur / 1000).toFixed(1) + 's';
@@ -172,7 +182,7 @@ async function convert() {
       <div class="file-item done" style="margin-top:1rem">
         <div class="file-item__info">
           <div class="file-item__name">animation.gif</div>
-          <div class="file-item__meta">${formatSize(blob.size)} · ${frames.length} frames · ${durStr}</div>
+          <div class="file-item__meta">${formatSize(blob.size)} · ${frameCount} frames · ${durStr}</div>
         </div>
         <div class="file-item__actions">
           <button class="btn btn--success" style="padding:0.4rem 0.8rem;font-size:0.8rem" id="dl-gif">Download</button>
@@ -183,12 +193,13 @@ async function convert() {
       downloadBlob(blob, 'animation.gif');
     });
   } catch (err) {
+    if (token !== opToken) return;
     progressDiv.style.display = 'none';
     resultDiv.innerHTML = `<div class="notice">${escapeHtml(err.message)}</div>`;
+  } finally {
+    conversionActive = false;
+    updateUI();
   }
-
-  convertBtn.disabled = false;
-  updateUI();
 }
 
 function escapeHtml(str) {
