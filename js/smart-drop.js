@@ -2223,9 +2223,18 @@ export function initSmartDrop() {
         if (resolved) {
           runInlineConversion(files[0], dominant, resolved, routePanel, clearDroppedFiles);
         } else {
+          const token = selectionToken;
           btn.textContent = 'Loading...';
           btn.disabled = true;
           await storeFiles(files);
+          // A new drop or a dismissal while the write was in flight means these
+          // files are not what the user wants any more. Navigating would carry
+          // the old selection, and leaving the rows behind would hand them to
+          // whichever page loads next, so drop them instead.
+          if (token !== selectionToken) {
+            await storeFiles([]);
+            return;
+          }
           window.location.href = btn.dataset.href;
         }
       });
