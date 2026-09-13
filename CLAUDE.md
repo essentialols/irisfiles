@@ -10,8 +10,13 @@ Privacy-first client-side file converter. See [README.md](README.md) for project
   the deployed site instead of a local server. Catches what only exists once deployed:
   a path `.vercelignore` excludes, a CDN header overriding `vercel.json`.
 - `bash build.sh` - Rebuild WASM + fflate (rarely needed)
-- `git push origin main` - Deploy (Vercel auto-deploy). Pushing to main also triggers
-  `patrol.sh` via `.git/hooks/pre-push`.
+- `git push origin main` - Deploy (Vercel auto-deploy). `.git/hooks/pre-push` runs `npm test`
+  plus the e2e suite first and refuses the push if either fails; override once with
+  `CLAUDE_ALLOW_UNTESTED_PUSH=1`. `patrol.sh` runs from the same hook, opt-in via
+  `PATROL_ON_PUSH=1`.
+- **There is no CI.** A PR's only checks are `Vercel` and `Vercel Preview Comments`, both
+  preview builds. Green checks say nothing about tests, so run the suite locally before
+  merging anything. That gap let #166 merge carrying a test that could never pass.
 
 ## Conventions
 - One HTML page per tool, unique SEO meta, shared JS via ES module imports
