@@ -123,4 +123,23 @@ test.describe('Image Metadata regressions', () => {
     await expect(page.locator('#save-changes')).toBeHidden();
     await expect(page.locator('.meta-notice').last()).toContainText('Non-JPEG format');
   });
+
+  // The selectionToken guard deliberately skips cleanup belonging to a
+  // superseded operation, so resetState() owns restoring the buttons it hides.
+  // Without that they came back disabled and still labelled "Stripping...".
+  test('the action buttons come back enabled and normally labelled after Clear', async ({ page }) => {
+    await page.goto('/image-metadata');
+    await page.locator('#file-input').setInputFiles(fixture('metadata-heavy.jpg'));
+    await expect(page.locator('#strip-all')).toBeVisible({ timeout: 20000 });
+
+    await page.locator('#strip-all').click();
+    await page.locator('#clear-all').click();
+
+    await page.locator('#file-input').setInputFiles(fixture('metadata-heavy.jpg'));
+    await expect(page.locator('#strip-all')).toBeVisible({ timeout: 20000 });
+
+    await expect(page.locator('#strip-all')).toBeEnabled();
+    await expect(page.locator('#strip-all')).toHaveText('Strip All Metadata');
+    await expect(page.locator('#save-changes')).toHaveText('Save Changes');
+  });
 });

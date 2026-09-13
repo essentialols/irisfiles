@@ -34,4 +34,26 @@ test.describe('Resize settings validation', () => {
     await page.locator('.file-item.done').waitFor({ timeout: 10000 });
     await expect(page.locator('.btn-download')).toBeVisible();
   });
+
+  // A processing error is recoverable, unlike a validation error at add time, so
+  // the entry stays retryable. The Resize button used to disappear anyway, which
+  // left no way to act on the correction.
+  test('an oversized-dimension error still leaves Resize available to retry', async ({ page }) => {
+    await page.goto('/resize-image');
+    await page.locator('#file-input').setInputFiles(fixture('landscape.png'));
+    await expect(page.locator('.file-item').first()).toBeVisible({ timeout: 15000 });
+
+    await page.locator('#lock-aspect').uncheck();
+    await page.locator('#resize-width').fill('16384');
+    await page.locator('#resize-height').fill('16384');
+    await page.locator('#resize-btn').click();
+
+    await expect(page.locator('.file-item__status.error')).toContainText(/too large/i, { timeout: 30000 });
+    await expect(page.locator('#resize-btn')).toBeVisible();
+
+    await page.locator('#resize-width').fill('320');
+    await page.locator('#resize-height').fill('240');
+    await page.locator('#resize-btn').click();
+    await expect(page.locator('.file-item.done').first()).toBeVisible({ timeout: 30000 });
+  });
 });
