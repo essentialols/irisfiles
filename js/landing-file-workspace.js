@@ -10,6 +10,8 @@
  * file-focus's action matrix to fill any gaps (for example Create ZIP).
  */
 
+import { storePendingFiles } from './pending-store.js';
+
 import { actionsForSelection } from './file-focus.js';
 
 function workspaceIsActive(routePanel) {
@@ -40,38 +42,6 @@ function sectionFor(routePanel, labelText) {
   return section;
 }
 
-function openPendingDb() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open('irisfiles', 1);
-    req.onupgradeneeded = () => {
-      if (!req.result.objectStoreNames.contains('pending')) req.result.createObjectStore('pending');
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function storePendingFiles(files) {
-  const selection = Array.from(files || []).filter(Boolean);
-  if (!selection.length) return false;
-
-  const db = await openPendingDb();
-  try {
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction('pending', 'readwrite');
-      const store = tx.objectStore('pending');
-      store.clear();
-      selection.forEach((file, index) => store.put(file, index));
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error || new Error('Could not store selected files.'));
-    });
-    return true;
-  } finally {
-    db.close();
-  }
-}
-
 function mergePersistentActions(routePanel, selection) {
   if (!selection.length) return;
 
@@ -97,7 +67,7 @@ function mergePersistentActions(routePanel, selection) {
       button.disabled = true;
       button.textContent = 'Loading...';
       try {
-        await storePendingFiles(selection);
+        await storePendingFiles(selection, action.href);
         window.location.href = action.href;
       } catch (error) {
         button.disabled = false;

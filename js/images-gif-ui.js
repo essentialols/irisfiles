@@ -26,6 +26,15 @@ const frames = []; // { id, file, thumbUrl }
 let draggedFrameId = null;
 let conversionActive = false;
 let opToken = 0;
+let previewUrl = null;
+
+// Every conversion registers a preview URL; without this the browser holds on
+// to every GIF produced in the session, not just the one on screen.
+function releasePreview() {
+  if (!previewUrl) return;
+  URL.revokeObjectURL(previewUrl);
+  previewUrl = null;
+}
 
 // Drop zone
 dropZone.addEventListener('click', () => fileInput.click());
@@ -82,6 +91,9 @@ function renderFrames() {
       <button class="frame-item__remove" title="Remove">&times;</button>
     `;
     div.querySelector('.frame-item__remove').addEventListener('click', () => {
+      // Same reason clearAll() bumps it: a conversion already running was asked
+      // for frames that no longer exist, so its result must not be published.
+      opToken++;
       URL.revokeObjectURL(frame.thumbUrl);
       frames.splice(frames.indexOf(frame), 1);
       renderFrames();
@@ -134,6 +146,7 @@ function updateUI() {
 
 function clearAll() {
   opToken++;
+  releasePreview();
   for (const f of frames) URL.revokeObjectURL(f.thumbUrl);
   frames.length = 0;
   frameList.innerHTML = '';
@@ -151,6 +164,7 @@ async function convert() {
   updateUI();
   progressDiv.style.display = '';
   progressDiv.textContent = 'Starting...';
+  releasePreview();
   resultDiv.innerHTML = '';
 
   const t0 = performance.now();
@@ -175,6 +189,7 @@ async function convert() {
     progressDiv.style.display = 'none';
 
     const gifUrl = URL.createObjectURL(blob);
+    previewUrl = gifUrl;
     resultDiv.innerHTML = `
       <div class="gif-result-preview">
         <img src="${gifUrl}" alt="Generated GIF" style="max-width:100%;border-radius:8px;border:1px solid var(--border)">

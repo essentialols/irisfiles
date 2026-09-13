@@ -6,6 +6,8 @@
  * dedicated page (video -> audio, PDF editing, OCR, background removal, HTML -> PDF).
  */
 
+import { storePendingFiles } from './pending-store.js';
+
 const LANDING_GROUPS = [
   {
     label: 'Video → Audio',
@@ -123,34 +125,6 @@ function extensionOf(file) {
   return match ? match[1] : '';
 }
 
-function openPendingDb() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open('irisfiles', 1);
-    req.onupgradeneeded = () => {
-      if (!req.result.objectStoreNames.contains('pending')) {
-        req.result.createObjectStore('pending');
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function storePendingFiles(files) {
-  if (!files.length) return;
-  const db = await openPendingDb();
-  const tx = db.transaction('pending', 'readwrite');
-  const store = tx.objectStore('pending');
-  store.clear();
-  files.forEach((file, index) => store.put(file, index));
-  await new Promise((resolve, reject) => {
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error || new Error('Could not store dropped files.'));
-  });
-  db.close();
-}
-
 function getOrCreateSection(routePanel, labelText) {
   const sections = Array.from(routePanel.querySelectorAll('.route-section'));
   const existing = sections.find(section =>
@@ -183,7 +157,7 @@ function addRouteButtons(routePanel, files, labelText, routes) {
       btn.disabled = true;
       btn.textContent = 'Loading...';
       try {
-        await storePendingFiles(files);
+        await storePendingFiles(files, href);
         window.location.href = href;
       } catch (error) {
         btn.disabled = false;

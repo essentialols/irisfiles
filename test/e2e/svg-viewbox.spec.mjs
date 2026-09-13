@@ -113,4 +113,36 @@ test.describe('SVG raster dimensions', () => {
     await expect(page.locator('.file-item.done').first()).toBeVisible({ timeout: 90000 });
     await expect(page.locator('.file-item').first()).not.toContainText(/too large/i);
   });
+
+  // jsPDF clamps any page over 14400 units and says so on the console, but
+  // addImage still drew at the requested size, so the overflow was cropped. The
+  // first page escaped the clamp entirely (it assigns pageSize directly), which
+  // also left a batch with mismatched page widths.
+  test('a viewBox wider than one PDF page is scaled to fit rather than cropped', async ({ page }) => {
+    const wide = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24000 100"><rect width="24000" height="100" fill="#111827"/></svg>`;
+    await page.goto('/svg-to-pdf');
+    await page.locator('#file-input').setInputFiles([
+      { name: 'wide-1.svg', mimeType: 'image/svg+xml', buffer: Buffer.from(wide) },
+      { name: 'wide-2.svg', mimeType: 'image/svg+xml', buffer: Buffer.from(wide) },
+    ]);
+
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#pdf-results .file-item.done')).toBeVisible({ timeout: 30_000 });
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('#dl-single').click(),
+    ]);
+
+    const pdf = await PDFDocument.load(await readFile(await download.path()));
+    const sizes = pdf.getPages().map(p => p.getSize());
+    expect(sizes).toHaveLength(2);
+    for (const { width, height } of sizes) {
+      expect(width).toBeLessThanOrEqual(14400);
+      expect(height).toBeLessThanOrEqual(14400);
+      // 24000x100 is 240:1, and scaling to fit has to keep that.
+      expect(width / height).toBeCloseTo(240, 0);
+    }
+    // Both pages take the same path, so neither may escape the limit.
+    expect(sizes[0].width).toBeCloseTo(sizes[1].width, 1);
+  });
 });
