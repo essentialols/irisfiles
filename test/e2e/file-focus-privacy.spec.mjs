@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 import { fixture } from './helpers.mjs';
 
@@ -82,20 +83,25 @@ test.describe('file-focus handoff store is not a persistent copy of user files',
 
   // The Smart Drop store had the same hole: rows were consumed by whichever page
   // loaded next, so a handoff the user abandoned surfaced in an unrelated tool.
+  // /jpg-to-webp accepts a JPG, so it would load the file if it were offered it:
+  // without the destination on the row this shows one file item named sample.jpg.
   test('a Smart Drop handoff the user abandoned is not picked up by another tool', async ({ page }) => {
+    const bytes = Array.from(await readFile(fixture('sample.jpg')));
     await page.goto('/jpg-to-png');
-    await page.locator('#file-input').setInputFiles(fixture('sample.jpg'));
-    await expect(page.locator('#active-file-focus')).toBeVisible({ timeout: 15000 });
 
-    // Write the handoff exactly as a route click does, then never go there.
-    await page.evaluate(async () => {
+    // Write the handoff exactly as a route click does, then never go there. The
+    // File is built in the page because the tool clears its input after change,
+    // which would leave a probe reading input.files with nothing to store.
+    const stored = await page.evaluate(async payload => {
       const { storePendingFiles } = await import('/js/pending-store.js');
-      await storePendingFiles(Array.from(document.querySelector('#file-input').files), '/image-metadata');
-    });
+      const file = new File([new Uint8Array(payload)], 'sample.jpg', { type: 'image/jpeg' });
+      return storePendingFiles([file], '/image-metadata');
+    }, bytes);
+    expect(stored).toBe(true);
 
-    await page.goto('/png-to-jpg');
+    await page.goto('/jpg-to-webp');
     await page.waitForTimeout(750);
-    await expect(page.locator('#file-list .file-item')).toHaveCount(0);
+    await expect(page.locator('.file-item')).toHaveCount(0);
     await expect(page.locator('#active-file-focus')).toHaveCount(0);
     expect(await storedCount(page)).toBeLessThanOrEqual(0);
   });

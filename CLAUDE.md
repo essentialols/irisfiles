@@ -14,9 +14,12 @@ Privacy-first client-side file converter. See [README.md](README.md) for project
   plus the e2e suite first and refuses the push if either fails; override once with
   `CLAUDE_ALLOW_UNTESTED_PUSH=1`. `patrol.sh` runs from the same hook, opt-in via
   `PATROL_ON_PUSH=1`.
+- `bash scripts/merge-pr.sh <n>` - Merge a PR after running the suite against its merge
+  result in a throwaway worktree. Use this rather than `gh pr merge`: merging on GitHub
+  deploys without running anything, because the pre-push hook only sees `git push`.
 - **There is no CI.** A PR's only checks are `Vercel` and `Vercel Preview Comments`, both
-  preview builds. Green checks say nothing about tests, so run the suite locally before
-  merging anything. That gap let #166 merge carrying a test that could never pass.
+  preview builds. Green checks say nothing about tests. That gap let #166 merge carrying a
+  test that could never pass.
 
 ## Conventions
 - One HTML page per tool, unique SEO meta, shared JS via ES module imports
