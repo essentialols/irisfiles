@@ -6,6 +6,9 @@ Privacy-first client-side file converter. See [README.md](README.md) for project
 - `npm run dev` - Dev server (`npx serve . -p 3000`)
 - `npm test` - Validation suite (154 pages)
 - `npm run test:e2e` - Playwright e2e suite (test/e2e, own server on :3988)
+- `IRIS_TEST_BASE_URL=https://irisfiles.com npx playwright test` - run the suite against
+  the deployed site instead of a local server. Catches what only exists once deployed:
+  a path `.vercelignore` excludes, a CDN header overriding `vercel.json`.
 - `bash build.sh` - Rebuild WASM + fflate (rarely needed)
 - `git push origin main` - Deploy (Vercel auto-deploy). Pushing to main also triggers
   `patrol.sh` via `.git/hooks/pre-push`.
