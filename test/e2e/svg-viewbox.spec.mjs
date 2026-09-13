@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
+import { fixture } from './helpers.mjs';
 
 function pngDimensions(buffer) {
   if (buffer.length < 24 || buffer.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') {
@@ -46,5 +47,16 @@ test.describe('SVG raster dimensions', () => {
     `);
 
     expect(dimensions).toEqual({ width: 120, height: 80 });
+  });
+
+  // Rasterizing at the viewBox size sent that size straight into
+  // validateDimensions(), so a viewBox past the 100MP canvas budget started
+  // throwing. An SVG is resolution-independent, so it is scaled to fit instead.
+  test('a viewBox larger than the 100MP budget is scaled down, not rejected', async ({ page }) => {
+    await page.goto('/svg-to-png');
+    await page.locator('#file-input').setInputFiles(fixture('huge-viewbox.svg'));
+    await expect(page.locator('.file-item').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.file-item.done').first()).toBeVisible({ timeout: 90000 });
+    await expect(page.locator('.file-item').first()).not.toContainText(/too large/i);
   });
 });
