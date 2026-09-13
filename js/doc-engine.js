@@ -513,6 +513,9 @@ async function extractDocxText(file, onProgress) {
   if (onProgress) onProgress(40);
 
   const doc = new DOMParser().parseFromString(xml, 'application/xml');
+  if (doc.getElementsByTagName('parsererror').length > 0) {
+    throw new Error('Failed to parse DOCX document content: the file may be corrupted.');
+  }
 
   // Namespace-aware: w:p -> paragraphs, w:r -> runs, w:t -> text
   // DOMParser may or may not resolve namespaces; handle both cases
