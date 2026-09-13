@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 import { fixture } from './helpers.mjs';
 
@@ -45,6 +46,21 @@ test.describe('High-value tool expansion', () => {
     await expect(page.locator('.file-item.done')).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('.file-item.done .btn--success')).toBeVisible();
     await expect(page.locator('.file-item__meta')).toContainText('→');
+  });
+
+  test('PNG to ICO tells the user when the 50-file batch limit drops inputs', async ({ page }) => {
+    await page.goto('/png-to-ico');
+    const source = await readFile(fixture('sample.png'));
+    const inputs = Array.from({ length: 51 }, (_, index) => ({
+      name: `icon-${index + 1}.png`,
+      mimeType: 'image/png',
+      buffer: source,
+    }));
+
+    await page.locator('#file-input').setInputFiles(inputs);
+
+    await expect(page.locator('.file-item')).toHaveCount(50);
+    await expect(page.locator('#ico-notice')).toHaveText('Only added 50 of 51 files (batch limit: 50).');
   });
 
   test('background remover exposes quality, refinement, and manual cleanup UI', async ({ page }) => {

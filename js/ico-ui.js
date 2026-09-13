@@ -16,7 +16,17 @@ export function init() {
   loadPendingFiles().then(files => { if (files?.length) add(files); }).catch(() => {});
 }
 function add(files) {
-  for (const file of Array.from(files).slice(0, MAX_BATCH_SIZE - queue.length)) {
+  const incoming = Array.from(files);
+  const remaining = MAX_BATCH_SIZE - queue.length;
+  if (remaining <= 0) {
+    notice(`Batch limit reached (${MAX_BATCH_SIZE} files). Clear some files first.`);
+    return;
+  }
+  const toAdd = incoming.slice(0, remaining);
+  if (toAdd.length < incoming.length) {
+    notice(`Only added ${toAdd.length} of ${incoming.length} files (batch limit: ${MAX_BATCH_SIZE}).`);
+  }
+  for (const file of toAdd) {
     const entry = { id: crypto.randomUUID(), file, status: 'queued', progress: 0, output: null, name: outputFilename(file.name, 'ico') };
     try { validateFile(file); } catch (err) { entry.status = 'error'; entry.error = err.message; }
     queue.push(entry); render(entry);
