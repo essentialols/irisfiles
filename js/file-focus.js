@@ -1,3 +1,5 @@
+import { peekPendingFiles } from './pending-store.js';
+
 const ACTIVE_DB = 'irisfiles-active-file';
 const ACTIVE_STORE = 'active';
 const ACTIVE_KEY = 'current';
@@ -219,28 +221,6 @@ async function setActiveFiles(files, destination) {
       tx.onerror = () => reject(tx.error);
     });
   } catch { /* best effort: persistence is an enhancement */ }
-}
-
-async function peekPendingFiles() {
-  try {
-    const db = await new Promise((resolve, reject) => {
-      const req = indexedDB.open('irisfiles', 1);
-      req.onupgradeneeded = () => {
-        if (!req.result.objectStoreNames.contains('pending')) req.result.createObjectStore('pending');
-      };
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-    const store = db.transaction('pending', 'readonly').objectStore('pending');
-    const keys = await reqResult(store.getAllKeys());
-    if (!keys.length) return [];
-    const files = [];
-    for (const key of keys) {
-      const file = await reqResult(store.get(key));
-      if (file) files.push(file);
-    }
-    return files;
-  } catch { return []; }
 }
 
 function prettySize(bytes) {

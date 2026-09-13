@@ -1,24 +1,38 @@
 import { test, expect } from '@playwright/test';
 import { fixture } from './helpers.mjs';
 
-// Counts rows in the handoff store WITHOUT creating it, so the probe itself
-// cannot manufacture the evidence it is looking for.
+// Counts rows in BOTH handoff stores WITHOUT creating either, so the probe
+// cannot manufacture the evidence it is looking for. Counting only
+// irisfiles-active-file reported zero while a copy of the user's file could be
+// sitting in irisfiles/pending, which made this a false negative.
+const STORES = [
+  ['irisfiles-active-file', 'active'],
+  ['irisfiles', 'pending'],
+];
+
 async function storedCount(page) {
-  return page.evaluate(async () => {
-    const dbs = await indexedDB.databases();
-    if (!dbs.some(d => d.name === 'irisfiles-active-file')) return -1; // db absent
-    const db = await new Promise((res, rej) => {
-      const r = indexedDB.open('irisfiles-active-file');
-      r.onsuccess = () => res(r.result);
-      r.onerror = () => rej(r.error);
-    });
-    if (!db.objectStoreNames.contains('active')) return 0;
-    return new Promise((res, rej) => {
-      const r = db.transaction('active', 'readonly').objectStore('active').count();
-      r.onsuccess = () => res(r.result);
-      r.onerror = () => rej(r.error);
-    });
-  });
+  return page.evaluate(async stores => {
+    const present = (await indexedDB.databases()).map(d => d.name);
+    let total = -1; // stays negative when neither database exists at all
+    for (const [dbName, storeName] of stores) {
+      if (!present.includes(dbName)) continue;
+      const db = await new Promise((res, rej) => {
+        const r = indexedDB.open(dbName);
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      });
+      if (total < 0) total = 0;
+      if (db.objectStoreNames.contains(storeName)) {
+        total += await new Promise((res, rej) => {
+          const r = db.transaction(storeName, 'readonly').objectStore(storeName).count();
+          r.onsuccess = () => res(r.result);
+          r.onerror = () => rej(r.error);
+        });
+      }
+      db.close();
+    }
+    return total;
+  }, STORES);
 }
 
 test.describe('file-focus handoff store is not a persistent copy of user files', () => {
@@ -64,5 +78,25 @@ test.describe('file-focus handoff store is not a persistent copy of user files',
     await page.waitForTimeout(750);
     expect(await storedCount(page)).toBeLessThanOrEqual(0);
     await expect(page.locator('#active-file-focus')).toHaveCount(0);
+  });
+
+  // The Smart Drop store had the same hole: rows were consumed by whichever page
+  // loaded next, so a handoff the user abandoned surfaced in an unrelated tool.
+  test('a Smart Drop handoff the user abandoned is not picked up by another tool', async ({ page }) => {
+    await page.goto('/jpg-to-png');
+    await page.locator('#file-input').setInputFiles(fixture('sample.jpg'));
+    await expect(page.locator('#active-file-focus')).toBeVisible({ timeout: 15000 });
+
+    // Write the handoff exactly as a route click does, then never go there.
+    await page.evaluate(async () => {
+      const { storePendingFiles } = await import('/js/pending-store.js');
+      await storePendingFiles(Array.from(document.querySelector('#file-input').files), '/image-metadata');
+    });
+
+    await page.goto('/png-to-jpg');
+    await page.waitForTimeout(750);
+    await expect(page.locator('#file-list .file-item')).toHaveCount(0);
+    await expect(page.locator('#active-file-focus')).toHaveCount(0);
+    expect(await storedCount(page)).toBeLessThanOrEqual(0);
   });
 });
