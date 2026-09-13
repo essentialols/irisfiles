@@ -301,22 +301,87 @@ function encodeWav(audioBuffer, onProgress) {
 }
 
 /**
+ * Fold a multichannel AudioBuffer down to stereo. Uses the Web Audio spec's
+ * standard downmix formulas for quad (4) and 5.1 (6) layouts, so surround
+ * and center-channel content survives instead of being dropped, then scales
+ * the pair back under full scale if the sum overshot.
+ * @param {AudioBuffer} audioBuffer
+ * @returns {[Float32Array, Float32Array]}
+ */
+function downmixToStereo(audioBuffer) {
+  const n = audioBuffer.numberOfChannels;
+  const length = audioBuffer.length;
+  const ch = [];
+  for (let c = 0; c < n; c++) ch.push(audioBuffer.getChannelData(c));
+  const left = new Float32Array(length);
+  const right = new Float32Array(length);
+
+  if (n === 4) {
+    // L, R, SL, SR
+    for (let i = 0; i < length; i++) {
+      left[i] = 0.5 * (ch[0][i] + ch[2][i]);
+      right[i] = 0.5 * (ch[1][i] + ch[3][i]);
+    }
+  } else if (n === 6) {
+    // L, R, C, LFE, SL, SR
+    for (let i = 0; i < length; i++) {
+      left[i] = ch[0][i] + 0.7071 * (ch[2][i] + ch[4][i]);
+      right[i] = ch[1][i] + 0.7071 * (ch[2][i] + ch[5][i]);
+    }
+  } else {
+    // Unknown layout: the front pair keeps unit gain and every other channel
+    // folds into both sides equally. Splitting by even/odd index instead would
+    // send the center of a 3ch L/R/C source to the left only, and halve one
+    // side's gain but not the other.
+    for (let i = 0; i < length; i++) {
+      let extra = 0;
+      for (let c = 2; c < n; c++) extra += ch[c][i];
+      extra *= 0.7071;
+      left[i] = ch[0][i] + extra;
+      right[i] = ch[1][i] + extra;
+    }
+  }
+
+  // Summing channels overshoots full scale: 5.1 at 0.75 per channel reaches
+  // 1.81, which the Int16 clamp in encodeMp3 would turn into hard clipping.
+  // One shared factor keeps the stereo image and relative dynamics intact.
+  let peak = 0;
+  for (let i = 0; i < length; i++) {
+    const l = Math.abs(left[i]);
+    const r = Math.abs(right[i]);
+    if (l > peak) peak = l;
+    if (r > peak) peak = r;
+  }
+  if (peak > 1) {
+    const gain = 1 / peak;
+    for (let i = 0; i < length; i++) {
+      left[i] *= gain;
+      right[i] *= gain;
+    }
+  }
+
+  return [left, right];
+}
+
+/**
  * Encode AudioBuffer to MP3 using lamejs. Yields to main thread periodically.
  * @param {AudioBuffer} audioBuffer
  * @param {function} onProgress
  * @returns {Promise<Blob>}
  */
 async function encodeMp3(audioBuffer, onProgress, kbps = 128) {
-  const numChannels = Math.max(1, Math.min(audioBuffer.numberOfChannels, 2)); // lamejs supports mono/stereo
+  const sourceChannels = audioBuffer.numberOfChannels;
+  const numChannels = Math.max(1, Math.min(sourceChannels, 2)); // lamejs supports mono/stereo
   const sampleRate = audioBuffer.sampleRate;
   const encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, kbps);
   const chunkSize = 1152;
   const mp3Chunks = [];
 
-  // Get PCM data as Int16 arrays
+  // Get PCM data as Int16 arrays, downmixing surround sources to stereo first
+  const downmixed = sourceChannels > 2 ? downmixToStereo(audioBuffer) : null;
   const channels = [];
   for (let ch = 0; ch < numChannels; ch++) {
-    const float32 = audioBuffer.getChannelData(ch);
+    const float32 = downmixed ? downmixed[ch] : audioBuffer.getChannelData(ch);
     const int16 = new Int16Array(float32.length);
     for (let i = 0; i < float32.length; i++) {
       const s = Math.max(-1, Math.min(1, float32[i]));
