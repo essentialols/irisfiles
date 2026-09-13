@@ -64,11 +64,20 @@ test.describe('SVG raster dimensions', () => {
         `),
       },
       {
-        name: 'explicit-size.svg',
+        name: 'explicit-landscape.svg',
         mimeType: 'image/svg+xml',
         buffer: Buffer.from(`
           <svg xmlns="http://www.w3.org/2000/svg" width="120" height="80" viewBox="0 0 600 400">
             <rect width="600" height="400" fill="#ef4444"/>
+          </svg>
+        `),
+      },
+      {
+        name: 'explicit-portrait.svg',
+        mimeType: 'image/svg+xml',
+        buffer: Buffer.from(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="80" height="120" viewBox="0 0 400 600">
+            <rect width="400" height="600" fill="#3b82f6"/>
           </svg>
         `),
       },
@@ -85,11 +94,13 @@ test.describe('SVG raster dimensions', () => {
     const sizes = pdf.getPages().map(pdfPage => pdfPage.getSize());
 
     // jsPDF's px_scaling hotfix maps CSS px to PDF points at 72/96.
-    expect(sizes).toHaveLength(2);
+    expect(sizes).toHaveLength(3);
     expect(sizes[0].width).toBeCloseTo(600, 1);
     expect(sizes[0].height).toBeCloseTo(300, 1);
     expect(sizes[1].width).toBeCloseTo(90, 1);
     expect(sizes[1].height).toBeCloseTo(60, 1);
+    expect(sizes[2].width).toBeCloseTo(60, 1);
+    expect(sizes[2].height).toBeCloseTo(90, 1);
   });
 
   // Rasterizing at the viewBox size sent that size straight into
