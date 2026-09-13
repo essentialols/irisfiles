@@ -38,9 +38,10 @@ export async function resizeImage(file, opts, onProgress) {
   // Reject before clamping so the error quotes the size the user actually asked for
   validateDimensions(targetW, targetH);
 
-  // Clamp to reasonable limits
-  targetW = Math.max(1, Math.min(targetW, 16384));
-  targetH = Math.max(1, Math.min(targetH, 16384));
+  // Clamp to canvas limits with a single proportional factor so aspect ratio survives
+  const overLimit = Math.max(targetW / 16384, targetH / 16384, 1);
+  targetW = Math.max(1, Math.round(targetW / overLimit));
+  targetH = Math.max(1, Math.round(targetH / overLimit));
 
   if (onProgress) onProgress(30);
 
