@@ -95,4 +95,42 @@ test.describe('font conversion output', () => {
     // Same table count survives the wrap, so no table is dropped on the way in.
     expect(woff.readUInt16BE(12)).toBe(original.readUInt16BE(4));
   });
+
+  test('a batch of two fonts shows a summary and downloads together as a ZIP', async ({ page }) => {
+    await page.goto('/ttf-to-woff');
+    await page.locator('#file-input').setInputFiles([fixture('sample.ttf'), fixture('sample.ttf')]);
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#font-results .file-item.done')).toHaveCount(2, { timeout: 30_000 });
+    await expect(page.locator('#font-results .batch-summary')).toBeVisible();
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator('#dl-all-zip').click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe('irisfiles-fonts.zip');
+    const outputPath = await download.path();
+    expect(outputPath).toBeTruthy();
+    expect((await readFile(outputPath)).length).toBeGreaterThan(1_000);
+  });
+
+  // Regression guard for #164: a cleared batch used to leave the button
+  // permanently disabled or mislabeled with a stale "Converting..." text.
+  test('clearing after a completed batch leaves the button usable for a new conversion', async ({ page }) => {
+    await page.goto('/ttf-to-woff');
+    await page.locator('#file-input').setInputFiles(fixture('sample.ttf'));
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#font-results .file-item.done')).toBeVisible({ timeout: 30_000 });
+
+    await page.locator('#clear-all').click();
+    await expect(page.locator('#file-list .file-item')).toHaveCount(0);
+    await expect(page.locator('#font-results')).toHaveCount(0);
+    await expect(page.locator('#action-btn')).not.toBeVisible();
+
+    await page.locator('#file-input').setInputFiles(fixture('sample.ttf'));
+    await expect(page.locator('#action-btn')).toBeEnabled();
+    await expect(page.locator('#action-btn')).toHaveText('Convert to WOFF');
+
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#font-results .file-item.done')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('#action-btn')).toHaveText('Convert to WOFF');
+  });
 });
