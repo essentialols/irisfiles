@@ -699,10 +699,12 @@ async function extractMobiText(file, onProgress) {
     }
   }
 
-  // If text contains HTML, strip tags
+  // HTML-based MOBI books use block elements and <br> tags to carry the
+  // document's reading structure. Reuse the EPUB text walker instead of
+  // textContent, which concatenates adjacent paragraphs and headings.
   if (text.includes('<html') || text.includes('<body') || text.includes('<p>') || text.includes('<p ')) {
     const doc = new DOMParser().parseFromString(text, 'text/html');
-    text = (doc.body || doc.documentElement).textContent || '';
+    text = htmlBodyToPlainText(doc.body || doc.documentElement);
   }
 
   if (onProgress) onProgress(80);
