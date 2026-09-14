@@ -163,7 +163,7 @@ test.describe('ICO pages (no fixture)', () => {
   });
 });
 
-test.describe('TIFF pages (no fixture)', () => {
+test.describe('TIFF pages', () => {
   test('tiff-to-jpg page loads correctly', async ({ page }) => {
     await page.goto('/tiff-to-jpg');
     await expect(page.locator('#drop-zone')).toBeVisible();
@@ -202,6 +202,15 @@ test.describe('TIFF pages (no fixture)', () => {
     await expect(config).toHaveAttribute('data-target-ext', 'png');
   });
 
+  test('recognizes a native TIFF and explains Chromium decode failure', async ({ page }) => {
+    await page.goto('/tiff-to-png');
+    await page.locator('#file-input').setInputFiles(fixture('sample.tiff'));
+    const status = page.locator('.file-item__status.error').first();
+    await expect(status).toBeVisible({ timeout: 15000 });
+    await expect(status).toContainText('Could not decode TIFF');
+    await expect(status).not.toContainText('Unrecognized image format');
+  });
+
   test('offers no quality control for a lossless target', async ({ page }) => {
     await page.goto('/tiff-to-png');
     // Quality only applies to lossy encoders, so these pages ship none.
@@ -232,6 +241,15 @@ test.describe('TIFF pages (no fixture)', () => {
     // Every *-to-pdf route is the same img-to-pdf tool behind its own
     // landing page, so it carries a pdf mode rather than a target mime.
     await expect(config).toHaveAttribute('data-pdf-mode', 'img-to-pdf');
+  });
+
+  test('tiff-to-pdf reports the same TIFF capability error', async ({ page }) => {
+    await page.goto('/tiff-to-pdf');
+    await page.locator('#file-input').setInputFiles(fixture('sample.tiff'));
+    await page.locator('#action-btn').click();
+    const notice = page.locator('#pdf-results .notice');
+    await expect(notice).toBeVisible({ timeout: 15000 });
+    await expect(notice).toContainText('Could not decode TIFF');
   });
 });
 
