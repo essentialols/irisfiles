@@ -199,7 +199,7 @@ test.describe('TIFF pages', () => {
     const badge = page.locator('#tiff-support-badge');
     await expect(badge).toBeVisible();
     await expect(badge).toContainText('Safari supports TIFF natively');
-    await expect(badge).toContainText('Chrome, Edge, and Firefox do not');
+    await expect(badge).toContainText('Chrome, Edge, and Firefox do not support TIFF natively');
   });
 
   test('tiff-to-png config has correct attributes', async ({ page }) => {

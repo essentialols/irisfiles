@@ -118,7 +118,7 @@ function inferFormatPreflight(options) {
     ...options,
     preflight: {
       id: 'tiff-support-badge',
-      text: 'TIFF decoding depends on browser support. Safari supports TIFF natively; Chrome, Edge, and Firefox do not.',
+      text: 'TIFF decoding depends on browser support. Safari supports TIFF natively; Chrome, Edge, and Firefox do not support TIFF natively.',
     },
   };
 }
