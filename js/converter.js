@@ -224,6 +224,24 @@ export async function loadSvgImage(file) {
   }
 }
 
+async function loadNativeImage(file, errorMessage) {
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.src = url;
+  try {
+    await img.decode();
+    return {
+      image: img,
+      width: img.naturalWidth,
+      height: img.naturalHeight,
+      cleanup: () => URL.revokeObjectURL(url),
+    };
+  } catch {
+    URL.revokeObjectURL(url);
+    throw new Error(errorMessage);
+  }
+}
+
 /**
  * Convert an image using the Canvas API (for natively-supported formats).
  * @param {File|Blob} file - Source image
@@ -246,16 +264,20 @@ export async function convertWithCanvas(file, targetMime, quality) {
   } catch {
     const fmt = await detectFormat(file);
     if (fmt?.mime === 'image/tiff') {
-      throw new Error(TIFF_DECODE_ERROR);
-    }
-    if (fmt?.mime !== 'image/svg+xml') {
+      const loaded = await loadNativeImage(file, TIFF_DECODE_ERROR);
+      source = loaded.image;
+      width = loaded.width;
+      height = loaded.height;
+      cleanup = loaded.cleanup;
+    } else if (fmt?.mime === 'image/svg+xml') {
+      const loaded = await loadSvgImage(file);
+      source = loaded.image;
+      width = loaded.width;
+      height = loaded.height;
+      cleanup = loaded.cleanup;
+    } else {
       throw new Error('Could not decode image. The file may be corrupted or in an unsupported format.');
     }
-    const loaded = await loadSvgImage(file);
-    source = loaded.image;
-    width = loaded.width;
-    height = loaded.height;
-    cleanup = loaded.cleanup;
   }
   let canvas;
   try {
