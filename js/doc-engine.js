@@ -214,6 +214,9 @@ async function extractEpubText(file, onProgress) {
 
     const html = new TextDecoder().decode(data);
     const doc = new DOMParser().parseFromString(html, 'application/xhtml+xml');
+    if (doc.getElementsByTagName('parsererror').length > 0) {
+      throw new Error('Failed to parse EPUB chapter content: the file may be corrupted.');
+    }
     const body = doc.body || doc.documentElement;
     const text = htmlBodyToPlainText(body);
     if (text) chapters.push(text);

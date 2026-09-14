@@ -95,6 +95,34 @@ test('EPUB resolves spine href dot segments and ignores fragments', async ({ pag
   expect(await downloadText(page)).toBe('Resolved chapter');
 });
 
+test('EPUB rejects malformed XHTML instead of downloading parser-error text', async ({ page }) => {
+  const containerXml = `<?xml version="1.0"?>
+<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles><rootfile full-path="OEBPS/content.opf"/></rootfiles>
+</container>`;
+  const opf = `<?xml version="1.0"?>
+<package xmlns="http://www.idpf.org/2007/opf">
+  <manifest><item id="chapter" href="chapter.xhtml" media-type="application/xhtml+xml"/></manifest>
+  <spine><itemref idref="chapter"/></spine>
+</package>`;
+  const malformedChapter = '<html xmlns="http://www.w3.org/1999/xhtml"><body><h1>Chapter</h1><p>Broken <b>tag</p></body></html>';
+
+  await page.goto('/epub-to-txt');
+  await page.locator('#file-input').setInputFiles({
+    name: 'malformed-chapter.epub',
+    mimeType: 'application/epub+zip',
+    buffer: storedZip({
+      'META-INF/container.xml': containerXml,
+      'OEBPS/content.opf': opf,
+      'OEBPS/chapter.xhtml': malformedChapter,
+    }),
+  });
+  await page.locator('#action-btn').click();
+
+  await expect(page.locator('#doc-results')).toContainText('Failed to parse EPUB chapter content: the file may be corrupted.');
+  await expect(page.locator('#dl-doc')).toHaveCount(0);
+});
+
 test('RTF honors group-scoped uc values and escaped fallback characters', async ({ page }) => {
   const rtf = '{\\rtf1\\ansi\\uc0 Unicode: \\u945X {\\uc2\\u946\\\'62?Y} \\u947Z; accent: {\\uc1\\u233\\\'e9}.}';
 
