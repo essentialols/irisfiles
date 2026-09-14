@@ -120,6 +120,7 @@ test('EPUB rejects malformed XHTML instead of downloading parser-error text', as
   await page.locator('#action-btn').click();
 
   await expect(page.locator('#doc-results')).toContainText('Failed to parse EPUB chapter content: the file may be corrupted.');
+  await expect(page.locator('#doc-results .notice')).toHaveAttribute('data-kind', 'error');
   await expect(page.locator('#dl-doc')).toHaveCount(0);
 });
 
