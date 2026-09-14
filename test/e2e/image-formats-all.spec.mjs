@@ -194,6 +194,14 @@ test.describe('TIFF pages', () => {
     await expect(page.locator('#drop-zone')).toBeVisible();
   });
 
+  test('warns about native TIFF browser support before upload', async ({ page }) => {
+    await page.goto('/tiff-to-png');
+    const badge = page.locator('#tiff-support-badge');
+    await expect(badge).toBeVisible();
+    await expect(badge).toContainText('Safari supports TIFF natively');
+    await expect(badge).toContainText('Chrome, Edge, and Firefox do not');
+  });
+
   test('tiff-to-png config has correct attributes', async ({ page }) => {
     await page.goto('/tiff-to-png');
     const config = page.locator('#converter-config');
@@ -233,6 +241,7 @@ test.describe('TIFF pages', () => {
   test('tiff-to-pdf page loads correctly', async ({ page }) => {
     await page.goto('/tiff-to-pdf');
     await expect(page.locator('#drop-zone')).toBeVisible();
+    await expect(page.locator('#tiff-support-badge')).toBeVisible();
   });
 
   test('tiff-to-pdf config has correct attributes', async ({ page }) => {
