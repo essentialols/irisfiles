@@ -42,6 +42,108 @@ function readFlacSampleRate(arrayBuffer) {
 }
 
 /**
+ * Read the sample rate from an ISO BMFF audio sample entry (M4A/MP4).
+ * AudioSampleEntry stores it as a 16.16 fixed-point value; reading it before
+ * Web Audio decoding prevents a 48 kHz M4A from being silently resampled to
+ * the browser/device default when the target is WAV.
+ *
+ * @param {ArrayBuffer} arrayBuffer
+ * @returns {number|null}
+ */
+function readMp4AudioSampleRate(arrayBuffer) {
+  const view = new DataView(arrayBuffer);
+  const length = view.byteLength;
+  if (length < 16) return null;
+
+  const typeAt = (offset) => {
+    if (offset + 4 > length) return "";
+    return String.fromCharCode(
+      view.getUint8(offset),
+      view.getUint8(offset + 1),
+      view.getUint8(offset + 2),
+      view.getUint8(offset + 3),
+    );
+  };
+
+  const readBox = (offset, end) => {
+    if (offset + 8 > end || offset + 8 > length) return null;
+    let size = view.getUint32(offset, false);
+    const type = typeAt(offset + 4);
+    let headerSize = 8;
+
+    if (size === 1) {
+      if (offset + 16 > end || offset + 16 > length) return null;
+      const high = view.getUint32(offset + 8, false);
+      const low = view.getUint32(offset + 12, false);
+      // Files large enough to need a non-zero high word cannot exist in a
+      // browser ArrayBuffer anyway; rejecting it also keeps arithmetic exact.
+      if (high !== 0) return null;
+      size = low;
+      headerSize = 16;
+    } else if (size === 0) {
+      size = end - offset;
+    }
+
+    if (
+      size < headerSize ||
+      offset + size > end ||
+      offset + size > length
+    ) {
+      return null;
+    }
+    return { offset, size, type, headerSize, end: offset + size };
+  };
+
+  const audioSampleEntries = new Set([
+    "mp4a",
+    "alac",
+    "ac-3",
+    "ec-3",
+    "enca",
+  ]);
+  const containers = new Set(["moov", "trak", "mdia", "minf", "stbl"]);
+
+  const walk = (start, end) => {
+    let offset = start;
+    while (offset + 8 <= end) {
+      const box = readBox(offset, end);
+      if (!box) return null;
+
+      if (box.type === "stsd") {
+        // FullBox version/flags + entry_count precede the sample descriptions.
+        const entriesStart = box.offset + box.headerSize + 8;
+        if (entriesStart > box.end) return null;
+        let entryOffset = entriesStart;
+        while (entryOffset + 8 <= box.end) {
+          const entry = readBox(entryOffset, box.end);
+          if (!entry) break;
+          if (audioSampleEntries.has(entry.type) && entry.size >= 36) {
+            const fixedRate = view.getUint32(entry.offset + 32, false);
+            const sampleRate = fixedRate / 65536;
+            if (
+              Number.isInteger(sampleRate) &&
+              sampleRate >= 3000 &&
+              sampleRate <= 384000
+            ) {
+              return sampleRate;
+            }
+          }
+          entryOffset = entry.end;
+        }
+      } else if (containers.has(box.type)) {
+        const found = walk(box.offset + box.headerSize, box.end);
+        if (found) return found;
+      }
+
+      offset = box.end;
+    }
+    return null;
+  };
+
+  return walk(0, length);
+}
+
+/**
  * Lazy-load lamejs from CDN. Only called when MP3 output is needed.
  * @returns {Promise<void>}
  */
@@ -85,13 +187,16 @@ export async function convertAudio(
   onProgress(10);
 
   // Decode audio data via Web Audio API. decodeAudioData() resamples into
-  // the AudioContext's rate, so preserve FLAC's native rate for WAV output.
+  // the AudioContext's rate, so preserve source-native rates that can be read
+  // from the container/header before decoding WAV output.
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx)
     throw new Error("Audio processing is not supported in this browser.");
 
   const sourceSampleRate =
-    targetFormat === "wav" ? readFlacSampleRate(arrayBuffer) : null;
+    targetFormat === "wav"
+      ? readFlacSampleRate(arrayBuffer) || readMp4AudioSampleRate(arrayBuffer)
+      : null;
   let audioCtx = null;
   if (sourceSampleRate) {
     try {
