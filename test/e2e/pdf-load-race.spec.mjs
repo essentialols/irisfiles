@@ -88,4 +88,5 @@ test('a rebuild cannot publish after the user replaces the source PDF', async ({
   await expect(page.locator('.pdf-page-card')).toHaveCount(1);
   await expect(page.locator('#pdf-tool-result')).toHaveCount(0);
   await expect(page.locator('#action-btn')).toBeEnabled();
+  await expect(page.locator('#action-btn')).toHaveText('Save New Order');
 });
