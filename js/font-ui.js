@@ -83,11 +83,10 @@ function addFiles(fileList_) {
   if (skipped > 0) {
     showNotice(`${skipped} file(s) skipped (max ${formatSize(MAX_FILE_SIZE)} per file).`);
   }
-  // The active run owns a snapshot of the old queue. If the user adds a file
-  // while it is converting, do not publish results that silently omit the new
-  // file now visible in the queue. The current file may finish computing, but
-  // its stale batch is discarded and the updated queue can be run next.
-  if (activeOperation && files.length !== initialCount) generation++;
+  // Results belong to the exact queue that produced them. Adding a source must
+  // hide completed results from the old queue and invalidate a run in flight,
+  // otherwise the page can offer downloads that omit a file now visibly queued.
+  if (files.length !== initialCount) invalidateResults();
   updateControls();
 }
 
@@ -111,10 +110,9 @@ function renderFileEntry(file) {
     const idx = files.indexOf(file);
     if (idx !== -1) {
       files.splice(idx, 1);
-      // A conversion in flight belongs to the queue as it existed when the
-      // user clicked Convert. Removing a file invalidates that snapshot so a
-      // result for the now-removed file cannot reappear after it finishes.
-      if (activeOperation) generation++;
+      // Never leave a download/result belonging to a file the user removed.
+      // This also invalidates an in-flight snapshot before it can publish.
+      invalidateResults();
     }
     div.remove();
     updateControls();
@@ -131,12 +129,16 @@ function updateControls() {
 }
 
 function clearAll() {
-  generation++;
   files.length = 0;
-  results.length = 0;
   fileList.innerHTML = '';
-  removeResults();
+  invalidateResults();
   updateControls();
+}
+
+function invalidateResults() {
+  generation++;
+  results.length = 0;
+  removeResults();
 }
 
 function removeResults() {

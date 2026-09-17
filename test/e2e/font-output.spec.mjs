@@ -139,8 +139,19 @@ test.describe('font conversion output', () => {
     expect((await readFile(outputPath)).length).toBeGreaterThan(1_000);
   });
 
-  // Regression guard for #164: a cleared batch used to leave the button
-  // permanently disabled or mislabeled with a stale "Converting..." text.
+  test('changing the queue after conversion removes downloads from the old queue', async ({ page }) => {
+    await page.goto('/otf-to-woff');
+    await page.locator('#file-input').setInputFiles(fixture('sample.otf'));
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#font-results .file-item.done')).toHaveCount(1, { timeout: 30_000 });
+
+    await page.locator('#file-input').setInputFiles(fixture('sample.otf'));
+    await expect(page.locator('#file-list .file-item')).toHaveCount(2);
+    await expect(page.locator('#font-results')).toHaveCount(0);
+  });
+
+  // Queue changes during conversion used to let the old snapshot publish after
+  // the visible source list had already changed.
   test('removing a font during conversion cannot publish a result for the removed file', async ({ page }) => {
     await delayFirstFontRead(page);
     await page.goto('/otf-to-woff');
@@ -171,6 +182,8 @@ test.describe('font conversion output', () => {
     await expect(page.locator('#action-btn')).toBeEnabled();
   });
 
+  // Regression guard for #164: a cleared batch used to leave the button
+  // permanently disabled or mislabeled with a stale "Converting..." text.
   test('clearing after a completed batch leaves the button usable for a new conversion', async ({ page }) => {
     await page.goto('/ttf-to-woff');
     await page.locator('#file-input').setInputFiles(fixture('sample.ttf'));
