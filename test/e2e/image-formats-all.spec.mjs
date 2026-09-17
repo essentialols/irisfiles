@@ -1,7 +1,8 @@
+import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 import { fixture } from './helpers.mjs';
 
-test.describe('AVIF pages (no fixture)', () => {
+test.describe('AVIF pages', () => {
   test('avif-to-jpg page loads correctly', async ({ page }) => {
     await page.goto('/avif-to-jpg');
     await expect(page.locator('#drop-zone')).toBeVisible();
@@ -50,6 +51,26 @@ test.describe('AVIF pages (no fixture)', () => {
     await page.goto('/avif-to-png');
     // Quality only applies to lossy encoders, so these pages ship none.
     await expect(page.locator('#quality-slider')).toHaveCount(0);
+  });
+
+  test('avif-to-png explains high-bit-depth precision limits', async ({ page }) => {
+    await page.goto('/avif-to-png');
+    const note = page.locator('.avif-depth-note');
+    await expect(note).toBeVisible();
+    await expect(note).toContainText('High-bit-depth / HDR AVIF');
+    await expect(note).toContainText('8-bit');
+  });
+
+  test('avif-to-png converts the native fixture to a real PNG', async ({ page }) => {
+    await page.goto('/avif-to-png');
+    await page.locator('#file-input').setInputFiles(fixture('sample.avif'));
+    await page.locator('.file-item.done').first().waitFor({ timeout: 15000 });
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('.btn-download').first().click(),
+    ]);
+    const bytes = await readFile(await download.path());
+    expect(bytes.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
   });
 
   test('avif-to-png wrong format shows error', async ({ page }) => {
