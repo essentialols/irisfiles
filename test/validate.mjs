@@ -66,7 +66,7 @@ const PAGES = [
   // PDF page/text/compression tools
   '/delete-pdf-pages', '/extract-pdf-pages', '/reorder-pdf-pages',
   '/rotate-pdf', '/pdf-to-text', '/compress-pdf',
-  '/about', '/privacy'
+  '/about', '/privacy', '/verify-local-file-conversion'
 ];
 
 let passed = 0;
@@ -98,7 +98,10 @@ function meta(html, property) {
 
 function startServer() {
   return new Promise((res, rej) => {
-    const proc = spawn('npx', ['serve', '.', '-p', '3987', '-s'], {
+    // No -s: that is SPA mode, which rewrites every clean URL to index.html.
+    // With it, each page's metadata was being asserted against index.html
+    // rather than the page itself. serve's default cleanUrls maps /foo to foo.html.
+    const proc = spawn('npx', ['serve', '.', '-p', '3987'], {
       cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe']
     });
     let ready = false;
@@ -151,14 +154,20 @@ async function validatePage(path) {
   if (path === '/about' || path === '/privacy') {
     // about/privacy pages: no JSON-LD required (but ok if present)
   } else {
+    // Guides are HowTo documents, not tools. Marking one as a WebApplication
+    // would describe a converter that is not on the page.
+    const expectedTypes = path === '/verify-local-file-conversion'
+      ? ['HowTo', 'FAQPage']
+      : ['WebApplication', 'FAQPage'];
     ok(ldMatch, `${label}: missing JSON-LD`);
     if (ldMatch) {
       try {
         const ld = JSON.parse(ldMatch[1]);
         ok(Array.isArray(ld) && ld.length === 2, `${label}: JSON-LD should be array of 2`);
         const types = ld.map(e => e['@type']);
-        ok(types.includes('WebApplication'), `${label}: JSON-LD missing WebApplication`);
-        ok(types.includes('FAQPage'), `${label}: JSON-LD missing FAQPage`);
+        for (const expected of expectedTypes) {
+          ok(types.includes(expected), `${label}: JSON-LD missing ${expected}`);
+        }
       } catch (e) {
         ok(false, `${label}: JSON-LD parse error: ${e.message}`);
       }

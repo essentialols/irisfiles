@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How to Verify a File Converter Does Not Upload Your Files | IrisFiles</title>
+  <meta name="description" content="Check for yourself whether a browser file converter uploads your files. A step by step network inspection you can run in any browser, and what the result does and does not prove.">
+  <meta property="og:title" content="How to Verify a File Converter Does Not Upload Your Files | IrisFiles">
+  <meta property="og:description" content="Check for yourself whether a browser file converter uploads your files. A step by step network inspection you can run in any browser, and what the result does and does not prove.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://irisfiles.com/verify-local-file-conversion">
+  <meta property="og:image" content="https://irisfiles.com/img/og-default.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="How to Verify a File Converter Does Not Upload Your Files | IrisFiles">
+  <meta name="twitter:description" content="Check for yourself whether a browser file converter uploads your files. A step by step network inspection you can run in any browser, and what the result does and does not prove.">
+  <meta name="twitter:image" content="https://irisfiles.com/img/og-default.png">
+  <link rel="canonical" href="https://irisfiles.com/verify-local-file-conversion">
+  <link rel="stylesheet" href="css/style.css?v=62d7ccf7">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "HowTo",
+      "name": "How to verify that a file converter does not upload your files",
+      "description": "Use your browser's built in network inspector to observe every request a file converter makes while it converts a file, and judge whether any of them carried your file.",
+      "totalTime": "PT10M",
+      "supply": [
+        {
+          "@type": "HowToSupply",
+          "name": "A non-sensitive sample file you do not mind exposing if the tool turns out to upload"
+        }
+      ],
+      "tool": [
+        {
+          "@type": "HowToTool",
+          "name": "Any desktop browser with developer tools, such as Chrome, Edge, Firefox or Safari"
+        }
+      ],
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "Choose a sample file you are willing to lose control of",
+          "text": "Never test with a real private document. If the tool does upload, the test itself leaks the file. Use a throwaway photo, a generated test clip, or any file whose contents would not matter if a stranger read them."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Open the network inspector before you load the page",
+          "text": "Press F12, or Ctrl+Shift+I on Windows and Linux, or Cmd+Option+I on macOS, and switch to the Network tab. Open it first, then load the converter page, because the inspector only records requests made while it is open."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Reload the page and let it settle",
+          "text": "Reload with the inspector open and watch the requests that arrive before you touch anything. These are the application itself: HTML, CSS, JavaScript, fonts, and often a WebAssembly binary. Note what the normal idle traffic looks like so you can recognise anything new later."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Select your file and convert it",
+          "text": "Add the file and start the conversion, watching the request list as it runs. Enable the Method and Size columns if your browser hides them. A tool that uploads has to send your bytes somewhere, and that shows up as a request carrying a body roughly the size of your file."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Inspect the requests that appeared",
+          "text": "Sort or filter by method. Look for POST, PUT or PATCH requests, and for any request whose payload is comparable to your file size. Click a suspicious request and read its Payload or Request tab. A converter that runs locally will typically show only GET requests for its own code and assets."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Check the less obvious transports",
+          "text": "In the Application or Storage panel, look for a registered service worker, which can make requests the main page did not. Filter the Network tab by WS to reveal WebSocket connections, which can stream data without appearing as ordinary requests. Both are legitimate in many apps, but both are places data can leave."
+        }
+      ]
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does the absence of POST requests prove my file was not uploaded?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. It is good evidence and it rules out the most common way a file would be sent, but it is not proof. Data can leave a page through a WebSocket, a service worker, a beacon, or a GET request with the data packed into the URL. A single inspection also only covers the one path you exercised. Treat a clean network log as a strong signal, not a guarantee."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "The converter downloaded several megabytes. Does that mean it sent my file somewhere?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Not by itself. Direction matters more than size. Downloading a large WebAssembly binary is the application arriving on your machine, which is the opposite of your file leaving it. Check whether the large transfer is a response being downloaded or a request body being uploaded, and check the request method."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does a local conversion mean the site works offline?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Not necessarily, and the two claims are often confused. A tool can do all its processing on your device while still needing the network to fetch its own code. IrisFiles is an example: conversion happens locally, but the video engine is fetched from a CDN the first time you use it, so a freshly loaded page with the CDN blocked cannot convert. Only believe an offline claim if you tested it with the network actually disabled."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I trust a privacy claim just because the source code is public?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Public source makes a claim checkable, which is worth a lot, but the code in a repository is not necessarily the code a site is serving you right now. Reading the source tells you what the project intends. Watching the network tells you what your browser actually did. The two together are much stronger than either alone."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does this test prove the site keeps no record of my visit at all?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No, and no site can honestly claim that. Loading any page tells the server and its CDN that a request came from your IP address at a particular time. That is ordinary web hosting, and it is separate from whether the contents of your file were transmitted. This test is about your file, not about the fact that you visited."
+          }
+        }
+      ]
+    }
+  ]
+  </script>
+</head>
+<body>
+  <header class="header">
+    <div class="container container--wide">
+      <a href="/" class="logo">Iris<span>Files</span></a>
+      <nav class="nav">
+        <a href="/">All Converters</a>
+        <a href="https://ko-fi.com/irisfiles" class="support-btn" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1.5a2.5 2.5 0 010 5H17"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z" fill="currentColor" stroke="none" opacity=".15"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3" opacity=".6"/></svg> Support this project</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> Back</a>
+    <article class="prose">
+      <h1>How to verify that a file converter does not upload your files</h1>
+
+      <p>Plenty of online converters say your files never leave your browser. That claim is easy to make and, unusually for a privacy claim, it is something you can check yourself in about ten minutes using tools already built into your browser. This page shows you how, and is equally honest about what the check does not prove.</p>
+
+      <p>You do not need to trust IrisFiles to use this. The method works on any converter, including ours.</p>
+
+      <h2>Before you start: pick a file you can afford to lose</h2>
+
+      <p>Use a sample file whose contents would not matter if a stranger read them. A throwaway photo, a generated test clip, a document with nothing real in it. This matters because of an obvious trap: if the tool does upload your file, then testing with a sensitive document is how you find out, and by then the file has already been sent. Never run this test for the first time with something private.</p>
+
+      <h2>The demonstration</h2>
+
+      <ol>
+        <li><strong>Open developer tools before loading the converter.</strong> Press F12, or Ctrl+Shift+I on Windows and Linux, or Cmd+Option+I on macOS. Go to the <strong>Network</strong> tab. In Safari you first need to enable the Develop menu in Settings, under Advanced. The inspector only records what happens while it is open, so open it first.</li>
+        <li><strong>Load the converter page and watch what arrives.</strong> With the Network tab recording, load the page. Everything you see now is the application being delivered to you: the HTML document, stylesheets, scripts, fonts, and for heavier tools often a WebAssembly binary of a few megabytes. Get a feel for this baseline so that anything new stands out later.</li>
+        <li><strong>Make sure you can see Method and Size.</strong> Most browsers show these columns by default; if not, right click the column headers and enable them. The method tells you whether the browser was sending or asking, and the size tells you how much.</li>
+        <li><strong>Add your file and convert it.</strong> Keep watching the list. This is the moment that matters. If a tool uploads your file, it has to transmit those bytes, and a transmission of that size is hard to hide from the panel that is recording every request.</li>
+        <li><strong>Read the requests.</strong> Look for any <code>POST</code>, <code>PUT</code> or <code>PATCH</code>. Look for any request whose uploaded payload is in the same ballpark as your file. Click anything suspicious and open its <strong>Payload</strong> or <strong>Request</strong> tab to see what was actually sent. A converter doing the work locally will usually show only <code>GET</code> requests, all of them fetching its own code and assets.</li>
+        <li><strong>Check the quieter routes.</strong> Requests are not the only way out. In the <strong>Application</strong> panel, under Service Workers, check whether one is registered, since a service worker can make requests of its own. Back in the Network tab, filter by <strong>WS</strong> to show WebSocket connections, which carry data as a stream rather than as discrete requests. Neither is sinister on its own, but both are worth knowing about.</li>
+      </ol>
+
+      <h2>Not all network activity is suspicious</h2>
+
+      <p>This is where most people get stuck, because a page that is busy on the network looks alarming even when nothing is wrong. The useful question is not whether traffic happened, but which direction it went and what it contained.</p>
+
+      <p>Ordinary and harmless:</p>
+
+      <ul>
+        <li><strong>The application itself.</strong> HTML, CSS and JavaScript have to reach your browser somehow.</li>
+        <li><strong>A large WebAssembly download.</strong> Serious in-browser processing, such as video encoding, means shipping a real codec to your machine. A multi-megabyte <code>.wasm</code> file is the engine arriving, not your file departing.</li>
+        <li><strong>Fonts, icons and stylesheets</strong>, often from a CDN.</li>
+        <li><strong>Requests that continue after conversion</strong>, if they are fetching assets rather than sending payloads.</li>
+      </ul>
+
+      <p>Worth a closer look:</p>
+
+      <ul>
+        <li>A request carrying a body of roughly your file's size.</li>
+        <li>A <code>POST</code> that appears at the moment you press convert.</li>
+        <li>A WebSocket that opens when you add a file.</li>
+        <li>A conversion that fails when you are offline but is described as fully local. That combination suggests the work is happening somewhere else.</li>
+      </ul>
+
+      <p>A genuinely local converter has a recognisable signature: a burst of downloads while the page and its engine load, then near silence while your machine does the work.</p>
+
+      <h2>What this test does not prove</h2>
+
+      <p>An honest method has to state its limits, and this one has real ones.</p>
+
+      <ul>
+        <li><strong>It covers one tool, one browser, one version, one moment.</strong> A clean result for one converter says nothing about the next page on the same site, or about the same page after its next deployment.</li>
+        <li><strong>No POST is not the same as no data leaving.</strong> Data can also leave through a WebSocket, a service worker, a beacon, or a GET request with information encoded into the URL. The check makes the common case visible; it does not close every route.</li>
+        <li><strong>It cannot see inside an encrypted payload it did not capture,</strong> and it only shows the paths you actually exercised. A different file type or an error path might behave differently.</li>
+        <li><strong>Local processing is not the same as working offline.</strong> These get conflated constantly. A tool can do every computation on your device and still need the network to fetch its own code.</li>
+        <li><strong>It says nothing about server logs.</strong> Requesting any page reveals your IP address and the time to the server and its CDN. That is how the web works, and it is a separate question from whether your file was transmitted.</li>
+      </ul>
+
+      <p>What the test does give you is a specific, checkable observation to replace a marketing claim. That is a genuine improvement over taking a company's word for it, and it is worth doing even though it is not proof.</p>
+
+      <h2>What we observed on IrisFiles</h2>
+
+      <p>We ran exactly this check against our own AVI to WebM converter, and we are reporting the provenance so you can judge it rather than take it on faith.</p>
+
+      <ul>
+        <li><strong>What was tested:</strong> a local development build of this site, served from <code>localhost</code>, at commit <code>5799cd8</code>.</li>
+        <li><strong>Browser:</strong> headless Chromium 148.0.7778.96, driven by Playwright 1.60.0.</li>
+        <li><strong>Date:</strong> 13 September 2026.</li>
+        <li><strong>Method:</strong> every network request was recorded programmatically from before the page loaded until the converted file was downloaded, using a synthetic 3 second AVI test clip with an audio track.</li>
+      </ul>
+
+      <p>In that run we recorded 46 request events. All of them were <code>GET</code>. None carried a request body. No service worker was registered, and no WebSocket was opened. The only requests to a third party were four files from <code>cdn.jsdelivr.net</code>, which make up the FFmpeg WebAssembly engine that performs the conversion. The video file itself was not sent anywhere.</p>
+
+      <p>The limits stated above apply to our own test as much as to yours. This was one browser, one flow, and a local build. <strong>It is not a measurement of the production site you are reading right now</strong>, and we are not going to present it as one. If it matters to you, run the check yourself against this page. That is the point of writing it down.</p>
+
+      <p>One related finding, since it cuts against us: when we reloaded the page with <code>cdn.jsdelivr.net</code> blocked, the conversion could not run. The processing is local, but fetching the engine is not, so this is not an offline tool. We would rather say that plainly than let "runs in your browser" quietly imply something it does not.</p>
+
+      <h2>Try it on a real conversion</h2>
+
+      <p>These are good pages to test against, because they do enough work that a hidden upload would have somewhere to hide:</p>
+
+      <ul>
+        <li><a href="/avi-to-webm">AVI to WebM converter</a>, the page used for the test above. It loads a large WebAssembly engine, which makes it a good example of heavy but legitimate traffic.</li>
+        <li><a href="/image-metadata">Image metadata viewer</a>, for inspecting what your photos reveal before you share them.</li>
+        <li><a href="/strip-exif">EXIF metadata remover</a>, for stripping location and camera data out of an image.</li>
+        <li><a href="/pdf-ocr">PDF OCR</a>, which downloads a full text recognition engine and is another useful case for telling downloads apart from uploads.</li>
+      </ul>
+
+      <p>Our <a href="/privacy">privacy policy</a> and <a href="/about">about page</a> describe how the site is built. This page exists so you do not have to take either of them purely on trust.</p>
+
+      <h2>Common questions</h2>
+
+      <h3>Does the absence of POST requests prove my file was not uploaded?</h3>
+      <p>No. It is good evidence and it rules out the most common way a file would be sent, but it is not proof. Data can leave a page through a WebSocket, a service worker, a beacon, or a GET request with the data packed into the URL. A single inspection also only covers the one path you exercised. Treat a clean network log as a strong signal, not a guarantee.</p>
+
+      <h3>The converter downloaded several megabytes. Does that mean it sent my file somewhere?</h3>
+      <p>Not by itself. Direction matters more than size. Downloading a large WebAssembly binary is the application arriving on your machine, which is the opposite of your file leaving it. Check whether the large transfer is a response being downloaded or a request body being uploaded, and check the request method.</p>
+
+      <h3>Does a local conversion mean the site works offline?</h3>
+      <p>Not necessarily, and the two claims are often confused. A tool can do all its processing on your device while still needing the network to fetch its own code. IrisFiles is an example: conversion happens locally, but the video engine is fetched from a CDN the first time you use it, so a freshly loaded page with the CDN blocked cannot convert. Only believe an offline claim if you tested it with the network actually disabled.</p>
+
+      <h3>Can I trust a privacy claim just because the source code is public?</h3>
+      <p>Public source makes a claim checkable, which is worth a lot, but the code in a repository is not necessarily the code a site is serving you right now. Reading the source tells you what the project intends. Watching the network tells you what your browser actually did. The two together are much stronger than either alone.</p>
+
+      <h3>Does this test prove the site keeps no record of my visit at all?</h3>
+      <p>No, and no site can honestly claim that. Loading any page tells the server and its CDN that a request came from your IP address at a particular time. That is ordinary web hosting, and it is separate from whether the contents of your file were transmitted. This test is about your file, not about the fact that you visited.</p>
+    </article>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="/">All Converters</a>
+        <a href="/about">About</a>
+        <a href="/privacy">Privacy & Disclaimer</a>
+      </div>
+      <p>IrisFiles. All processing happens in your browser.</p>
+    </div>
+  </footer>
+</body>
+</html>

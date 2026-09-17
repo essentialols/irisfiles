@@ -40,6 +40,19 @@ const pages = {
     required: ['TTF to OTF does not improve font quality', 'Why can conversion fail?', 'not every advanced OpenType table'],
     forbidden: ['All glyphs, metrics, and font tables are preserved'],
   },
+  'avi-to-webm.html': {
+    h1: 'Convert AVI to WebM privately.',
+    canonical: 'https://irisfiles.com/avi-to-webm',
+    required: [
+      'There is no file size limit on this converter',
+      'CRF 30, a 1 Mbps video bitrate cap, and Vorbis quality level 4',
+      'there is no batch or ZIP output here',
+      'When not to use this converter',
+    ],
+    // The 100MB cap never existed on this path: it lives in js/converter.js and
+    // js/compress-audio-engine.js, neither of which the vidconv engine goes through.
+    forbidden: ['Files must be under 100MB', 'Experimental feature.'],
+  },
 };
 
 let failures = 0;
