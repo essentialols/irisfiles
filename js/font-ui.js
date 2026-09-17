@@ -63,6 +63,7 @@ export function init() {
 
 function addFiles(fileList_) {
   const incoming = Array.from(fileList_);
+  const initialCount = files.length;
   const remaining = MAX_BATCH - files.length;
   if (remaining <= 0) {
     showNotice(`Batch limit reached (${MAX_BATCH} files). Clear some files first.`);
@@ -82,6 +83,11 @@ function addFiles(fileList_) {
   if (skipped > 0) {
     showNotice(`${skipped} file(s) skipped (max ${formatSize(MAX_FILE_SIZE)} per file).`);
   }
+  // The active run owns a snapshot of the old queue. If the user adds a file
+  // while it is converting, do not publish results that silently omit the new
+  // file now visible in the queue. The current file may finish computing, but
+  // its stale batch is discarded and the updated queue can be run next.
+  if (activeOperation && files.length !== initialCount) generation++;
   updateControls();
 }
 
@@ -103,7 +109,13 @@ function renderFileEntry(file) {
   `;
   div.querySelector('.btn-remove').addEventListener('click', () => {
     const idx = files.indexOf(file);
-    if (idx !== -1) files.splice(idx, 1);
+    if (idx !== -1) {
+      files.splice(idx, 1);
+      // A conversion in flight belongs to the queue as it existed when the
+      // user clicked Convert. Removing a file invalidates that snapshot so a
+      // result for the now-removed file cannot reappear after it finishes.
+      if (activeOperation) generation++;
+    }
     div.remove();
     updateControls();
   });

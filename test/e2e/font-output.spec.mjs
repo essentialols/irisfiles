@@ -53,6 +53,33 @@ async function expectRefusal(page, path, fixtureName, message) {
 }
 
 test.describe('font conversion output', () => {
+  async function delayFirstFontRead(page) {
+    await page.addInitScript(() => {
+      const originalArrayBuffer = Blob.prototype.arrayBuffer;
+      let release;
+      let delayed = false;
+      window.__fontReadStarted = false;
+      window.__releaseFontRead = () => { if (release) release(); };
+      Blob.prototype.arrayBuffer = async function() {
+        if (!delayed && this instanceof File) {
+          delayed = true;
+          window.__fontReadStarted = true;
+          await new Promise(resolve => { release = resolve; });
+        }
+        return originalArrayBuffer.call(this);
+      };
+    });
+  }
+
+  async function waitForDelayedFontRead(page) {
+    await expect.poll(() => page.evaluate(() => window.__fontReadStarted)).toBe(true);
+  }
+
+  async function releaseDelayedFontRead(page) {
+    await page.evaluate(() => window.__releaseFontRead());
+    await expect(page.locator('#action-btn')).toHaveText('Convert to WOFF');
+  }
+
   // WOFF only wraps an sfnt, so these stay lossless and never re-encode outlines.
   test('TTF to WOFF wraps the original sfnt into a browser-loadable WOFF', async ({ page }) => {
     const output = await convertAndDownload(page, '/ttf-to-woff', 'sample.ttf', 'woff');
@@ -114,6 +141,36 @@ test.describe('font conversion output', () => {
 
   // Regression guard for #164: a cleared batch used to leave the button
   // permanently disabled or mislabeled with a stale "Converting..." text.
+  test('removing a font during conversion cannot publish a result for the removed file', async ({ page }) => {
+    await delayFirstFontRead(page);
+    await page.goto('/otf-to-woff');
+    await page.locator('#file-input').setInputFiles(fixture('sample.otf'));
+    await page.locator('#action-btn').click();
+    await waitForDelayedFontRead(page);
+
+    await page.locator('#file-list .btn-remove').click();
+    await expect(page.locator('#file-list .file-item')).toHaveCount(0);
+    await releaseDelayedFontRead(page);
+
+    await expect(page.locator('#font-results')).toHaveCount(0);
+    await expect(page.locator('#action-btn')).not.toBeVisible();
+  });
+
+  test('adding a font during conversion discards the stale partial batch', async ({ page }) => {
+    await delayFirstFontRead(page);
+    await page.goto('/otf-to-woff');
+    await page.locator('#file-input').setInputFiles(fixture('sample.otf'));
+    await page.locator('#action-btn').click();
+    await waitForDelayedFontRead(page);
+
+    await page.locator('#file-input').setInputFiles(fixture('sample.otf'));
+    await expect(page.locator('#file-list .file-item')).toHaveCount(2);
+    await releaseDelayedFontRead(page);
+
+    await expect(page.locator('#font-results')).toHaveCount(0);
+    await expect(page.locator('#action-btn')).toBeEnabled();
+  });
+
   test('clearing after a completed batch leaves the button usable for a new conversion', async ({ page }) => {
     await page.goto('/ttf-to-woff');
     await page.locator('#file-input').setInputFiles(fixture('sample.ttf'));
