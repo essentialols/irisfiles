@@ -52,8 +52,10 @@ async function runSpeedChange(ffmpeg, file, preset, opts, onProgress, onStatus) 
   if (onProgress) onProgress(20);
   if (onStatus) onStatus('Changing speed (this may take a while)...');
 
-  const args = ['-i', inputName, '-vf', `setpts=${preset.setpts}`,
-                '-c:v', 'libx264', '-preset', 'fast', '-crf', '23'];
+  const args = ['-i', inputName,
+                '-vf', `setpts=${preset.setpts},pad=ceil(iw/2)*2:ceil(ih/2)*2`,
+                '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
+                '-pix_fmt', 'yuv420p'];
 
   if (opts.keepAudio && preset.atempo) {
     args.push('-af', preset.atempo.map(v => `atempo=${v}`).join(','));
