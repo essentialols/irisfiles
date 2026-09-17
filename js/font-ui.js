@@ -159,7 +159,7 @@ async function runConversion() {
   try {
     for (let i = 0; i < snapshot.length; i++) {
       const f = snapshot[i];
-      // Cleared: stop converting a batch whose results will be discarded anyway.
+      // Queue changed: stop converting a batch whose results will be discarded anyway.
       // break, not return: the tail below resets activeOperation, and returning
       // past it would leave the button disabled for good.
       if (myGen !== generation) break;
