@@ -145,4 +145,36 @@ test.describe('SVG raster dimensions', () => {
     // Both pages take the same path, so neither may escape the limit.
     expect(sizes[0].width).toBeCloseTo(sizes[1].width, 1);
   });
+
+  test('SVGs with linked external images fail instead of silently omitting them', async ({ page }) => {
+    await page.goto('/svg-to-png');
+    await page.locator('#file-input').setInputFiles({
+      name: 'Résumé_日本語_linked.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="120" height="80">
+          <rect width="120" height="80" fill="#fff"/>
+          <image href="https://example.invalid/photo.png" width="120" height="80"/>
+        </svg>
+      `),
+    });
+
+    const item = page.locator('.file-item').first();
+    await expect(item.locator('.file-item__status.error')).toContainText(/references external files/i);
+    await expect(item.locator('.btn-download')).toHaveCount(0);
+  });
+
+  test('embedded data images and fragment references remain convertible', async ({ page }) => {
+    const redPng = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR4nGP8z8Dwn4GBgYGJAQoAHxcCAk+Uzr4AAAAASUVORK5CYII=';
+    const dimensions = await convertSvgToPng(page, `
+      <svg xmlns="http://www.w3.org/2000/svg" width="120" height="80">
+        <defs><rect id="marker" width="20" height="20" fill="#2563eb"/></defs>
+        <image href="data:image/png;base64,${redPng}" width="120" height="80"/>
+        <use href="#marker" x="5" y="5"/>
+      </svg>
+    `, 'embedded.svg');
+
+    expect(dimensions).toEqual({ width: 120, height: 80 });
+  });
+
 });
