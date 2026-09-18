@@ -92,7 +92,7 @@ test.describe('font conversion output', () => {
     });
 
     await page.goto('/otf-to-ttf');
-    await expect(page.locator('.notice[data-kind="info"]')).toContainText('most OTF files use CFF outlines');
+    await expect(page.locator('.notice[data-kind="info"]')).toContainText('many OTF files use CFF outlines');
     await page.locator('#file-input').setInputFiles(fixture('sample.otf'));
     await page.locator('#action-btn').click();
 
