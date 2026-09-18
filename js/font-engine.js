@@ -67,6 +67,17 @@ export async function convertFont(file, targetFormat, onProgress) {
   }
   if (onProgress) onProgress(45);
 
+  // opentype.js 1.3.4 serializes rebuilt outlines as CFF/OTTO. It cannot
+  // produce the quadratic glyf/loca tables a real TrueType sfnt requires.
+  // Fail before loading the serializer instead of making a CFF OTF user wait
+  // for a conversion that can only end in a flavor mismatch.
+  if (targetFormat === 'ttf' && flavor === SFNT_CFF) {
+    throw new Error(
+      'This font uses CFF outlines, which IrisFiles cannot safely rebuild as TrueType in the browser yet. ' +
+      'No file was created. Keep the original font, or use WOFF when you only need a web-font container.'
+    );
+  }
+
   if (targetFormat === 'woff') {
     if (onProgress) onProgress(100);
     return new Blob([wrapAsWoff(sfnt)], { type: MIME_TYPES.woff });

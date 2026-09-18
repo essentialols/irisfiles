@@ -85,8 +85,23 @@ test.describe('font conversion output', () => {
     await expectRefusal(page, '/woff-to-otf', 'sample.woff', 'cannot rebuild');
   });
 
-  test('OTF to TTF refuses to relabel CFF OpenType bytes as TrueType', async ({ page }) => {
-    await expectRefusal(page, '/otf-to-ttf', 'sample.otf', 'TTF output is not supported');
+  test('OTF to TTF refuses CFF before loading a serializer that cannot make TrueType outlines', async ({ page }) => {
+    const opentypeRequests = [];
+    page.on('request', request => {
+      if (request.url().includes('opentype.js')) opentypeRequests.push(request.url());
+    });
+
+    await page.goto('/otf-to-ttf');
+    await expect(page.locator('.notice[data-kind="info"]')).toContainText('most OTF files use CFF outlines');
+    await page.locator('#file-input').setInputFiles(fixture('sample.otf'));
+    await page.locator('#action-btn').click();
+
+    const notice = page.locator('#font-results .notice');
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText('CFF outlines');
+    await expect(notice).toContainText('No file was created');
+    await expect(page.locator('#font-results .dl-btn')).toHaveCount(0);
+    expect(opentypeRequests).toHaveLength(0);
   });
 
   test('WOFF round-trips through TTF without losing tables', async ({ page }) => {
