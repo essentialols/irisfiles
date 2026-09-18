@@ -85,8 +85,42 @@ test.describe('font conversion output', () => {
     await expectRefusal(page, '/woff-to-otf', 'sample.woff', 'cannot rebuild');
   });
 
-  test('OTF to TTF refuses to relabel CFF OpenType bytes as TrueType', async ({ page }) => {
-    await expectRefusal(page, '/otf-to-ttf', 'sample.otf', 'TTF output is not supported');
+  test('OTF to TTF refuses CFF before loading a serializer that cannot make TrueType outlines', async ({ page }) => {
+    const opentypeRequests = [];
+    page.on('request', request => {
+      if (request.url().includes('opentype.js')) opentypeRequests.push(request.url());
+    });
+
+    await page.goto('/otf-to-ttf');
+    await expect(page.locator('.notice[data-kind="info"]')).toContainText('many OTF files use CFF outlines');
+    await page.locator('#file-input').setInputFiles(fixture('sample.otf'));
+    await page.locator('#action-btn').click();
+
+    const notice = page.locator('#font-results .notice');
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText('CFF outlines');
+    await expect(notice).toContainText('No file was created');
+    await expect(page.locator('#font-results .dl-btn')).toHaveCount(0);
+    expect(opentypeRequests).toHaveLength(0);
+  });
+
+  test('OTF to TTF still reports a truncated sfnt as corrupted rather than unsupported CFF', async ({ page }) => {
+    const truncated = Buffer.alloc(32);
+    truncated.write('OTTO', 0, 'ascii');
+    truncated.writeUInt16BE(2, 4); // Two table records would require at least 44 bytes.
+
+    await page.goto('/otf-to-ttf');
+    await page.locator('#file-input').setInputFiles({
+      name: 'truncated.otf',
+      mimeType: 'font/otf',
+      buffer: truncated,
+    });
+    await page.locator('#action-btn').click();
+
+    const notice = page.locator('#font-results .notice');
+    await expect(notice).toContainText('corrupted or unsupported');
+    await expect(notice).not.toContainText('CFF outlines');
+    await expect(page.locator('#font-results .dl-btn')).toHaveCount(0);
   });
 
   test('WOFF round-trips through TTF without losing tables', async ({ page }) => {
