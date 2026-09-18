@@ -65,6 +65,7 @@ export async function convertFont(file, targetFormat, onProgress) {
   if (flavor !== SFNT_TRUETYPE && flavor !== SFNT_CFF) {
     throw new Error('Could not parse font file. It may be corrupted or unsupported.');
   }
+  validateSfntDirectory(sfnt);
   if (onProgress) onProgress(45);
 
   // opentype.js 1.3.4 serializes rebuilt outlines as CFF/OTTO. It cannot
@@ -130,6 +131,23 @@ async function convertOutlines(arrayBuffer, targetFormat, onProgress) {
     );
   }
   return sfntBuffer;
+}
+
+/** Verify that the sfnt table directory and every declared table fit in the file. */
+function validateSfntDirectory(sfnt) {
+  const view = new DataView(sfnt.buffer, sfnt.byteOffset, sfnt.byteLength);
+  const numTables = view.getUint16(4);
+  if (!numTables || 12 + numTables * 16 > sfnt.byteLength) {
+    throw new Error('Could not parse font file. It may be corrupted or unsupported.');
+  }
+  for (let i = 0; i < numTables; i++) {
+    const dir = 12 + i * 16;
+    const offset = view.getUint32(dir + 8);
+    const length = view.getUint32(dir + 12);
+    if (offset > sfnt.byteLength || length > sfnt.byteLength - offset) {
+      throw new Error('Could not parse font file. It may be corrupted or unsupported.');
+    }
+  }
 }
 
 /**

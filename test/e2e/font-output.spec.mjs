@@ -104,6 +104,25 @@ test.describe('font conversion output', () => {
     expect(opentypeRequests).toHaveLength(0);
   });
 
+  test('OTF to TTF still reports a truncated sfnt as corrupted rather than unsupported CFF', async ({ page }) => {
+    const truncated = Buffer.alloc(32);
+    truncated.write('OTTO', 0, 'ascii');
+    truncated.writeUInt16BE(2, 4); // Two table records would require at least 44 bytes.
+
+    await page.goto('/otf-to-ttf');
+    await page.locator('#file-input').setInputFiles({
+      name: 'truncated.otf',
+      mimeType: 'font/otf',
+      buffer: truncated,
+    });
+    await page.locator('#action-btn').click();
+
+    const notice = page.locator('#font-results .notice');
+    await expect(notice).toContainText('corrupted or unsupported');
+    await expect(notice).not.toContainText('CFF outlines');
+    await expect(page.locator('#font-results .dl-btn')).toHaveCount(0);
+  });
+
   test('WOFF round-trips through TTF without losing tables', async ({ page }) => {
     const woff = await convertAndDownload(page, '/ttf-to-woff', 'sample.ttf', 'woff');
     const original = await readFile(fixture('sample.ttf'));
