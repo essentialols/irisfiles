@@ -488,6 +488,205 @@ function extractDocxParagraphText(paragraph) {
   return text;
 }
 
+const DOCX_WORD_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+
+function docxLocalName(node) {
+  return node?.localName || node?.nodeName?.replace(/^.*:/, '') || '';
+}
+
+function docxChild(node, name) {
+  if (!node) return null;
+  for (const child of node.childNodes) {
+    if (child.nodeType === 1 && docxLocalName(child) === name) return child;
+  }
+  return null;
+}
+
+function docxAttr(node, name) {
+  if (!node) return null;
+  return node.getAttributeNS(DOCX_WORD_NS, name) ||
+    node.getAttribute(`w:${name}`) || node.getAttribute(name);
+}
+
+function parseDocxLevel(level) {
+  const start = parseInt(docxAttr(docxChild(level, 'start'), 'val') || '1', 10);
+  return {
+    start: Number.isFinite(start) && start > 0 ? start : 1,
+    format: docxAttr(docxChild(level, 'numFmt'), 'val') || 'decimal',
+    text: docxAttr(docxChild(level, 'lvlText'), 'val') || '',
+  };
+}
+
+function parseDocxNumberingPart(zip) {
+  const numberingKey = Object.keys(zip).find(k => k.toLowerCase() === 'word/numbering.xml');
+  if (!numberingKey) return null;
+
+  const doc = new DOMParser().parseFromString(
+    new TextDecoder().decode(zip[numberingKey]),
+    'application/xml'
+  );
+  if (doc.getElementsByTagName('parsererror').length > 0) return null;
+
+  const abstractNums = new Map();
+  for (const abstractNum of doc.getElementsByTagNameNS(DOCX_WORD_NS, 'abstractNum')) {
+    const id = docxAttr(abstractNum, 'abstractNumId');
+    if (id == null) continue;
+    const levels = new Map();
+    for (const child of abstractNum.childNodes) {
+      if (child.nodeType !== 1 || docxLocalName(child) !== 'lvl') continue;
+      const level = parseInt(docxAttr(child, 'ilvl') || '0', 10);
+      levels.set(Number.isFinite(level) && level >= 0 ? level : 0, parseDocxLevel(child));
+    }
+    abstractNums.set(id, levels);
+  }
+
+  const nums = new Map();
+  for (const num of doc.getElementsByTagNameNS(DOCX_WORD_NS, 'num')) {
+    const id = docxAttr(num, 'numId');
+    const abstractNumId = docxAttr(docxChild(num, 'abstractNumId'), 'val');
+    if (id == null || abstractNumId == null) continue;
+    const overrides = new Map();
+    for (const child of num.childNodes) {
+      if (child.nodeType !== 1 || docxLocalName(child) !== 'lvlOverride') continue;
+      const level = parseInt(docxAttr(child, 'ilvl') || '0', 10);
+      const ilvl = Number.isFinite(level) && level >= 0 ? level : 0;
+      const startOverride = docxChild(child, 'startOverride');
+      const levelOverride = docxChild(child, 'lvl');
+      overrides.set(ilvl, {
+        start: startOverride ? parseInt(docxAttr(startOverride, 'val') || '1', 10) : null,
+        level: levelOverride ? parseDocxLevel(levelOverride) : null,
+      });
+    }
+    nums.set(id, { abstractNumId, overrides });
+  }
+
+  const styles = new Map();
+  const stylesKey = Object.keys(zip).find(k => k.toLowerCase() === 'word/styles.xml');
+  if (stylesKey) {
+    const stylesDoc = new DOMParser().parseFromString(
+      new TextDecoder().decode(zip[stylesKey]),
+      'application/xml'
+    );
+    if (stylesDoc.getElementsByTagName('parsererror').length === 0) {
+      for (const style of stylesDoc.getElementsByTagNameNS(DOCX_WORD_NS, 'style')) {
+        if (docxAttr(style, 'type') !== 'paragraph') continue;
+        const styleId = docxAttr(style, 'styleId');
+        if (!styleId) continue;
+        const pPr = docxChild(style, 'pPr');
+        const numPr = docxChild(pPr, 'numPr');
+        styles.set(styleId, {
+          basedOn: docxAttr(docxChild(style, 'basedOn'), 'val'),
+          numId: docxAttr(docxChild(numPr, 'numId'), 'val'),
+          level: docxAttr(docxChild(numPr, 'ilvl'), 'val'),
+        });
+      }
+    }
+  }
+
+  return { abstractNums, nums, styles, counters: new Map() };
+}
+
+function docxParagraphNumbering(paragraph, numbering) {
+  const pPr = docxChild(paragraph, 'pPr');
+  const directNumPr = docxChild(pPr, 'numPr');
+  if (directNumPr) {
+    return {
+      numId: docxAttr(docxChild(directNumPr, 'numId'), 'val'),
+      level: docxAttr(docxChild(directNumPr, 'ilvl'), 'val'),
+    };
+  }
+
+  let styleId = docxAttr(docxChild(pPr, 'pStyle'), 'val');
+  const visited = new Set();
+  while (styleId && !visited.has(styleId)) {
+    visited.add(styleId);
+    const style = numbering.styles.get(styleId);
+    if (!style) break;
+    if (style.numId != null) return { numId: style.numId, level: style.level };
+    styleId = style.basedOn;
+  }
+  return null;
+}
+
+function docxAlphabetic(value) {
+  let result = '';
+  for (let n = value; n > 0; n = Math.floor((n - 1) / 26)) {
+    result = String.fromCharCode(65 + ((n - 1) % 26)) + result;
+  }
+  return result;
+}
+
+function docxRoman(value) {
+  const parts = [
+    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'],
+    [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'],
+    [5, 'V'], [4, 'IV'], [1, 'I'],
+  ];
+  let result = '';
+  let remaining = value;
+  for (const [amount, numeral] of parts) {
+    while (remaining >= amount) {
+      result += numeral;
+      remaining -= amount;
+    }
+  }
+  return result || String(value);
+}
+
+function formatDocxListCounter(value, format) {
+  if (format === 'lowerLetter') return docxAlphabetic(value).toLowerCase();
+  if (format === 'upperLetter') return docxAlphabetic(value);
+  if (format === 'lowerRoman') return docxRoman(value).toLowerCase();
+  if (format === 'upperRoman') return docxRoman(value);
+  return String(value);
+}
+
+function docxListLabel(paragraph, numbering) {
+  if (!numbering) return '';
+  const paragraphNumbering = docxParagraphNumbering(paragraph, numbering);
+  if (!paragraphNumbering?.numId || paragraphNumbering.numId === '0') return '';
+
+  const num = numbering.nums.get(paragraphNumbering.numId);
+  const levels = num && numbering.abstractNums.get(num.abstractNumId);
+  if (!num || !levels) return '';
+
+  const parsedLevel = parseInt(paragraphNumbering.level || '0', 10);
+  const level = Number.isFinite(parsedLevel) && parsedLevel >= 0 ? parsedLevel : 0;
+  const override = num.overrides.get(level);
+  const spec = override?.level || levels.get(level);
+  if (!spec || spec.format === 'none') return '';
+
+  let state = numbering.counters.get(paragraphNumbering.numId);
+  if (!state) {
+    state = { values: [], seen: new Set() };
+    numbering.counters.set(paragraphNumbering.numId, state);
+  }
+
+  const start = Number.isFinite(override?.start) && override.start > 0 ? override.start : spec.start;
+  if (state.seen.has(level)) state.values[level] += 1;
+  else {
+    state.values[level] = start;
+    state.seen.add(level);
+  }
+  for (let deeper = level + 1; deeper < state.values.length; deeper++) {
+    state.values[deeper] = undefined;
+    state.seen.delete(deeper);
+  }
+
+  if (spec.format === 'bullet') return '•';
+  const template = spec.text || `%${level + 1}.`;
+  return template.replace(/%([1-9])/g, (_, digit) => {
+    const referencedLevel = Number(digit) - 1;
+    const referencedOverride = num.overrides.get(referencedLevel);
+    const referencedSpec = referencedOverride?.level || levels.get(referencedLevel);
+    if (!referencedSpec) return '';
+    const referencedStart = Number.isFinite(referencedOverride?.start) && referencedOverride.start > 0
+      ? referencedOverride.start : referencedSpec.start;
+    const value = state.values[referencedLevel] ?? referencedStart;
+    return formatDocxListCounter(value, referencedSpec.format);
+  });
+}
+
 /** Parse DOCX (ZIP) and extract text from word/document.xml. */
 async function extractDocxText(file, onProgress) {
   if (onProgress) onProgress(10);
@@ -517,10 +716,11 @@ async function extractDocxText(file, onProgress) {
     throw new Error('Failed to parse DOCX document content: the file may be corrupted.');
   }
 
+  const numbering = parseDocxNumberingPart(zip);
+
   // Namespace-aware: w:p -> paragraphs, w:r -> runs, w:t -> text
   // DOMParser may or may not resolve namespaces; handle both cases
-  const nsW = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-  let paragraphs = doc.getElementsByTagNameNS(nsW, 'p');
+  let paragraphs = doc.getElementsByTagNameNS(DOCX_WORD_NS, 'p');
 
   // Fallback for parsers that don't resolve the namespace
   if (paragraphs.length === 0) {
@@ -529,7 +729,9 @@ async function extractDocxText(file, onProgress) {
 
   const lines = [];
   for (let i = 0; i < paragraphs.length; i++) {
-    lines.push(extractDocxParagraphText(paragraphs[i]));
+    const text = extractDocxParagraphText(paragraphs[i]);
+    const label = docxListLabel(paragraphs[i], numbering);
+    lines.push(label ? `${label} ${text}` : text);
 
     if (onProgress) onProgress(40 + Math.round((i / paragraphs.length) * 30));
   }
