@@ -673,7 +673,10 @@ function docxListLabel(paragraph, numbering) {
     state.seen.delete(deeper);
   }
 
-  if (spec.format === 'bullet') return '•';
+  if (spec.format === 'bullet') {
+    const bullet = spec.text.trim();
+    return !bullet || /[\uE000-\uF8FF]/.test(bullet) ? '•' : bullet;
+  }
   const template = spec.text || `%${level + 1}.`;
   return template.replace(/%([1-9])/g, (_, digit) => {
     const referencedLevel = Number(digit) - 1;
