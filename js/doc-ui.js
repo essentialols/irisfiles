@@ -199,7 +199,7 @@ async function runConversion() {
   } catch (err) {
     if (token !== selectionToken) return;
     const div = makeResultsDiv();
-    div.innerHTML = `<div class="notice">${esc(err.message)}</div>`;
+    div.innerHTML = `<div class="notice" data-kind="error">${esc(err.message)}</div>`;
   } finally {
     if (token === selectionToken) {
       actionBtn.textContent = origText;

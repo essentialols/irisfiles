@@ -65,7 +65,19 @@ export async function convertFont(file, targetFormat, onProgress) {
   if (flavor !== SFNT_TRUETYPE && flavor !== SFNT_CFF) {
     throw new Error('Could not parse font file. It may be corrupted or unsupported.');
   }
+  validateSfntDirectory(sfnt);
   if (onProgress) onProgress(45);
+
+  // opentype.js 1.3.4 serializes rebuilt outlines as CFF/OTTO. It cannot
+  // produce the quadratic glyf/loca tables a real TrueType sfnt requires.
+  // Fail before loading the serializer instead of making a CFF OTF user wait
+  // for a conversion that can only end in a flavor mismatch.
+  if (targetFormat === 'ttf' && flavor === SFNT_CFF) {
+    throw new Error(
+      'This font uses CFF outlines, which IrisFiles cannot safely rebuild as TrueType in the browser yet. ' +
+      'No file was created. Keep the original font, or use WOFF when you only need a web-font container.'
+    );
+  }
 
   if (targetFormat === 'woff') {
     if (onProgress) onProgress(100);
@@ -121,6 +133,23 @@ async function convertOutlines(arrayBuffer, targetFormat, onProgress) {
   return sfntBuffer;
 }
 
+/** Verify that the sfnt table directory and every declared table fit in the file. */
+function validateSfntDirectory(sfnt) {
+  const view = new DataView(sfnt.buffer, sfnt.byteOffset, sfnt.byteLength);
+  const numTables = view.getUint16(4);
+  if (!numTables || 12 + numTables * 16 > sfnt.byteLength) {
+    throw new Error('Could not parse font file. It may be corrupted or unsupported.');
+  }
+  for (let i = 0; i < numTables; i++) {
+    const dir = 12 + i * 16;
+    const offset = view.getUint32(dir + 8);
+    const length = view.getUint32(dir + 12);
+    if (offset > sfnt.byteLength || length > sfnt.byteLength - offset) {
+      throw new Error('Could not parse font file. It may be corrupted or unsupported.');
+    }
+  }
+}
+
 /**
  * Expand a WOFF 1.0 container back into the sfnt it was built from.
  * @param {Uint8Array} woff
@@ -172,6 +201,7 @@ function unwrapWoff(woff) {
   out.setUint16(10, numTables * 16 - searchRange);
 
   let dataOffset = 12 + dirSize;
+  let headOffset = -1;
   for (let i = 0; i < tables.length; i++) {
     const t = tables[i];
     const dir = 12 + i * 16;
@@ -180,7 +210,20 @@ function unwrapWoff(woff) {
     out.setUint32(dir + 8, dataOffset);
     out.setUint32(dir + 12, t.data.length);
     sfnt.set(t.data, dataOffset);
+    if (t.tag === 0x68656164) headOffset = dataOffset; // 'head'
     dataOffset += (t.data.length + 3) & ~3;
+  }
+
+  // Repacking the tables changes their offsets, so the source font's
+  // checkSumAdjustment no longer balances the reconstructed sfnt. OpenType
+  // requires the checksum of the complete font to equal 0xB1B0AFBA.
+  if (headOffset >= 0 && headOffset + 12 <= sfnt.byteLength) {
+    out.setUint32(headOffset + 8, 0);
+    let checksum = 0;
+    for (let i = 0; i < sfnt.byteLength; i += 4) {
+      checksum = (checksum + out.getUint32(i)) >>> 0;
+    }
+    out.setUint32(headOffset + 8, (0xB1B0AFBA - checksum) >>> 0);
   }
 
   return sfnt;
