@@ -194,6 +194,26 @@ test.describe('Image Metadata regressions', () => {
     expect(piexifRequests).toBe(0);
   });
 
+  test('Strip GPS fails closed when EXIF metadata cannot be parsed', async ({ page }) => {
+    const source = await readFile(fixture('sample.jpg'));
+    const input = injectApp1(source, Buffer.concat([
+      Buffer.from('Exif\0\0', 'binary'),
+      Buffer.from('not-a-valid-tiff', 'ascii'),
+    ]));
+
+    await page.goto('/image-metadata');
+    await page.locator('#file-input').setInputFiles({
+      name: 'malformed-exif.jpg',
+      mimeType: 'image/jpeg',
+      buffer: input,
+    });
+    await expect(page.locator('#strip-gps')).toBeVisible({ timeout: 10000 });
+    await page.locator('#strip-gps').click();
+
+    await expect(page.locator('#exif-file .file-item__status')).toContainText('Could not safely read EXIF location metadata', { timeout: 10000 });
+    await expect(page.locator('.btn-download')).toHaveCount(0);
+  });
+
   test('names re-encoded BMP output with the returned JPEG type', async ({ page }) => {
     await page.goto('/image-metadata');
     await page.locator('#file-input').setInputFiles(fixture('sample.bmp'));
