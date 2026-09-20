@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OTF to TTF Font Converter - Free, Private | IrisFiles</title>
-  <meta name="description" content="Convert OTF font files to TTF format in your browser. No upload needed. Uses opentype.js for accurate conversion.">
-  <meta property="og:title" content="OTF to TTF Font Converter - Free, Private | IrisFiles">
-  <meta property="og:description" content="Convert OTF font files to TTF format in your browser. No upload needed. Uses opentype.js for accurate conversion.">
+  <title>OTF to TTF Compatibility Converter - Free, Private | IrisFiles</title>
+  <meta name="description" content="Convert compatible OTF fonts to TTF privately in your browser. TrueType-outline OTFs can be saved as TTF; CFF-based OTFs are detected and safely refused.">
+  <meta property="og:title" content="OTF to TTF Compatibility Converter - Free, Private | IrisFiles">
+  <meta property="og:description" content="Convert compatible OTF fonts to TTF privately in your browser. TrueType-outline OTFs can be saved as TTF; CFF-based OTFs are detected and safely refused.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://irisfiles.com/otf-to-ttf">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="OTF to TTF Font Converter - Free, Private | IrisFiles">
-  <meta name="twitter:description" content="Convert OTF font files to TTF format in your browser. No upload needed. Uses opentype.js for accurate conversion.">
+  <meta name="twitter:title" content="OTF to TTF Compatibility Converter - Free, Private | IrisFiles">
+  <meta name="twitter:description" content="Convert compatible OTF fonts to TTF privately in your browser. TrueType-outline OTFs can be saved as TTF; CFF-based OTFs are detected and safely refused.">
   <meta property="og:image" content="https://irisfiles.com/img/og-default.png">
   <meta name="twitter:image" content="https://irisfiles.com/img/og-default.png">
   <link rel="canonical" href="https://irisfiles.com/otf-to-ttf">
@@ -23,9 +23,9 @@
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      "name": "OTF to TTF Font Converter - IrisFiles",
+      "name": "OTF to TTF Compatibility Converter - IrisFiles",
       "url": "https://irisfiles.com/otf-to-ttf",
-      "description": "Convert OTF font files to TTF format in your browser. No upload needed. Uses opentype.js for accurate conversion.",
+      "description": "Convert compatible OTF fonts to TTF privately in your browser. TrueType-outline OTFs can be saved as TTF; CFF-based OTFs are detected and safely refused.",
       "applicationCategory": "MultimediaApplication",
       "operatingSystem": "Any",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
@@ -39,7 +39,7 @@
           "name": "How does OTF to TTF conversion work?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "IrisFiles uses opentype.js to parse your OTF font file in the browser, then outputs it as a standard TTF file. No server upload is needed."
+            "text": "IrisFiles checks the font's underlying outline flavor in your browser. An OTF that already contains TrueType outlines can be saved as TTF without rebuilding its tables. A CFF-based OTF cannot be safely rebuilt as a real TrueType font by the current browser library, so IrisFiles stops without creating a file."
           }
         },
         {
@@ -47,7 +47,7 @@
           "name": "Will glyph data be preserved?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. All glyphs, metrics, and font tables are preserved during conversion. The output font will render identically to the input."
+            "text": "For a compatible TrueType-outline OTF, IrisFiles preserves the underlying sfnt bytes. CFF-based OTFs are not converted, because rebuilding cubic CFF outlines and advanced font tables as TrueType would not be lossless or reliably supported here."
           }
         },
         {
@@ -55,7 +55,7 @@
           "name": "Can I convert multiple fonts at once?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. Drop as many OTF files as you want. IrisFiles converts them sequentially and lets you download all results as a ZIP."
+            "text": "Yes. You can add up to 50 OTF files, with a 50 MB limit per font. Compatible files are processed sequentially; a CFF-based font is refused rather than mislabeled as TTF."
           }
         }
       ]
@@ -76,8 +76,11 @@
 
   <main class="container">
     <a href="/" class="back-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg> Back</a>
+    <div class="notice" data-kind="info">
+      <span class="notice__text"><strong>Compatibility note:</strong> many OTF files use CFF outlines. This browser tool can create a true TTF only when the OTF already contains TrueType outlines. CFF-based OTFs are detected and stopped without creating a mislabeled file. For web use, <a href="/otf-to-woff">OTF to WOFF</a> preserves the original outlines.</span>
+    </div>
 <div id="drop-zone" class="drop-zone">
-      <h1 class="drop-zone__title">OTF to TTF privately.</h1>
+      <h1 class="drop-zone__title">Check OTF to TTF compatibility privately.</h1>
       <p class="drop-zone__subtitle">Everything runs in your browser. Nothing is uploaded. Ever.</p>
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M28 8H12a4 4 0 00-4 4v24a4 4 0 004 4h24a4 4 0 004-4V20L28 8z"/><path d="M28 8v12h12"/><path d="M24 34v-8m-4 4l4-4 4 4"/></svg>
       <p>Drop OTF font files here, or click to browse</p>
@@ -92,6 +95,12 @@
       <button id="clear-all" class="btn btn--secondary" style="display:none">Clear All</button>
     </div>
 
+    <section class="prose">
+      <h2>Why some OTF files cannot become TTF here</h2>
+      <p><code>.otf</code> describes an OpenType font container, not one specific outline type. Many OTF files use cubic <strong>CFF</strong> outlines, while a true TTF needs quadratic TrueType <code>glyf</code>/<code>loca</code> outlines. The browser-side serializer IrisFiles uses can write CFF OpenType output, but it cannot generate those TrueType outline tables. IrisFiles therefore refuses CFF-based OTFs instead of changing only the extension or handing you a structurally incorrect TTF.</p>
+      <p>If the OTF already contains TrueType outlines, IrisFiles can save those existing sfnt bytes as TTF without rebuilding them. If your goal is a web font rather than a TrueType outline conversion, <a href="/otf-to-woff">OTF to WOFF</a> keeps the original outline format.</p>
+    </section>
+
     <div class="related-tools">
       <h2>Related Tools</h2>
       <div class="related-tools__links">
@@ -105,19 +114,19 @@
       <div class="faq-item">
         <button class="faq-question">How does OTF to TTF conversion work?</button>
         <div class="faq-answer">
-          <p>IrisFiles uses opentype.js to parse your OTF font file in the browser, then outputs it as a standard TTF file. No server upload is needed.</p>
+          <p>IrisFiles checks the font's underlying outline flavor in your browser. An OTF that already contains TrueType outlines can be saved as TTF without rebuilding its tables. A CFF-based OTF cannot be safely rebuilt as a real TrueType font by the current browser library, so IrisFiles stops without creating a file.</p>
         </div>
       </div>
       <div class="faq-item">
         <button class="faq-question">Will glyph data be preserved?</button>
         <div class="faq-answer">
-          <p>Yes. All glyphs, metrics, and font tables are preserved during conversion. The output font will render identically to the input.</p>
+          <p>For a compatible TrueType-outline OTF, IrisFiles preserves the underlying sfnt bytes. CFF-based OTFs are not converted, because rebuilding cubic CFF outlines and advanced font tables as TrueType would not be lossless or reliably supported here.</p>
         </div>
       </div>
       <div class="faq-item">
         <button class="faq-question">Can I convert multiple fonts at once?</button>
         <div class="faq-answer">
-          <p>Yes. Drop as many OTF files as you want. IrisFiles converts them sequentially and lets you download all results as a ZIP.</p>
+          <p>Yes. You can add up to 50 OTF files, with a 50 MB limit per font. Compatible files are processed sequentially; a CFF-based font is refused rather than mislabeled as TTF.</p>
         </div>
       </div>
     </section>
