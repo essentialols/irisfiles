@@ -18,6 +18,7 @@ const FORMAT_SIGNATURES = [
   { mime: 'image/webp',  ext: 'webp', offsets: [[8, [0x57,0x45,0x42,0x50]]] },
   { mime: 'image/gif',   ext: 'gif',  offsets: [[0, [0x47,0x49,0x46]]] },
   { mime: 'image/bmp',   ext: 'bmp',  offsets: [[0, [0x42,0x4D]]] },
+  { mime: 'image/tiff',  ext: 'tiff', offsets: [[0, [0x49,0x49,0x2A,0x00]], [0, [0x4D,0x4D,0x00,0x2A]]] },
   { mime: 'image/x-icon', ext: 'ico', offsets: [[0, [0x00,0x00,0x01,0x00]]] },
   { mime: 'image/avif',  ext: 'avif', offsets: [[4,[0x66,0x74,0x79,0x70,0x61,0x76,0x69,0x66]],[4,[0x66,0x74,0x79,0x70,0x61,0x76,0x69,0x73]]] },
 ];
@@ -112,6 +113,8 @@ export function validateDimensions(width, height) {
 }
 
 export { MAX_BATCH_SIZE };
+
+export const TIFF_DECODE_ERROR = 'Could not decode TIFF. This browser may not support TIFF, or the file may be corrupted. Try Safari or another TIFF-capable app.';
 
 let gifEncoderPromise = null;
 
@@ -280,6 +283,24 @@ export async function loadSvgImage(file) {
   }
 }
 
+async function loadNativeImage(file, errorMessage) {
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.src = url;
+  try {
+    await img.decode();
+    return {
+      image: img,
+      width: img.naturalWidth,
+      height: img.naturalHeight,
+      cleanup: () => URL.revokeObjectURL(url),
+    };
+  } catch {
+    URL.revokeObjectURL(url);
+    throw new Error(errorMessage);
+  }
+}
+
 /**
  * Convert an image using the Canvas API (for natively-supported formats).
  * @param {File|Blob} file - Source image
@@ -310,7 +331,18 @@ export async function convertWithCanvas(file, targetMime, quality) {
       height = source.height;
       cleanup = () => source.close();
     } catch {
-      throw new Error('Could not decode image. The file may be corrupted or in an unsupported format.');
+      // Chrome, Edge and Firefox cannot createImageBitmap a TIFF while Safari
+      // decodes one through <img>, so this fallback is what makes the TIFF
+      // guidance reachable instead of a generic decode failure.
+      if (fmt?.mime === 'image/tiff') {
+        const loaded = await loadNativeImage(file, TIFF_DECODE_ERROR);
+        source = loaded.image;
+        width = loaded.width;
+        height = loaded.height;
+        cleanup = loaded.cleanup;
+      } else {
+        throw new Error('Could not decode image. The file may be corrupted or in an unsupported format.');
+      }
     }
   }
   let canvas;
