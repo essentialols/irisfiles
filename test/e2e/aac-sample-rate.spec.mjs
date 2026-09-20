@@ -34,31 +34,57 @@ function rewriteAdtsSampleRate(source, sampleRateIndex) {
   return bytes;
 }
 
+// sample.aac is genuine 44.1 kHz ADTS AAC. The sampling-frequency index lives
+// in every ADTS frame header, so rewriting it produces a genuine stream at the
+// new rate without pretending another format is AAC.
+async function convertAacToWav(page, sampleRateIndex, name) {
+  const input = rewriteAdtsSampleRate(readFileSync(fixture('sample.aac')), sampleRateIndex);
+
+  await page.goto('/aac-to-wav');
+  await page.locator('#file-input').setInputFiles({
+    name,
+    mimeType: 'audio/aac',
+    buffer: input,
+  });
+  await page.locator('.file-item.done').waitFor({ timeout: 45_000 });
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.locator('.btn-download').click(),
+  ]);
+  const output = readFileSync(await download.path());
+
+  expect(output.subarray(0, 4).toString('ascii')).toBe('RIFF');
+  expect(output.subarray(8, 12).toString('ascii')).toBe('WAVE');
+  return { channels: output.readUInt16LE(22), sampleRate: output.readUInt32LE(24) };
+}
+
+// An AudioContext resamples to the device's default rate, which is usually
+// 44100 or 48000. Asserting one rate would silently pass on whichever machine
+// already defaults to that rate -- verified: the 48 kHz case alone still passes
+// with the ADTS reader removed. Both rates are checked so that whatever the
+// default is, at least one of them has to survive resampling.
 test.describe('AAC source sample rate', () => {
   test('AAC to WAV preserves a 48 kHz ADTS source rate', async ({ page }) => {
-    // sample.aac is genuine 44.1 kHz ADTS AAC. The sampling-frequency index
-    // lives in every ADTS frame header, so changing index 4 -> 3 produces a
-    // genuine 48 kHz ADTS stream without pretending another format is AAC.
-    const source = readFileSync(fixture('sample.aac'));
-    const input = rewriteAdtsSampleRate(source, 3);
+    const { channels, sampleRate } = await convertAacToWav(page, 3, 'stereo-48000.aac');
+    expect(channels).toBe(2);
+    expect(sampleRate).toBe(48_000);
+  });
 
+  test('AAC to WAV preserves a 44.1 kHz ADTS source rate', async ({ page }) => {
+    const { channels, sampleRate } = await convertAacToWav(page, 4, 'stereo-44100.aac');
+    expect(channels).toBe(2);
+    expect(sampleRate).toBe(44_100);
+  });
+
+  test('the two rates do not both match the browser default rate', async ({ page }) => {
     await page.goto('/aac-to-wav');
-    await page.locator('#file-input').setInputFiles({
-      name: 'stereo-48000.aac',
-      mimeType: 'audio/aac',
-      buffer: input,
+    const defaultRate = await page.evaluate(() => {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const rate = ctx.sampleRate;
+      ctx.close();
+      return rate;
     });
-    await page.locator('.file-item.done').waitFor({ timeout: 45_000 });
-
-    const [download] = await Promise.all([
-      page.waitForEvent('download'),
-      page.locator('.btn-download').click(),
-    ]);
-    const output = readFileSync(await download.path());
-
-    expect(output.subarray(0, 4).toString('ascii')).toBe('RIFF');
-    expect(output.subarray(8, 12).toString('ascii')).toBe('WAVE');
-    expect(output.readUInt16LE(22)).toBe(2);
-    expect(output.readUInt32LE(24)).toBe(48_000);
+    expect([48_000, 44_100].filter(r => r !== defaultRate).length).toBeGreaterThan(0);
   });
 });
