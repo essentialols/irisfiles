@@ -36,6 +36,15 @@ async function expectBrowserLoadsFont(page, output) {
   expect(status).toBe('loaded');
 }
 
+function sfntChecksum(output) {
+  expect(output.length % 4).toBe(0);
+  let checksum = 0;
+  for (let offset = 0; offset < output.length; offset += 4) {
+    checksum = (checksum + output.readUInt32BE(offset)) >>> 0;
+  }
+  return checksum;
+}
+
 async function expectRefusal(page, path, fixtureName, message) {
   const downloads = [];
   page.on('download', download => downloads.push(download));
@@ -98,6 +107,7 @@ test.describe('font conversion output', () => {
   test('WOFF to TTF unwraps the container back to a browser-loadable TrueType font', async ({ page }) => {
     const output = await convertAndDownload(page, '/woff-to-ttf', 'sample.woff', 'ttf');
     expect(output.readUInt32BE(0)).toBe(0x00010000);
+    expect(sfntChecksum(output)).toBe(0xB1B0AFBA);
     await expectBrowserLoadsFont(page, output);
   });
 
