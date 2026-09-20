@@ -250,14 +250,19 @@ async function handleDownloadAll() {
   downloadAllBtn.disabled = true;
   downloadAllBtn.textContent = 'Zipping...';
 
-  const entries = await Promise.all(doneFiles.map(async f => ({
-    name: f.outputName,
-    data: new Uint8Array(await f.outputBlob.arrayBuffer()),
-  })));
+  try {
+    const entries = await Promise.all(doneFiles.map(async f => ({
+      name: f.outputName,
+      data: new Uint8Array(await f.outputBlob.arrayBuffer()),
+    })));
 
-  await downloadAsZip(entries, 'irisfiles-audio.zip');
-  downloadAllBtn.disabled = false;
-  downloadAllBtn.textContent = 'Download All as ZIP';
+    await downloadAsZip(entries, 'irisfiles-audio.zip');
+  } catch (err) {
+    showNotice(`Failed to create ZIP: ${err.message}`);
+  } finally {
+    downloadAllBtn.disabled = false;
+    downloadAllBtn.textContent = 'Download All as ZIP';
+  }
 }
 
 function handleClearAll() {
