@@ -88,7 +88,9 @@ function renderFileEntry(file) {
       <button class="btn btn--danger btn-remove">Remove</button>
     </div>
   `;
-  div.querySelector('.btn-remove').addEventListener('click', () => {
+  const removeBtn = div.querySelector('.btn-remove');
+  removeBtn.setAttribute('aria-label', `Remove ${file.name}`);
+  removeBtn.addEventListener('click', () => {
     const idx = files.indexOf(file);
     if (idx !== -1) {
       files.splice(idx, 1);
@@ -185,8 +187,9 @@ function showExtractResults(entries, durationMs) {
   div.innerHTML = html;
 
   div.querySelectorAll('.dl-btn').forEach(btn => {
+    const entry = entries[parseInt(btn.dataset.idx)];
+    btn.setAttribute('aria-label', `Download ${entry.name}`);
     btn.addEventListener('click', () => {
-      const entry = entries[parseInt(btn.dataset.idx)];
       const filename = entry.name.includes('/') ? entry.name.split('/').pop() : entry.name;
       downloadBlob(entry.blob, filename);
     });
@@ -223,7 +226,9 @@ function showCreateResult(blob, durationMs) {
       </div>
     </div>
   `;
-  div.querySelector('#dl-zip').addEventListener('click', () => downloadBlob(blob, 'archive.zip'));
+  const downloadBtn = div.querySelector('#dl-zip');
+  downloadBtn.setAttribute('aria-label', 'Download archive.zip');
+  downloadBtn.addEventListener('click', () => downloadBlob(blob, 'archive.zip'));
 }
 
 function showError(msg) {
