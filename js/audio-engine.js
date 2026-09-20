@@ -41,6 +41,45 @@ function readFlacSampleRate(arrayBuffer) {
   return sampleRate || null;
 }
 
+const ADTS_SAMPLE_RATES = [
+  96000,
+  88200,
+  64000,
+  48000,
+  44100,
+  32000,
+  24000,
+  22050,
+  16000,
+  12000,
+  11025,
+  8000,
+  7350,
+];
+
+/**
+ * Read the sample rate from the first ADTS AAC frame.
+ * Raw .aac files carry this in every frame header, so we can create the
+ * AudioContext at the source rate instead of silently resampling to the
+ * browser/device default before writing WAV.
+ *
+ * @param {ArrayBuffer} arrayBuffer
+ * @returns {number|null}
+ */
+function readAdtsSampleRate(arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+  if (
+    bytes.length < 7 ||
+    bytes[0] !== 0xff ||
+    (bytes[1] & 0xf6) !== 0xf0
+  ) {
+    return null;
+  }
+
+  const sampleRateIndex = (bytes[2] >> 2) & 0x0f;
+  return ADTS_SAMPLE_RATES[sampleRateIndex] || null;
+}
+
 /**
  * Lazy-load lamejs from CDN. Only called when MP3 output is needed.
  * @returns {Promise<void>}
@@ -85,13 +124,16 @@ export async function convertAudio(
   onProgress(10);
 
   // Decode audio data via Web Audio API. decodeAudioData() resamples into
-  // the AudioContext's rate, so preserve FLAC's native rate for WAV output.
+  // the AudioContext's rate, so preserve a source-native rate when it can be
+  // read directly from the container/header before decoding WAV output.
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx)
     throw new Error("Audio processing is not supported in this browser.");
 
   const sourceSampleRate =
-    targetFormat === "wav" ? readFlacSampleRate(arrayBuffer) : null;
+    targetFormat === "wav"
+      ? readFlacSampleRate(arrayBuffer) || readAdtsSampleRate(arrayBuffer)
+      : null;
   let audioCtx = null;
   if (sourceSampleRate) {
     try {
