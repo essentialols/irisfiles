@@ -50,3 +50,43 @@ test('the page grid always matches the named file after rapid re-selection', asy
   await expect(page.locator('.file-item__name')).toHaveText('sample.pdf');
   await expect(page.locator('.pdf-page-card')).toHaveCount(1);
 });
+
+test('a rebuild cannot publish after the user replaces the source PDF', async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = File.prototype.arrayBuffer;
+    let reads = 0;
+    window.__releasePdfRebuild = null;
+    File.prototype.arrayBuffer = function (...args) {
+      const read = () => original.apply(this, args);
+      if (this.name === 'multi-page.pdf' && ++reads === 2) {
+        return new Promise((resolve, reject) => {
+          window.__releasePdfRebuild = () => read().then(resolve, reject);
+        });
+      }
+      return read();
+    };
+  });
+
+  await page.goto('/reorder-pdf-pages');
+  const input = page.locator('#file-input');
+  await input.setInputFiles(fixture('multi-page.pdf'));
+  await expect(page.locator('.pdf-page-card')).toHaveCount(3);
+
+  await page.locator('#action-btn').click();
+  await page.waitForFunction(() => typeof window.__releasePdfRebuild === 'function');
+
+  // Replacing the source while the first rebuild is paused used to let the old
+  // three-page blob appear under the new one-page file's name when it finished.
+  await input.setInputFiles(fixture('sample.pdf'));
+  await expect(page.locator('.file-item__name')).toHaveText('sample.pdf');
+  await expect(page.locator('.pdf-page-card')).toHaveCount(1);
+
+  await page.evaluate(() => window.__releasePdfRebuild());
+  await page.waitForTimeout(1500);
+
+  await expect(page.locator('.file-item__name')).toHaveText('sample.pdf');
+  await expect(page.locator('.pdf-page-card')).toHaveCount(1);
+  await expect(page.locator('#pdf-tool-result')).toHaveCount(0);
+  await expect(page.locator('#action-btn')).toBeEnabled();
+  await expect(page.locator('#action-btn')).toHaveText('Save New Order');
+});
