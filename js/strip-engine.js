@@ -98,7 +98,9 @@ function stripGifMetadata(data) {
     const marker = data[pos];
 
     if (marker === 0x3b) {
-      chunks.push(data.slice(pos));
+      // Only the trailer belongs to the GIF stream. Decoders ignore later bytes,
+      // so copying them would allow arbitrary metadata to survive a clean-up.
+      chunks.push(data.slice(pos, pos + 1));
       pos = data.length;
       break;
     }
@@ -129,8 +131,11 @@ function stripGifMetadata(data) {
       }
       pos = skipGifSubBlocks(data, pos);
 
-      const remove = label === 0xfe ||
-        (label === 0xff && (appId.startsWith('XMP DataXMP') || appId.startsWith('ICCRGBG1012')));
+      // Application extensions can contain arbitrary metadata. Keep the two
+      // established looping extensions because they control animation playback.
+      const keepAnimationApp = label === 0xff &&
+        (appId.startsWith('NETSCAPE2.0') || appId.startsWith('ANIMEXTS1.0'));
+      const remove = label === 0xfe || (label === 0xff && !keepAnimationApp);
       if (!remove) chunks.push(data.slice(start, pos));
       continue;
     }
