@@ -124,6 +124,47 @@ test('EPUB rejects malformed XHTML instead of downloading parser-error text', as
   await expect(page.locator('#dl-doc')).toHaveCount(0);
 });
 
+test('EPUB keeps the chapters that parsed when one chapter is malformed', async ({ page }) => {
+  const containerXml = `<?xml version="1.0"?>
+<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles><rootfile full-path="OEBPS/content.opf"/></rootfiles>
+</container>`;
+  const opf = `<?xml version="1.0"?>
+<package xmlns="http://www.idpf.org/2007/opf">
+  <manifest>
+    <item id="c1" href="c1.xhtml" media-type="application/xhtml+xml"/>
+    <item id="c2" href="c2.xhtml" media-type="application/xhtml+xml"/>
+    <item id="c3" href="c3.xhtml" media-type="application/xhtml+xml"/>
+  </manifest>
+  <spine><itemref idref="c1"/><itemref idref="c2"/><itemref idref="c3"/></spine>
+</package>`;
+  const good = (n, body) => `<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml"><body><h1>${n}</h1><p>${body}</p></body></html>`;
+  // An unescaped & is a fatal XML error and is common in real EPUBs.
+  const broken = '<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml"><body><p>Smith & Jones</p></body></html>';
+
+  await page.goto('/epub-to-txt');
+  await page.locator('#file-input').setInputFiles({
+    name: 'one-bad-chapter.epub',
+    mimeType: 'application/epub+zip',
+    buffer: storedZip({
+      'META-INF/container.xml': containerXml,
+      'OEBPS/content.opf': opf,
+      'OEBPS/c1.xhtml': good('One', 'CHAPTER-ONE-CONTENT'),
+      'OEBPS/c2.xhtml': broken,
+      'OEBPS/c3.xhtml': good('Three', 'CHAPTER-THREE-CONTENT'),
+    }),
+  });
+  await page.locator('#action-btn').click();
+
+  const text = await downloadText(page);
+  expect(text).toContain('CHAPTER-ONE-CONTENT');
+  expect(text).toContain('CHAPTER-THREE-CONTENT');
+  // The gap is marked rather than dropped silently, and the parser's own error
+  // text never reaches the reader.
+  expect(text).toContain('[Chapter could not be read: OEBPS/c2.xhtml]');
+  expect(text).not.toMatch(/parsererror|error on line|not well-formed/i);
+});
+
 test('RTF honors group-scoped uc values and escaped fallback characters', async ({ page }) => {
   const rtf = '{\\rtf1\\ansi\\uc0 Unicode: \\u945X {\\uc2\\u946\\\'62?Y} \\u947Z; accent: {\\uc1\\u233\\\'e9}.}';
 
