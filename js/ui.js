@@ -97,6 +97,10 @@ export function init() {
           const div = document.getElementById(`file-${entry.id}`);
           const actions = div?.querySelector('.file-item__actions');
           if (actions) actions.innerHTML = '<span class="file-item__status">Queued</span>';
+        } else if (entry.status === 'processing') {
+          // The current pass already captured the old quality. Let it finish,
+          // discard that result, then immediately rerun with the latest value.
+          entry.reprocessAfterCurrent = true;
         }
       }
       processQueue();
@@ -170,6 +174,7 @@ async function addFile(file) {
     detectedFormat: null,
     durationMs: null,
     savings: null,
+    reprocessAfterCurrent: false,
   };
 
   // Pre-validate file size
@@ -205,11 +210,20 @@ async function processQueue() {
       updateFileItem(next);
       await processFile(next);
       next.durationMs = Math.round(performance.now() - t0);
-      next.status = 'done';
-      next.progress = 100;
-      if (next.outputBlob) {
-        const saved = 1 - (next.outputBlob.size / next.file.size);
-        next.savings = Math.round(saved * 100);
+      if (next.reprocessAfterCurrent) {
+        next.reprocessAfterCurrent = false;
+        next.outputBlob = null;
+        next.progress = 0;
+        next.savings = null;
+        next.statusText = null;
+        next.status = 'queued';
+      } else {
+        next.status = 'done';
+        next.progress = 100;
+        if (next.outputBlob) {
+          const saved = 1 - (next.outputBlob.size / next.file.size);
+          next.savings = Math.round(saved * 100);
+        }
       }
     } catch (err) {
       next.status = 'error';
@@ -311,7 +325,10 @@ function updateFileItem(entry) {
     + (entry.status === 'done' ? ' done' : '')
     + (entry.status === 'error' ? ' error' : '');
 
-  if (entry.status === 'processing') {
+  if (entry.status === 'queued') {
+    status.textContent = 'Queued';
+    status.className = 'file-item__status';
+  } else if (entry.status === 'processing') {
     status.textContent = entry.statusText || 'Converting...';
     status.className = 'file-item__status';
   } else if (entry.status === 'done') {
