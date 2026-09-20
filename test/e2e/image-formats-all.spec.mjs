@@ -163,7 +163,7 @@ test.describe('ICO pages (no fixture)', () => {
   });
 });
 
-test.describe('TIFF pages (no fixture)', () => {
+test.describe('TIFF pages', () => {
   test('tiff-to-jpg page loads correctly', async ({ page }) => {
     await page.goto('/tiff-to-jpg');
     await expect(page.locator('#drop-zone')).toBeVisible();
@@ -194,12 +194,29 @@ test.describe('TIFF pages (no fixture)', () => {
     await expect(page.locator('#drop-zone')).toBeVisible();
   });
 
+  test('warns about native TIFF browser support before upload', async ({ page }) => {
+    await page.goto('/tiff-to-png');
+    const badge = page.locator('#tiff-support-badge');
+    await expect(badge).toBeVisible();
+    await expect(badge).toContainText('Safari supports TIFF natively');
+    await expect(badge).toContainText('Chrome, Edge, and Firefox do not support TIFF natively');
+  });
+
   test('tiff-to-png config has correct attributes', async ({ page }) => {
     await page.goto('/tiff-to-png');
     const config = page.locator('#converter-config');
     await expect(config).toHaveAttribute('data-source-formats', 'image/tiff');
     await expect(config).toHaveAttribute('data-target-mime', 'image/png');
     await expect(config).toHaveAttribute('data-target-ext', 'png');
+  });
+
+  test('recognizes a native TIFF and explains Chromium decode failure', async ({ page }) => {
+    await page.goto('/tiff-to-png');
+    await page.locator('#file-input').setInputFiles(fixture('sample.tiff'));
+    const status = page.locator('.file-item__status.error').first();
+    await expect(status).toBeVisible({ timeout: 15000 });
+    await expect(status).toContainText('Could not decode TIFF');
+    await expect(status).not.toContainText('Unrecognized image format');
   });
 
   test('offers no quality control for a lossless target', async ({ page }) => {
@@ -224,6 +241,7 @@ test.describe('TIFF pages (no fixture)', () => {
   test('tiff-to-pdf page loads correctly', async ({ page }) => {
     await page.goto('/tiff-to-pdf');
     await expect(page.locator('#drop-zone')).toBeVisible();
+    await expect(page.locator('#tiff-support-badge')).toBeVisible();
   });
 
   test('tiff-to-pdf config has correct attributes', async ({ page }) => {
@@ -232,6 +250,15 @@ test.describe('TIFF pages (no fixture)', () => {
     // Every *-to-pdf route is the same img-to-pdf tool behind its own
     // landing page, so it carries a pdf mode rather than a target mime.
     await expect(config).toHaveAttribute('data-pdf-mode', 'img-to-pdf');
+  });
+
+  test('tiff-to-pdf reports the same TIFF capability error', async ({ page }) => {
+    await page.goto('/tiff-to-pdf');
+    await page.locator('#file-input').setInputFiles(fixture('sample.tiff'));
+    await page.locator('#action-btn').click();
+    const notice = page.locator('#pdf-results .notice');
+    await expect(notice).toBeVisible({ timeout: 15000 });
+    await expect(notice).toContainText('Could not decode TIFF');
   });
 });
 
