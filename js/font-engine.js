@@ -201,6 +201,7 @@ function unwrapWoff(woff) {
   out.setUint16(10, numTables * 16 - searchRange);
 
   let dataOffset = 12 + dirSize;
+  let headOffset = -1;
   for (let i = 0; i < tables.length; i++) {
     const t = tables[i];
     const dir = 12 + i * 16;
@@ -209,7 +210,20 @@ function unwrapWoff(woff) {
     out.setUint32(dir + 8, dataOffset);
     out.setUint32(dir + 12, t.data.length);
     sfnt.set(t.data, dataOffset);
+    if (t.tag === 0x68656164) headOffset = dataOffset; // 'head'
     dataOffset += (t.data.length + 3) & ~3;
+  }
+
+  // Repacking the tables changes their offsets, so the source font's
+  // checkSumAdjustment no longer balances the reconstructed sfnt. OpenType
+  // requires the checksum of the complete font to equal 0xB1B0AFBA.
+  if (headOffset >= 0 && headOffset + 12 <= sfnt.byteLength) {
+    out.setUint32(headOffset + 8, 0);
+    let checksum = 0;
+    for (let i = 0; i < sfnt.byteLength; i += 4) {
+      checksum = (checksum + out.getUint32(i)) >>> 0;
+    }
+    out.setUint32(headOffset + 8, (0xB1B0AFBA - checksum) >>> 0);
   }
 
   return sfnt;
