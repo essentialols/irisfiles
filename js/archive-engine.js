@@ -15,15 +15,16 @@ export async function extractZip(file, onProgress) {
   if (onProgress) onProgress(30);
 
   if (typeof fflate === 'undefined') throw new Error('ZIP library not loaded. Please reload the page.');
-  const unzipped = fflate.unzipSync(new Uint8Array(buffer));
+  const extracted = await unzipEntriesPreservingDuplicates(new Uint8Array(buffer));
   if (onProgress) onProgress(80);
 
   const entries = [];
-  for (const [name, data] of Object.entries(unzipped)) {
+  const usedNames = new Set();
+  for (const { name: rawName, data } of extracted) {
     // Skip directory entries (they end with / and have zero length)
-    if (name.endsWith('/') && data.length === 0) continue;
+    if (rawName.endsWith('/') && data.length === 0) continue;
     entries.push({
-      name,
+      name: uniqueArchiveName(rawName, usedNames),
       blob: new Blob([data]),
       size: data.length,
     });
@@ -31,6 +32,82 @@ export async function extractZip(file, onProgress) {
 
   if (onProgress) onProgress(100);
   return entries;
+}
+
+/**
+ * Stream every ZIP member so duplicate paths are not collapsed into object keys.
+ * fflate.unzipSync() returns an object keyed by filename, which silently drops
+ * earlier members when an archive contains the same path more than once.
+ * @param {Uint8Array} raw
+ * @returns {Promise<Array<{name: string, data: Uint8Array}>>}
+ */
+function unzipEntriesPreservingDuplicates(raw) {
+  return new Promise((resolve, reject) => {
+    const extracted = [];
+    let pending = 0;
+    let inputComplete = false;
+    let settled = false;
+
+    const resolveIfDone = () => {
+      if (inputComplete && pending === 0 && !settled) {
+        settled = true;
+        resolve(extracted);
+      }
+    };
+    const fail = err => {
+      if (!settled) {
+        settled = true;
+        reject(err);
+      }
+    };
+
+    const unzipper = new fflate.Unzip(file => {
+      pending++;
+      const chunks = [];
+      let size = 0;
+
+      file.ondata = (err, chunk, final) => {
+        if (err) {
+          fail(err);
+          return;
+        }
+        if (chunk && chunk.length) {
+          chunks.push(chunk);
+          size += chunk.length;
+        }
+        if (!final) return;
+
+        const data = new Uint8Array(size);
+        let offset = 0;
+        for (const part of chunks) {
+          data.set(part, offset);
+          offset += part.length;
+        }
+        extracted.push({ name: file.name, data });
+        pending--;
+        resolveIfDone();
+      };
+
+      try {
+        file.start();
+      } catch (err) {
+        pending--;
+        fail(err);
+      }
+    });
+
+    // Stored entries are supported by Unzip itself; register DEFLATE, the
+    // compression method used by ordinary ZIP archives.
+    unzipper.register(fflate.UnzipInflate);
+
+    try {
+      unzipper.push(raw, true);
+      inputComplete = true;
+      resolveIfDone();
+    } catch (err) {
+      fail(err);
+    }
+  });
 }
 
 /**
