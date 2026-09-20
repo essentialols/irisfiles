@@ -188,19 +188,20 @@ async function runAction() {
 
   try {
     if (mode === 'img-to-pdf') {
+      const quality = getQuality();
       const inputs = [];
       for (const f of inputFiles) {
         const detected = await detectFormat(f);
         const mime = detected ? detected.mime : (f.type || 'image/jpeg');
         if (needsHeicDecoder(mime)) {
           actionBtn.textContent = 'Decoding HEIC...';
-          const decoded = await convertHeic(f, 'image/jpeg', 0.92, () => {});
+          const decoded = await convertHeic(f, 'image/jpeg', quality, () => {});
           inputs.push({ blob: decoded, mime: 'image/jpeg' });
         } else {
           inputs.push({ blob: f, mime });
         }
       }
-      const blob = await imagesToPdf(inputs, pct => { actionBtn.textContent = `Converting... ${pct}%`; });
+      const blob = await imagesToPdf(inputs, pct => { actionBtn.textContent = `Converting... ${pct}%`; }, quality);
       const dur = Math.round(performance.now() - t0);
       if (token === operationToken) showSingleResult(blob, 'converted.pdf', dur);
 
