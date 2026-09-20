@@ -60,7 +60,7 @@
 
       <h2>How it works</h2>
 
-      <p><strong>Image conversion:</strong> For common formats (JPG, PNG, WebP, etc.), IrisFiles loads the image into a Canvas element and re-encodes it using the browser's built-in encoder. For HEIC/HEIF (iPhone photos), it lazy-loads a WebAssembly build of <a href="https://github.com/strukturag/libheif">libheif</a> (version 1.21.2) from the CDN. AVIF conversion also uses a WASM decoder when needed.</p>
+      <p><strong>Image conversion:</strong> For common formats (JPG, PNG, WebP, AVIF, etc.), IrisFiles uses the browser's built-in decoder, renders the image through Canvas, and re-encodes it with the browser's encoder. For HEIC/HEIF (iPhone photos), it lazy-loads a WebAssembly build of <a href="https://github.com/strukturag/libheif">libheif</a> (version 1.21.2) from the CDN. AVIF currently relies on native browser decoding; browsers without AVIF support cannot convert it here.</p>
 
       <p><strong>Video and audio conversion:</strong> IrisFiles lazy-loads <a href="https://github.com/ffmpegwasm/ffmpeg.wasm">FFmpeg.wasm</a> (version 0.12, roughly 10MB) from the CDN only when you use a video or audio tool. FFmpeg runs entirely in your browser; no media ever leaves your device. MP3 encoding uses lamejs; WAV encoding uses the Web Audio API directly.</p>
 

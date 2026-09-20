@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AVIF to PNG Converter - Free, Private, No Upload | IrisFiles</title>
-  <meta name="description" content="Convert AVIF images to PNG in your browser. No upload needed. Lossless output. Batch support.">
+  <meta name="description" content="Convert AVIF images to PNG in your browser. No upload needed. Transparency preserved. Batch support.">
   <meta property="og:title" content="AVIF to PNG Converter - Free, Private, No Upload | IrisFiles">
-  <meta property="og:description" content="Convert AVIF images to PNG in your browser. No upload needed. Lossless output. Batch support.">
+  <meta property="og:description" content="Convert AVIF images to PNG in your browser. No upload needed. Transparency preserved. Batch support.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://irisfiles.com/avif-to-png">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="AVIF to PNG Converter - Free, Private, No Upload | IrisFiles">
-  <meta name="twitter:description" content="Convert AVIF images to PNG in your browser. No upload needed. Lossless output. Batch support.">
+  <meta name="twitter:description" content="Convert AVIF images to PNG in your browser. No upload needed. Transparency preserved. Batch support.">
   <meta property="og:image" content="https://irisfiles.com/img/og-default.png">
   <meta name="twitter:image" content="https://irisfiles.com/img/og-default.png">
   <link rel="canonical" href="https://irisfiles.com/avif-to-png">
@@ -25,7 +25,7 @@
       "@type": "WebApplication",
       "name": "AVIF to PNG Converter - IrisFiles",
       "url": "https://irisfiles.com/avif-to-png",
-      "description": "Convert AVIF images to PNG in your browser. No upload needed. Lossless output. Batch support.",
+      "description": "Convert AVIF images to PNG in your browser. No upload needed. Transparency preserved. Batch support.",
       "applicationCategory": "MultimediaApplication",
       "operatingSystem": "Any",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
@@ -36,10 +36,10 @@
       "mainEntity": [
         {
           "@type": "Question",
-          "name": "Will the conversion be lossless?",
+          "name": "Will PNG preserve all AVIF image precision?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "The PNG output is lossless, meaning no additional quality is lost during the conversion. However, if the original AVIF was lossy-compressed, that quality loss is already baked in."
+            "text": "PNG encoding is lossless after your browser decodes the AVIF, but the conversion is not bit-for-bit lossless from the source. IrisFiles renders through browser Canvas; in Chromium this path exports an 8-bit PNG. High-bit-depth, HDR, or wide-gamut AVIF content may therefore lose precision or color range."
           }
         },
         {
@@ -85,6 +85,10 @@
       <input type="file" id="file-input" accept=".avif,image/avif" multiple>
     </div>
 
+    <div class="notice avif-depth-note" data-kind="info">
+      <span class="notice__text"><strong>High-bit-depth / HDR AVIF:</strong> PNG export goes through browser Canvas. In Chromium this path exports 8-bit PNG, so 10/12-bit, HDR, or wide-gamut source precision may be reduced.</span>
+    </div>
+
     <div id="file-list" class="file-list"></div>
 
     <div class="batch-actions">
@@ -104,9 +108,9 @@
     <section class="faq">
       <h2>Frequently Asked Questions</h2>
       <div class="faq-item">
-        <button class="faq-question">Will the conversion be lossless?</button>
+        <button class="faq-question">Will PNG preserve all AVIF image precision?</button>
         <div class="faq-answer">
-          <p>The PNG output is lossless, meaning no additional quality is lost during the conversion. However, if the original AVIF was lossy-compressed, that quality loss is already baked in.</p>
+          <p>PNG encoding is lossless after your browser decodes the AVIF, but the conversion is not bit-for-bit lossless from the source. IrisFiles renders through browser Canvas; in Chromium this path exports an 8-bit PNG. High-bit-depth, HDR, or wide-gamut AVIF content may therefore lose precision or color range.</p>
         </div>
       </div>
       <div class="faq-item">
