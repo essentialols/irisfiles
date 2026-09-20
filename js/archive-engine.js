@@ -15,7 +15,7 @@ export async function extractZip(file, onProgress) {
   if (onProgress) onProgress(30);
 
   if (typeof fflate === 'undefined') throw new Error('ZIP library not loaded. Please reload the page.');
-  const extracted = await unzipEntriesPreservingDuplicates(new Uint8Array(buffer));
+  const extracted = await unzipEntries(new Uint8Array(buffer));
   if (onProgress) onProgress(80);
 
   const entries = [];
@@ -32,6 +32,34 @@ export async function extractZip(file, onProgress) {
 
   if (onProgress) onProgress(100);
   return entries;
+}
+
+/**
+ * Extract ZIP members while retaining the strict validation performed by
+ * unzipSync(). The common unique-name path keeps the existing one-pass result.
+ * Only archives whose central-directory count cannot match the filename map
+ * take the streaming fallback needed to preserve duplicate member names.
+ * @param {Uint8Array} raw
+ * @returns {Promise<Array<{name: string, data: Uint8Array}>>}
+ */
+async function unzipEntries(raw) {
+  const unique = fflate.unzipSync(raw);
+  const entries = Object.entries(unique).map(([name, data]) => ({ name, data }));
+  const directoryCount = zipCentralDirectoryEntryCount(raw);
+
+  // 0xffff is the ZIP64 sentinel. Stream ZIP64 archives as well so we do not
+  // mistake the 16-bit compatibility count for the real member count.
+  if (directoryCount !== 0xffff && directoryCount === entries.length) return entries;
+  return unzipEntriesPreservingDuplicates(raw);
+}
+
+function zipCentralDirectoryEntryCount(raw) {
+  const min = Math.max(0, raw.length - 65558); // EOCD + maximum 65,535-byte comment
+  for (let pos = raw.length - 22; pos >= min; pos--) {
+    if (raw[pos] !== 0x50 || raw[pos + 1] !== 0x4b || raw[pos + 2] !== 0x05 || raw[pos + 3] !== 0x06) continue;
+    return raw[pos + 10] | (raw[pos + 11] << 8);
+  }
+  return null;
 }
 
 /**
@@ -170,7 +198,7 @@ export async function zipToFileList(file) {
   if (typeof fflate === 'undefined') throw new Error('ZIP library not loaded. Please reload the page.');
   const buffer = await file.arrayBuffer();
   const raw = new Uint8Array(buffer);
-  const unpacked = await unzipEntriesPreservingDuplicates(raw);
+  const unpacked = await unzipEntries(raw);
 
   const entries = [];
   const usedNames = new Set();
