@@ -63,6 +63,7 @@ export function init() {
 
 function addFiles(fileList_) {
   const incoming = Array.from(fileList_);
+  const initialCount = files.length;
   const remaining = MAX_BATCH - files.length;
   if (remaining <= 0) {
     showNotice(`Batch limit reached (${MAX_BATCH} files). Clear some files first.`);
@@ -82,6 +83,10 @@ function addFiles(fileList_) {
   if (skipped > 0) {
     showNotice(`${skipped} file(s) skipped (max ${formatSize(MAX_FILE_SIZE)} per file).`);
   }
+  // Results belong to the exact queue that produced them. Adding a source must
+  // hide completed results from the old queue and invalidate a run in flight,
+  // otherwise the page can offer downloads that omit a file now visibly queued.
+  if (files.length !== initialCount) invalidateResults();
   updateControls();
 }
 
@@ -103,7 +108,12 @@ function renderFileEntry(file) {
   `;
   div.querySelector('.btn-remove').addEventListener('click', () => {
     const idx = files.indexOf(file);
-    if (idx !== -1) files.splice(idx, 1);
+    if (idx !== -1) {
+      files.splice(idx, 1);
+      // Never leave a download/result belonging to a file the user removed.
+      // This also invalidates an in-flight snapshot before it can publish.
+      invalidateResults();
+    }
     div.remove();
     updateControls();
   });
@@ -119,12 +129,16 @@ function updateControls() {
 }
 
 function clearAll() {
-  generation++;
   files.length = 0;
-  results.length = 0;
   fileList.innerHTML = '';
-  removeResults();
+  invalidateResults();
   updateControls();
+}
+
+function invalidateResults() {
+  generation++;
+  results.length = 0;
+  removeResults();
 }
 
 function removeResults() {
@@ -145,7 +159,7 @@ async function runConversion() {
   try {
     for (let i = 0; i < snapshot.length; i++) {
       const f = snapshot[i];
-      // Cleared: stop converting a batch whose results will be discarded anyway.
+      // Queue changed: stop converting a batch whose results will be discarded anyway.
       // break, not return: the tail below resets activeOperation, and returning
       // past it would leave the button disabled for good.
       if (myGen !== generation) break;
