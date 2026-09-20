@@ -93,6 +93,9 @@ function stripGifMetadata(data) {
   if (pos > data.length) throw invalidImage();
   chunks.push(data.slice(0, pos));
 
+  let sawImageBlock = false;
+  let sawTrailer = false;
+
   while (pos < data.length) {
     const start = pos;
     const marker = data[pos];
@@ -100,6 +103,7 @@ function stripGifMetadata(data) {
     if (marker === 0x3b) {
       chunks.push(data.slice(pos));
       pos = data.length;
+      sawTrailer = true;
       break;
     }
 
@@ -112,6 +116,7 @@ function stripGifMetadata(data) {
       pos += 1;
       pos = skipGifSubBlocks(data, pos);
       chunks.push(data.slice(start, pos));
+      sawImageBlock = true;
       continue;
     }
 
@@ -139,6 +144,7 @@ function stripGifMetadata(data) {
   }
 
   if (pos !== data.length) throw invalidImage();
+  if (!sawImageBlock || !sawTrailer) throw invalidImage();
   return concatBytes(chunks);
 }
 
