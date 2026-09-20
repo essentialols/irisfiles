@@ -107,10 +107,27 @@ export function injectPreflightBadge(options = {}) {
   }
 }
 
+function inferFormatPreflight(options) {
+  if (options.preflight) return options;
+  const fileInputSelector = options.fileInputSelector || '#file-input';
+  const fileInput = document.querySelector(fileInputSelector);
+  const accept = fileInput?.getAttribute('accept') || '';
+  if (!/(?:image\/tiff|\.tiff|\.tif)(?:,|$)/i.test(accept)) return options;
+
+  return {
+    ...options,
+    preflight: {
+      id: 'tiff-support-badge',
+      text: 'TIFF decoding depends on browser support. Safari supports TIFF natively; Chrome, Edge, and Firefox do not support TIFF natively.',
+    },
+  };
+}
+
 export function applyPageUX(options = {}) {
-  enableKeyboardDropZone(options.dropZoneSelector, options.fileInputSelector);
+  const resolvedOptions = inferFormatPreflight(options);
+  enableKeyboardDropZone(resolvedOptions.dropZoneSelector, resolvedOptions.fileInputSelector);
   enhanceFaqSemantics(document);
   normalizeActionLabels(document);
-  injectPreflightBadge(options);
-  initPersistentFileFocus(options).catch(() => {});
+  injectPreflightBadge(resolvedOptions);
+  initPersistentFileFocus(resolvedOptions).catch(() => {});
 }

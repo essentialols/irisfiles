@@ -6,7 +6,7 @@
  * - PDF.js: PDF-to-image (render pages to Canvas)
  */
 
-import { loadSvgImage, validateDimensions } from './converter.js';
+import { loadSvgImage, validateDimensions, TIFF_DECODE_ERROR } from './converter.js';
 
 // jsPDF caps a page at 14400 PDF units. The px_scaling hotfix makes one CSS px
 // 0.75 units, so this is the largest page side expressible in px.
@@ -67,7 +67,14 @@ export async function imagesToPdf(files, onProgress, quality = 0.92) {
       cleanup = loaded.cleanup;
     } else {
       const url = URL.createObjectURL(file.blob);
-      try { img = await loadImage(url); } finally { URL.revokeObjectURL(url); }
+      try {
+        img = await loadImage(url);
+      } catch (error) {
+        if (file.mime === 'image/tiff') throw new Error(TIFF_DECODE_ERROR);
+        throw error;
+      } finally {
+        URL.revokeObjectURL(url);
+      }
       w = img.naturalWidth;
       h = img.naturalHeight;
       // An SVG is resolution-independent and loadSvgImage already fits it to the
