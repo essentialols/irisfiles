@@ -170,13 +170,14 @@ export async function zipToFileList(file) {
   if (typeof fflate === 'undefined') throw new Error('ZIP library not loaded. Please reload the page.');
   const buffer = await file.arrayBuffer();
   const raw = new Uint8Array(buffer);
-  const unzipped = fflate.unzipSync(raw);
+  const unpacked = await unzipEntriesPreservingDuplicates(raw);
 
   const entries = [];
-  for (const [name, data] of Object.entries(unzipped)) {
-    if (name.endsWith('/') && data.length === 0) continue;
+  const usedNames = new Set();
+  for (const { name: rawName, data } of unpacked) {
+    if (rawName.endsWith('/') && data.length === 0) continue;
     entries.push({
-      name,
+      name: uniqueArchiveName(rawName, usedNames),
       compressedSize: 0, // fflate doesn't expose per-entry compressed sizes
       uncompressedSize: data.length,
     });
