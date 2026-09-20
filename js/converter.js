@@ -167,10 +167,66 @@ function clampToMaxPixels(width, height) {
   };
 }
 
-function svgViewBoxDimensions(svgText) {
+function parseSvgDocument(svgText) {
   const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml');
   const svg = doc.documentElement;
-  if (!svg || svg.localName !== 'svg') return null;
+  if (!svg || svg.localName !== 'svg' || doc.querySelector('parsererror')) return null;
+  return { doc, svg };
+}
+
+function isEmbeddedSvgResource(value) {
+  const normalized = (value || '').trim();
+  return !normalized || normalized.startsWith('#') || /^data:/i.test(normalized);
+}
+
+function cssHasExternalResource(cssText) {
+  const urls = /url\(\s*(["']?)(.*?)\1\s*\)/gi;
+  let match;
+  while ((match = urls.exec(cssText))) {
+    if (!isEmbeddedSvgResource(match[2])) return true;
+  }
+
+  const imports = /@import\s+(?:url\(\s*)?(["'])(.*?)\1/gi;
+  while ((match = imports.exec(cssText))) {
+    if (!isEmbeddedSvgResource(match[2])) return true;
+  }
+  return false;
+}
+
+function svgHasExternalResources(svgText) {
+  const parsed = parseSvgDocument(svgText);
+  if (!parsed) return false;
+  const { doc } = parsed;
+
+  // SVGs loaded as images are deliberately isolated by browsers: linked images,
+  // fonts and other files are not fetched. Detect those references rather than
+  // silently rasterizing an incomplete picture. Fragment and data URLs are
+  // self-contained and remain supported.
+  const resourceElements = new Set(['image', 'use', 'feimage', 'font-face-uri']);
+  for (const element of doc.querySelectorAll('*')) {
+    const localName = element.localName?.toLowerCase();
+    if (resourceElements.has(localName)) {
+      const href = element.getAttribute('href') || element.getAttributeNS('http://www.w3.org/1999/xlink', 'href');
+      if (!isEmbeddedSvgResource(href)) return true;
+    }
+    if ((localName === 'img' || localName === 'source') && !isEmbeddedSvgResource(element.getAttribute('src'))) {
+      return true;
+    }
+    for (const attr of element.attributes || []) {
+      if (cssHasExternalResource(attr.value)) return true;
+    }
+  }
+
+  for (const style of doc.querySelectorAll('style')) {
+    if (cssHasExternalResource(style.textContent || '')) return true;
+  }
+  return false;
+}
+
+function svgViewBoxDimensions(svgText) {
+  const parsed = parseSvgDocument(svgText);
+  if (!parsed) return null;
+  const { svg } = parsed;
 
   const hasFixedDimension = value => {
     if (!value) return false;
@@ -200,8 +256,11 @@ function svgViewBoxDimensions(svgText) {
 
 export async function loadSvgImage(file) {
   const bytes = await file.arrayBuffer();
-  const svgBlob = new Blob([bytes], { type: 'image/svg+xml' });
   const svgText = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+  if (svgHasExternalResources(svgText)) {
+    throw new Error('This SVG references external files. Browsers do not load them during image conversion. Embed linked images or fonts in the SVG (for example as data URLs) and try again.');
+  }
+  const svgBlob = new Blob([bytes], { type: 'image/svg+xml' });
   const url = URL.createObjectURL(svgBlob);
   const img = new Image();
   img.src = url;
@@ -250,33 +309,40 @@ async function loadNativeImage(file, errorMessage) {
  * @returns {Promise<Blob>}
  */
 export async function convertWithCanvas(file, targetMime, quality) {
-  // createImageBitmap with imageOrientation auto-corrects EXIF rotation from iPhone photos.
-  // Chromium does not decode SVG blobs through createImageBitmap, so SVG uses an HTMLImageElement fallback.
+  // Route SVG through the HTMLImageElement path consistently. Some browsers can
+  // create an ImageBitmap from SVG while others cannot, but SVG-as-image resource
+  // isolation is the same product constraint and must not depend on that detail.
+  const fmt = await detectFormat(file);
   let source;
   let width;
   let height;
   let cleanup = () => {};
-  try {
-    source = await createImageBitmap(file, { imageOrientation: 'from-image' });
-    width = source.width;
-    height = source.height;
-    cleanup = () => source.close();
-  } catch {
-    const fmt = await detectFormat(file);
-    if (fmt?.mime === 'image/tiff') {
-      const loaded = await loadNativeImage(file, TIFF_DECODE_ERROR);
-      source = loaded.image;
-      width = loaded.width;
-      height = loaded.height;
-      cleanup = loaded.cleanup;
-    } else if (fmt?.mime === 'image/svg+xml') {
-      const loaded = await loadSvgImage(file);
-      source = loaded.image;
-      width = loaded.width;
-      height = loaded.height;
-      cleanup = loaded.cleanup;
-    } else {
-      throw new Error('Could not decode image. The file may be corrupted or in an unsupported format.');
+  if (fmt?.mime === 'image/svg+xml') {
+    const loaded = await loadSvgImage(file);
+    source = loaded.image;
+    width = loaded.width;
+    height = loaded.height;
+    cleanup = loaded.cleanup;
+  } else {
+    // createImageBitmap with imageOrientation auto-corrects EXIF rotation from iPhone photos.
+    try {
+      source = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      width = source.width;
+      height = source.height;
+      cleanup = () => source.close();
+    } catch {
+      // Chrome, Edge and Firefox cannot createImageBitmap a TIFF while Safari
+      // decodes one through <img>, so this fallback is what makes the TIFF
+      // guidance reachable instead of a generic decode failure.
+      if (fmt?.mime === 'image/tiff') {
+        const loaded = await loadNativeImage(file, TIFF_DECODE_ERROR);
+        source = loaded.image;
+        width = loaded.width;
+        height = loaded.height;
+        cleanup = loaded.cleanup;
+      } else {
+        throw new Error('Could not decode image. The file may be corrupted or in an unsupported format.');
+      }
     }
   }
   let canvas;
