@@ -573,7 +573,7 @@ export async function stripGpsOnly(file) {
   try {
     exifObj = piexif.load(dataUrl);
   } catch {
-    return dataUrlToBlob(dataUrl);
+    throw new Error('Could not safely read EXIF location metadata. Use Strip All Metadata instead.');
   }
   exifObj['GPS'] = {};
   const exifBytes = piexif.dump(exifObj);
