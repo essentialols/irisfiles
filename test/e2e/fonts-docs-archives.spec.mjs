@@ -272,6 +272,81 @@ test.describe('Document Pages - DOCX Visible Text', () => {
     });
   }
 
+  function numberedListDocx() {
+    const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+</Types>`;
+    const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+    const numbering = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:abstractNum w:abstractNumId="10">
+    <w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/></w:lvl>
+    <w:lvl w:ilvl="1"><w:start w:val="1"/><w:numFmt w:val="lowerLetter"/><w:lvlText w:val="%1.%2)"/></w:lvl>
+  </w:abstractNum>
+  <w:abstractNum w:abstractNumId="11">
+    <w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="&#xF0B7;"/></w:lvl>
+  </w:abstractNum>
+  <w:num w:numId="1"><w:abstractNumId w:val="10"/></w:num>
+  <w:num w:numId="2"><w:abstractNumId w:val="11"/></w:num>
+</w:numbering>`;
+    const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:style w:type="paragraph" w:styleId="ListNumberStyle">
+    <w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr>
+  </w:style>
+</w:styles>`;
+    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+  <w:p><w:r><w:t>Project checklist</w:t></w:r></w:p>
+  <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>Prepare résumé 日本語</w:t></w:r></w:p>
+  <w:p><w:pPr><w:pStyle w:val="ListNumberStyle"/></w:pPr><w:r><w:t>Confirm café details</w:t></w:r></w:p>
+  <w:p><w:pPr><w:numPr><w:ilvl w:val="1"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>Send link</w:t></w:r></w:p>
+  <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="2"/></w:numPr></w:pPr><w:r><w:t>Keep a backup</w:t></w:r></w:p>
+  <w:sectPr/>
+</w:body></w:document>`;
+
+    return storedZip({
+      '[Content_Types].xml': contentTypes,
+      '_rels/.rels': rels,
+      'word/document.xml': documentXml,
+      'word/numbering.xml': numbering,
+      'word/styles.xml': styles,
+    });
+  }
+
+  test('keeps numbered and bulleted list markers in visible text', async ({ page }) => {
+    await page.goto('/docx-to-txt');
+    await page.locator('#file-input').setInputFiles({
+      name: 'numbered-list.docx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      buffer: numberedListDocx(),
+    });
+
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#dl-doc')).toBeVisible({ timeout: 30000 });
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator('#dl-doc').click();
+    const download = await downloadPromise;
+    const text = await readFile(await download.path(), 'utf8');
+
+    expect(text).toBe([
+      'Project checklist',
+      '1. Prepare résumé 日本語',
+      '2. Confirm café details',
+      '2.a) Send link',
+      '• Keep a backup',
+    ].join('\n'));
+  });
+
   test('keeps visible text inside valid WordprocessingML wrappers', async ({ page }) => {
     await page.goto('/docx-to-txt');
     await page.locator('#file-input').setInputFiles({
