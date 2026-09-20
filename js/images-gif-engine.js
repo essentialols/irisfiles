@@ -33,8 +33,8 @@ export async function imagesToGif(files, opts = {}) {
   const firstW = images[0].width;
   const firstH = images[0].height;
   const scale = Math.min(1, maxWidth / firstW);
-  const w = Math.round(firstW * scale);
-  const h = Math.round(firstH * scale);
+  const w = Math.max(1, Math.round(firstW * scale));
+  const h = Math.max(1, Math.round(firstH * scale));
 
   const canvas = document.createElement('canvas');
   canvas.width = w;
