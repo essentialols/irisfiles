@@ -203,6 +203,7 @@ async function extractEpubText(file, onProgress) {
 
   // Extract text from each content file
   const chapters = [];
+  let malformedChapters = 0;
   for (let i = 0; i < orderedFiles.length; i++) {
     const path = orderedFiles[i];
     // Try exact match first, then try decoding URI components
@@ -214,11 +215,24 @@ async function extractEpubText(file, onProgress) {
 
     const html = new TextDecoder().decode(data);
     const doc = new DOMParser().parseFromString(html, 'application/xhtml+xml');
+    if (doc.getElementsByTagName('parsererror').length > 0) {
+      // Reading this chapter would yield the parser's own error text rather than
+      // the book, so it is skipped. An unescaped & in one chapter is common and
+      // must not cost the reader the chapters that did parse, but the gap is
+      // marked so the loss is visible instead of silent.
+      malformedChapters++;
+      chapters.push(`[Chapter could not be read: ${path}]`);
+      continue;
+    }
     const body = doc.body || doc.documentElement;
     const text = htmlBodyToPlainText(body);
     if (text) chapters.push(text);
 
     if (onProgress) onProgress(30 + Math.round((i / orderedFiles.length) * 40));
+  }
+
+  if (malformedChapters > 0 && malformedChapters === chapters.length) {
+    throw new Error('Failed to parse EPUB chapter content: the file may be corrupted.');
   }
 
   return chapters.join('\n\n');
