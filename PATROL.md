@@ -59,12 +59,24 @@ An in-Node or mocked reproduction proves the function misbehaves when called
 directly. It does not prove a user can get there. Label such evidence
 `code-path only` and mark the report `needs reachability check`.
 
+**Hard reject:** if the element id the code reads appears in no root `*.html`,
+the report is not a defect yet. That is a one-line grep and it is the check that
+would have caught #196.
+
 Why: #196 correctly reported that the image-to-PDF branch never passed the
 quality slider value to `imagesToPdf`, and the fix was correct. But **no
-image-to-PDF page shipped a `#quality-slider`**, so `getQuality()` always
+image-to-PDF page shipped a `quality-slider`**, so `getQuality()` always
 returned its fallback and the merged fix changed nothing observable. Two
 4000x3000 runs at nominal quality 10 and 100 both produced 1008098 bytes. The
 control was only added later, in #217.
+
+The rest of patrol's record survives this check. The seven other merged fixes
+whose reports cite an in-Node or mocked reproduction (#117, #119, #144, #145,
+#146, #147, #148) were audited in 2026-09: every DOM id they read exists on a
+shipped page, and each scenario is producible, either through the file input or
+through a control left enabled during the async window. #196 is so far the only
+unreachable one. So this rule is a filing-time check, not a reason to distrust
+a code-path reproduction.
 
 ### Fix autonomously
 
