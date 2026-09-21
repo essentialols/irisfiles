@@ -1,0 +1,95 @@
+#!/bin/bash
+# Pre-push gate + patrol trigger. Tracked in the repo (see CLAUDE.md) so a fresh
+# clone gets the fixed version instead of whatever happens to sit in
+# .git/hooks/. Activate it with either:
+#
+#   git config core.hooksPath .githooks     # per-repo
+#
+# or, on a machine whose global core.hooksPath already points at a delegating
+# hook (~/.git-hooks-global/pre-push here), nothing: that hook falls through to
+# this file when .git/hooks/pre-push is absent.
+#
+# Fires only when main is being pushed, and runs patrol detached: a full
+# patrol spawns Claude Code and the Playwright suite, which takes far longer
+# than anyone will wait at a push prompt. The push itself is never blocked or
+# failed by patrol.
+#
+# patrol.sh guards itself with .patrol/.lock and its own stale-base check, so
+# overlapping pushes are safe.
+
+set -u
+
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+patrol="$repo_root/patrol.sh"
+
+pushing_main=false
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+  # All-zero local sha means the ref is being deleted; nothing to patrol.
+  [[ "$local_sha" =~ ^0+$ ]] && continue
+  [[ "$remote_ref" == "refs/heads/main" ]] && pushing_main=true
+done
+
+[[ "$pushing_main" == true ]] || exit 0
+
+# ---------------------------------------------------------------------------
+# Test gate. There is no CI on this repo: the only checks on a PR are Vercel's
+# preview build and its comment bot, neither of which runs a test. #166 reached
+# a merge with two green checks while carrying a test that could never pass.
+# Pushing main deploys, so the suite runs here instead, where it costs nothing.
+# Override once with CLAUDE_ALLOW_UNTESTED_PUSH=1 git push ...
+#
+# The suite reuses an already-listening server by default, and a reused server
+# serves its OWN directory: without these two variables this gate can grade
+# whatever checkout owns :3988 rather than the tree being pushed. Same exposure
+# merge-pr.sh closes at scripts/merge-pr.sh:61. The port sits below the
+# 3990+ range merge-pr.sh allocates per PR, so the two never collide.
+# ---------------------------------------------------------------------------
+export IRIS_TEST_NO_REUSE=1
+export IRIS_TEST_PORT="${IRIS_TEST_PORT:-3989}"
+
+if [[ "${CLAUDE_ALLOW_UNTESTED_PUSH:-0}" == "1" ]]; then
+  echo "pre-push: CLAUDE_ALLOW_UNTESTED_PUSH=1 set, skipping the test gate." >&2
+else
+  mkdir -p "$repo_root/.patrol"
+  test_log="$repo_root/.patrol/pre-push-tests-$(date +%Y%m%d-%H%M%S).log"
+  echo "pre-push: main is being pushed, running the test suite on port $IRIS_TEST_PORT (log: ${test_log#"$repo_root"/})" >&2
+
+  gate_failed=false
+  if ! (cd "$repo_root" && npm test) >>"$test_log" 2>&1; then
+    echo "pre-push: validation suite FAILED." >&2
+    gate_failed=true
+  else
+    echo "pre-push: validation suite passed, running Playwright (about 6 minutes)..." >&2
+    if ! (cd "$repo_root" && npx playwright test) >>"$test_log" 2>&1; then
+      echo "pre-push: e2e suite FAILED." >&2
+      gate_failed=true
+    fi
+  fi
+
+  if [[ "$gate_failed" == true ]]; then
+    echo "" >&2
+    grep -E "^\s+[0-9]+ (failed|flaky)|✘|passed, .* failed|  [0-9]+ failed" "$test_log" | tail -20 >&2
+    echo "" >&2
+    echo "pre-push: BLOCKED. Full output: ${test_log#"$repo_root"/}" >&2
+    echo "To push anyway: CLAUDE_ALLOW_UNTESTED_PUSH=1 git push ..." >&2
+    exit 1
+  fi
+  echo "pre-push: test gate passed." >&2
+fi
+
+# Opt-in. A patrol run now measures a baseline and re-runs the suite per fix,
+# so it takes hours; firing that on every push to main is not a sane default.
+# The scheduled 04:00 LaunchAgent is the primary trigger.
+if [[ "${PATROL_ON_PUSH:-0}" != "1" ]]; then
+  echo "patrol: skipped (set PATROL_ON_PUSH=1 to run it on this push)"
+  exit 0
+fi
+
+[[ -x "$patrol" ]] || exit 0
+
+mkdir -p "$repo_root/.patrol"
+log="$repo_root/.patrol/pre-push-$(date +%Y%m%d-%H%M%S).log"
+nohup bash "$patrol" >"$log" 2>&1 &
+
+echo "patrol: started in background (log: ${log#"$repo_root"/})"
+exit 0
