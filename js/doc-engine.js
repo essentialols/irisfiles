@@ -69,28 +69,79 @@ const EPUB_BLOCK_ELEMENTS = new Set([
 function htmlBodyToPlainText(root) {
   let text = '';
   let preDepth = 0;
+  let atListItemStart = false;
+  const listStack = [];
 
   // Prose whitespace is layout, so it collapses; whitespace inside <pre> is
-  // content, so it is appended untouched.
+  // content, so it is appended untouched. Ignore formatting whitespace between
+  // a list marker and its first real child so pretty-printed XHTML does not
+  // produce an extra space before the item text.
   function appendProse(value) {
     let chunk = value.replace(/\s+/g, ' ');
     if (!chunk) return;
-    if (chunk === ' ' && (!text || text.endsWith('\n'))) return;
-    if (text.endsWith('\n')) chunk = chunk.replace(/^ /, '');
+    if (!chunk.trim()) {
+      if (atListItemStart || !text || text.endsWith('\n') || text.endsWith(' ')) return;
+      text += ' ';
+      return;
+    }
+    if (text.endsWith('\n') || atListItemStart) chunk = chunk.replace(/^ /, '');
     text += chunk;
+    atListItemStart = false;
   }
 
-  function appendBreak() {
+  function appendBreak(force = false) {
+    if (atListItemStart && !force) return;
     if (preDepth === 0) text = text.replace(/ +$/, '');
     if (text && !text.endsWith('\n')) text += '\n';
+    if (force) atListItemStart = false;
+  }
+
+  function alphaMarker(value, uppercase) {
+    if (value < 1) return String(value);
+    let result = '';
+    for (let n = value; n > 0;) {
+      n--;
+      result = String.fromCharCode((uppercase ? 65 : 97) + (n % 26)) + result;
+      n = Math.floor(n / 26);
+    }
+    return result;
+  }
+
+  function romanMarker(value, uppercase) {
+    if (value < 1 || value > 3999) return String(value);
+    const numerals = [
+      [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'],
+      [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+    ];
+    let result = '';
+    let remaining = value;
+    for (const [amount, glyph] of numerals) {
+      while (remaining >= amount) {
+        result += glyph;
+        remaining -= amount;
+      }
+    }
+    return uppercase ? result : result.toLowerCase();
+  }
+
+  function orderedMarker(value, type) {
+    if (type === 'a') return alphaMarker(value, false) + '.';
+    if (type === 'A') return alphaMarker(value, true) + '.';
+    if (type === 'i') return romanMarker(value, false) + '.';
+    if (type === 'I') return romanMarker(value, true) + '.';
+    return value + '.';
   }
 
   function walk(node) {
     // XHTML may carry visible text as CDATA, which is not a text node.
     if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.CDATA_SECTION_NODE) {
       const value = node.nodeValue || '';
-      if (preDepth > 0) text += value.replace(/\r\n?/g, '\n');
-      else appendProse(value);
+      if (preDepth > 0) {
+        text += value.replace(/\r\n?/g, '\n');
+        if (value.trim()) atListItemStart = false;
+      } else {
+        appendProse(value);
+      }
       return;
     }
     if (node.nodeType !== Node.ELEMENT_NODE) return;
@@ -99,6 +150,46 @@ function htmlBodyToPlainText(root) {
     if (tag === 'script' || tag === 'style') return;
     if (tag === 'br') {
       text += '\n';
+      atListItemStart = false;
+      return;
+    }
+
+    if (tag === 'ol' || tag === 'ul') {
+      // A nested list that is the first child of an li still needs to start on
+      // its own line instead of running directly after the parent's marker.
+      appendBreak(atListItemStart);
+      const ordered = tag === 'ol';
+      const reversed = ordered && node.hasAttribute('reversed');
+      const itemCount = [...node.children]
+        .filter(child => (child.localName || '').toLowerCase() === 'li').length;
+      const explicitStart = Number.parseInt(node.getAttribute('start') || '', 10);
+      const start = Number.isFinite(explicitStart) ? explicitStart : (reversed ? itemCount : 1);
+      listStack.push({
+        ordered,
+        reversed,
+        current: start,
+        type: node.getAttribute('type') || '1',
+      });
+      for (const child of node.childNodes) walk(child);
+      listStack.pop();
+      appendBreak();
+      return;
+    }
+
+    if (tag === 'li' && listStack.length > 0) {
+      appendBreak();
+      const list = listStack[listStack.length - 1];
+      let marker = '•';
+      if (list.ordered) {
+        const explicitValue = Number.parseInt(node.getAttribute('value') || '', 10);
+        if (Number.isFinite(explicitValue)) list.current = explicitValue;
+        marker = orderedMarker(list.current, list.type);
+        list.current += list.reversed ? -1 : 1;
+      }
+      text += `${'  '.repeat(listStack.length - 1)}${marker} `;
+      atListItemStart = true;
+      for (const child of node.childNodes) walk(child);
+      appendBreak(true);
       return;
     }
 
