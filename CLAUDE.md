@@ -23,6 +23,11 @@ Privacy-first client-side file converter. See [README.md](README.md) for project
   `IRIS_TEST_NO_REUSE=1` and a per-PR `IRIS_TEST_PORT`. For any manual run alongside one,
   pass both yourself. `.git/hooks/pre-push` has the same exposure and cannot be fixed in the
   repo, since it lives outside the working tree.
+- `npx playwright install webkit` - one-time, enables the Safari capability check.
+  `test/e2e/tiff-webkit-capability.spec.mjs` launches WebKit directly to verify the
+  claim that Safari decodes TIFF; it skips if WebKit is absent. Any page copy that
+  promises a specific browser can/cannot do something needs a check like this, because
+  the default matrix is Chromium only.
 - **There is no CI.** A PR's only checks are `Vercel` and `Vercel Preview Comments`, both
   preview builds. Green checks say nothing about tests. That gap let #166 merge carrying a
   test that could never pass.
