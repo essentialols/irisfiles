@@ -7,12 +7,34 @@
 import { withFFmpeg } from "./ffmpeg-shared.js";
 
 const LAMEJS_CDN = "https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js";
+const MP3_SAMPLE_RATES = new Set([
+  8000,
+  11025,
+  12000,
+  16000,
+  22050,
+  24000,
+  32000,
+  44100,
+  48000,
+]);
 let lameReady = null; // Promise that resolves when lamejs is loaded
+
+/**
+ * Whether an MP3 at `sampleRate` can carry `kbps`. MPEG-1 (32/44.1/48 kHz)
+ * reaches 320, MPEG-2 (16/22.05/24 kHz) stops at 160 and MPEG-2.5
+ * (8/11.025/12 kHz) at 64. Measured against lamejs 1.2.1, which clamps
+ * silently rather than throwing.
+ */
+function mp3CanCarry(sampleRate, kbps) {
+  if (!MP3_SAMPLE_RATES.has(sampleRate)) return false;
+  return kbps <= (sampleRate >= 32000 ? 320 : sampleRate >= 16000 ? 160 : 64);
+}
 
 /**
  * Read the sample rate from the mandatory FLAC STREAMINFO block.
  * Web Audio decodes into the AudioContext's sample rate, so using the
- * browser default would silently resample FLAC -> WAV conversions.
+ * browser default would silently resample browser-native FLAC conversions.
  *
  * @param {ArrayBuffer} arrayBuffer
  * @returns {number|null}
@@ -61,7 +83,7 @@ const ADTS_SAMPLE_RATES = [
  * Read the sample rate from the first ADTS AAC frame.
  * Raw .aac files carry this in every frame header, so we can create the
  * AudioContext at the source rate instead of silently resampling to the
- * browser/device default before writing WAV.
+ * browser/device default before browser-native WAV or MP3 encoding.
  *
  * @param {ArrayBuffer} arrayBuffer
  * @returns {number|null}
@@ -84,7 +106,7 @@ function readAdtsSampleRate(arrayBuffer) {
  * Read the sample rate from an ISO BMFF audio sample entry (M4A/MP4).
  * AudioSampleEntry stores it as a 16.16 fixed-point value; reading it before
  * Web Audio decoding prevents a 48 kHz M4A from being silently resampled to
- * the browser/device default when the target is WAV.
+ * the browser/device default before browser-native WAV or MP3 encoding.
  *
  * @param {ArrayBuffer} arrayBuffer
  * @returns {number|null}
@@ -227,17 +249,25 @@ export async function convertAudio(
 
   // Decode audio data via Web Audio API. decodeAudioData() resamples into
   // the AudioContext's rate, so preserve a source-native rate when it can be
-  // read directly from the container/header before decoding WAV output.
+  // read directly from the container/header before browser-based WAV or MP3
+  // encoding.
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx)
     throw new Error("Audio processing is not supported in this browser.");
 
+  const detectedSourceSampleRate =
+    readFlacSampleRate(arrayBuffer) ||
+    readAdtsSampleRate(arrayBuffer) ||
+    readMp4AudioSampleRate(arrayBuffer);
+  // Preserving a source rate MP3 cannot pair with the requested bitrate would
+  // silently downgrade it: LAME clamps to the table for that rate, so a 24 kHz
+  // source asked for 320 kbps yields 160 while the UI still promises 320. Fall
+  // back to the default context in that case, as this path did before.
   const sourceSampleRate =
-    targetFormat === "wav"
-      ? readFlacSampleRate(arrayBuffer) ||
-        readAdtsSampleRate(arrayBuffer) ||
-        readMp4AudioSampleRate(arrayBuffer)
-      : null;
+    targetFormat === "mp3" &&
+    !mp3CanCarry(detectedSourceSampleRate, opts.bitrate || 128)
+      ? null
+      : detectedSourceSampleRate;
   let audioCtx = null;
   if (sourceSampleRate) {
     try {
