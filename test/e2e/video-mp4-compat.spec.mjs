@@ -34,3 +34,68 @@ test('WebM to MP4 writes broadly compatible 4:2:0 H.264', async ({ page }) => {
   // High 4:4:4 Predictive (profile_idc 244), which is far less compatible.
   expect(output[avcC + 5]).toBe(100);
 });
+
+// #189 applied the pad + yuv420p pair to the mp4 FORMATS entry only. mkv, mov
+// and the compress path encode through libx264 too, so the same 17x15 yuv444p
+// source came out as High 4:4:4 Predictive there. Measured, not assumed: this
+// libx264 build does not refuse the odd width, it just keeps 4:4:4, so the
+// codec profile is the only thing that exposes the defect.
+async function convertOddYuv444(page, path, expectedName) {
+  await page.goto(path);
+  await page.locator('#file-input').setInputFiles({
+    name: 'odd-yuv444.webm',
+    mimeType: 'video/webm',
+    buffer: Buffer.from(ODD_YUV444_WEBM, 'base64'),
+  });
+  await expect(page.locator('#action-btn')).toBeEnabled();
+  await page.locator('#action-btn').click();
+  await expect(page.locator('.btn-download')).toBeVisible({ timeout: 120000 });
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('.btn-download').click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe(expectedName);
+  return fs.readFile(await download.path());
+}
+
+test('WebM to MOV writes broadly compatible 4:2:0 H.264', async ({ page }) => {
+  const output = await convertOddYuv444(page, '/webm-to-mov', 'odd-yuv444.mov');
+  const avcC = output.indexOf(Buffer.from('avcC'));
+  expect(avcC).toBeGreaterThan(0);
+  expect(output[avcC + 5]).toBe(100);
+});
+
+// Matroska has no avcC box to search for: it stores the same payload in
+// CodecPrivate (EBML id 0x63A2), which begins 0x01 <profile_idc>.
+function matroskaCodecProfile(buf) {
+  for (let i = 0; i + 8 < buf.length; i++) {
+    if (buf[i] !== 0x63 || buf[i + 1] !== 0xa2) continue;
+    const sizeByte = buf[i + 2];
+    let vintLength = 0;
+    for (let k = 0; k < 8; k++) if (sizeByte & (0x80 >> k)) { vintLength = k + 1; break; }
+    if (!vintLength) continue;
+    const payload = i + 2 + vintLength;
+    if (buf[payload] === 0x01) return buf[payload + 1];
+  }
+  return null;
+}
+
+test('WebM to MKV writes broadly compatible 4:2:0 H.264', async ({ page }) => {
+  const output = await convertOddYuv444(page, '/webm-to-mkv', 'odd-yuv444.mkv');
+  expect(output.subarray(0, 4)).toEqual(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]));
+  // Measured: without the pad + yuv420p pair this produced profile_idc 244
+  // (High 4:4:4 Predictive). libx264 does not refuse the odd width here, so
+  // the profile is the only thing that shows the defect.
+  expect(matroskaCodecProfile(output)).toBe(100);
+});
+
+test('Compress Video also writes compatible 4:2:0 H.264', async ({ page }) => {
+  // runVideoCompression builds its args inline rather than from FORMATS, so it
+  // was the third libx264 site #189 left without the pair. Its optional scale
+  // filter has to be chained into the same -vf, because a second -vf replaces
+  // the first instead of adding to it.
+  const output = await convertOddYuv444(page, '/compress-video', 'odd-yuv444-compressed.mp4');
+  const avcC = output.indexOf(Buffer.from('avcC'));
+  expect(avcC).toBeGreaterThan(0);
+  expect(output[avcC + 5]).toBe(100);
+});
