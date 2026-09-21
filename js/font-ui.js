@@ -230,13 +230,18 @@ function showResults(durationMs) {
     zipBtn.addEventListener('click', async () => {
       zipBtn.disabled = true;
       zipBtn.textContent = 'Zipping...';
-      const entries = await Promise.all(results.map(async r => ({
-        name: r.name,
-        data: new Uint8Array(await r.blob.arrayBuffer()),
-      })));
-      await downloadAsZip(entries, 'irisfiles-fonts.zip');
-      zipBtn.disabled = false;
-      zipBtn.textContent = 'Download All as ZIP';
+      try {
+        const entries = await Promise.all(results.map(async r => ({
+          name: r.name,
+          data: new Uint8Array(await r.blob.arrayBuffer()),
+        })));
+        await downloadAsZip(entries, 'irisfiles-fonts.zip');
+      } catch (err) {
+        showNotice(`Failed to create ZIP: ${err.message}`);
+      } finally {
+        zipBtn.disabled = false;
+        zipBtn.textContent = 'Download All as ZIP';
+      }
     });
   }
 }
