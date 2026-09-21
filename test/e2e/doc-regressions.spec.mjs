@@ -185,6 +185,10 @@ test('EPUB preserves ordered and bulleted list markers in downloaded text', asyn
   </ol>
   <h2>المهام</h2>
   <ul><li>مرحبا بالعالم</li><li>قهوة</li></ul>
+  <h2>Sequence</h2>
+  <ol type="A" reversed="reversed" start="3">
+    <li>Third</li><li>Second</li><li value="5">Fifth<ol type="i"><li>Nested one</li></ol></li>
+  </ol>
 </body></html>`;
 
   await page.goto('/epub-to-txt');
@@ -210,6 +214,11 @@ test('EPUB preserves ordered and bulleted list markers in downloaded text', asyn
     'المهام',
     '• مرحبا بالعالم',
     '• قهوة',
+    'Sequence',
+    'C. Third',
+    'B. Second',
+    'E. Fifth',
+    '  i. Nested one',
   ].join('\n'));
 });
 
