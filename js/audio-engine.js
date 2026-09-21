@@ -12,7 +12,7 @@ let lameReady = null; // Promise that resolves when lamejs is loaded
 /**
  * Read the sample rate from the mandatory FLAC STREAMINFO block.
  * Web Audio decodes into the AudioContext's sample rate, so using the
- * browser default would silently resample FLAC -> WAV conversions.
+ * browser default would silently resample browser-native FLAC conversions.
  *
  * @param {ArrayBuffer} arrayBuffer
  * @returns {number|null}
@@ -61,7 +61,7 @@ const ADTS_SAMPLE_RATES = [
  * Read the sample rate from the first ADTS AAC frame.
  * Raw .aac files carry this in every frame header, so we can create the
  * AudioContext at the source rate instead of silently resampling to the
- * browser/device default before writing WAV.
+ * browser/device default before browser-native WAV or MP3 encoding.
  *
  * @param {ArrayBuffer} arrayBuffer
  * @returns {number|null}
@@ -84,7 +84,7 @@ function readAdtsSampleRate(arrayBuffer) {
  * Read the sample rate from an ISO BMFF audio sample entry (M4A/MP4).
  * AudioSampleEntry stores it as a 16.16 fixed-point value; reading it before
  * Web Audio decoding prevents a 48 kHz M4A from being silently resampled to
- * the browser/device default when the target is WAV.
+ * the browser/device default before browser-native WAV or MP3 encoding.
  *
  * @param {ArrayBuffer} arrayBuffer
  * @returns {number|null}
