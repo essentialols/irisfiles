@@ -32,6 +32,12 @@ Privacy-first client-side file converter. See [README.md](README.md) for project
 - Format detection uses magic bytes, not file extensions
 - Heavy libraries lazy-loaded from jsDelivr CDN (ExifReader, piexifjs, FFmpeg.wasm, pdf-lib, etc.)
 - Engine/UI/Boot pattern: `*-engine.js` (pure functions), `*-ui.js` (DOM controller), `*-boot.js` (2-line bootstrapper)
+- **Stale async results need a generation token.** Any tool whose source the user can
+  replace or clear mid-operation must capture a counter when the run starts and drop the
+  result if the counter moved: `pdf-tools-ui.js`, `html-pdf-ui.js` and `font-ui.js` each
+  do this. Capturing without incrementing is only safe while the action button stays
+  `disabled` for the whole async window, which is what makes a second concurrent run
+  impossible. `pending-store.js` is the IndexedDB page-handoff store and is not this.
 - Safeguards: 100MB file limit, 100MP pixel limit, 50-file batch cap, 50MB PDF merge limit
 - Adding a new tool: create HTML + engine + UI + boot, add to index.html Image Tools row, smart-drop.js routes, sitemap.xml, test/validate.mjs PAGES array + sitemap count
 

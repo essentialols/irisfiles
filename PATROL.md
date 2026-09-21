@@ -43,6 +43,29 @@ Tuning: `PATROL_MAX_FIXES` (default 5) caps PRs per run; `PATROL_TEST_WORKERS`
 
 ## Scope
 
+### Reachability comes before the fix
+
+A true statement about a code path is not yet a defect. Before filing or fixing,
+establish that a **user can reach the scenario in a browser**, and put that
+evidence in the report:
+
+- If the code reads a DOM element, grep the root `*.html` files and confirm at
+  least one page that loads the module actually contains it.
+- If the scenario is a race, check whether the button is `disabled` for the whole
+  async window. If it is, the race is usually unreachable.
+- If the input must have an unusual shape, confirm the file input accepts it.
+
+An in-Node or mocked reproduction proves the function misbehaves when called
+directly. It does not prove a user can get there. Label such evidence
+`code-path only` and mark the report `needs reachability check`.
+
+Why: #196 correctly reported that the image-to-PDF branch never passed the
+quality slider value to `imagesToPdf`, and the fix was correct. But **no
+image-to-PDF page shipped a `#quality-slider`**, so `getQuality()` always
+returned its fallback and the merged fix changed nothing observable. Two
+4000x3000 runs at nominal quality 10 and 100 both produced 1008098 bytes. The
+control was only added later, in #217.
+
 ### Fix autonomously
 
 - Bug fixes (broken logic, wrong conditions, off-by-one errors)
