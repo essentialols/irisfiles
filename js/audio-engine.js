@@ -238,7 +238,8 @@ export async function convertAudio(
 
   // Decode audio data via Web Audio API. decodeAudioData() resamples into
   // the AudioContext's rate, so preserve a source-native rate when it can be
-  // read directly from the container/header before browser-based WAV or MP3 encoding.
+  // read directly from the container/header before browser-based WAV or MP3
+  // encoding.
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx)
     throw new Error("Audio processing is not supported in this browser.");
