@@ -528,6 +528,49 @@ test.describe('Images to GIF', () => {
     expect(count).toBe(0);
   });
 
+  test('removing a frame mid-conversion discards the result instead of publishing it', async ({ page }) => {
+    await page.locator('#file-input').setInputFiles([fixture('sample.png'), fixture('sample2.png')]);
+    await page.locator('.frame-item').nth(1).waitFor({ timeout: 5000 });
+
+    // Clear invalidated an in-flight conversion but removing a single frame did
+    // not, so a conversion could still publish a GIF built from frames no longer
+    // in the list. convert() only reaches its first await after taking a
+    // snapshot of the frame list, so firing both clicks in one synchronous page
+    // turn removes a frame while that snapshot's conversion is still in flight,
+    // without needing to race real encode time.
+    await page.evaluate(() => {
+      document.querySelector('#convert-btn').click();
+      document.querySelector('.frame-item__remove').click();
+    });
+
+    await expect(page.locator('.frame-item')).toHaveCount(1);
+    await page.waitForTimeout(2000);
+    await expect(page.locator('#gif-result #dl-gif')).toHaveCount(0);
+  });
+
+  test('converting again revokes the previous preview URL', async ({ page }) => {
+    await page.locator('#file-input').setInputFiles([fixture('sample.png'), fixture('sample2.png')]);
+    await page.locator('.frame-item').nth(1).waitFor({ timeout: 5000 });
+
+    await page.evaluate(() => {
+      window.__revoked = [];
+      const original = URL.revokeObjectURL.bind(URL);
+      URL.revokeObjectURL = url => { window.__revoked.push(url); original(url); };
+    });
+
+    await page.locator('#convert-btn').click();
+    await page.locator('#gif-result img').waitFor({ timeout: 30000 });
+    const firstPreviewUrl = await page.locator('#gif-result img').getAttribute('src');
+
+    // Every conversion registered a preview URL and nothing ever revoked it,
+    // so the browser held on to every GIF made in the session.
+    await page.locator('#convert-btn').click();
+    await page.locator('#gif-result img').waitFor({ timeout: 30000 });
+
+    const revoked = await page.evaluate(() => window.__revoked);
+    expect(revoked).toContain(firstPreviewUrl);
+  });
+
   test('progress indicator shown during conversion', async ({ page }) => {
     await page.locator('#file-input').setInputFiles([fixture('sample.png'), fixture('sample2.png')]);
     await page.locator('.frame-item').nth(1).waitFor({ timeout: 5000 });
