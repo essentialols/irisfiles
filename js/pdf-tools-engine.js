@@ -24,7 +24,7 @@ export async function renderPdfThumbnails(file,onProgress=()=>{}){
   for(let n=1;n<=doc.numPages;n++){
     const page=await doc.getPage(n);const base=page.getViewport({scale:1});const scale=Math.min(1,180/Math.max(base.width,1));const vp=page.getViewport({scale});
     const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(vp.width));canvas.height=Math.max(1,Math.round(vp.height));const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);await page.render({canvasContext:ctx,viewport:vp}).promise;
-    pages.push({index:n-1,pageNum:n,preview:canvas.toDataURL('image/jpeg',.7)});canvas.width=canvas.height=1;onProgress(Math.round(n/doc.numPages*100));
+    pages.push({index:n-1,pageNum:n,sourceRotation:((base.rotation||0)%360+360)%360,preview:canvas.toDataURL('image/jpeg',.7)});canvas.width=canvas.height=1;onProgress(Math.round(n/doc.numPages*100));
   }return pages;
 }
 
