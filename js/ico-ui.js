@@ -45,6 +45,6 @@ function update(entry) { const el = document.getElementById(`file-${entry.id}`);
 function remove(id) { const i = queue.findIndex(x => x.id === id); if (i >= 0) queue.splice(i, 1); document.getElementById(`file-${id}`)?.remove(); updateBatch(); }
 function clear() { queue.length = 0; fileList.innerHTML = ''; updateBatch(); }
 function updateBatch() { const done = queue.filter(x => x.status === 'done'); if (downloadAllBtn) downloadAllBtn.style.display = done.length >= 2 ? '' : 'none'; if (clearAllBtn) clearAllBtn.style.display = queue.length ? '' : 'none'; }
-async function downloadAll() { const done = queue.filter(x => x.status === 'done'); if (done.length < 2) return; downloadAllBtn.disabled = true; const entries = await Promise.all(done.map(async x => ({ name: x.name, data: new Uint8Array(await x.output.arrayBuffer()) }))); await downloadAsZip(entries, 'irisfiles-icons.zip'); downloadAllBtn.disabled = false; }
+async function downloadAll() { const done = queue.filter(x => x.status === 'done'); if (done.length < 2) return; downloadAllBtn.disabled = true; try { const entries = await Promise.all(done.map(async x => ({ name: x.name, data: new Uint8Array(await x.output.arrayBuffer()) }))); await downloadAsZip(entries, 'irisfiles-icons.zip'); } catch (err) { notice(`Failed to create ZIP: ${err.message}`); } finally { downloadAllBtn.disabled = false; } }
 function notice(msg) { showPersistentNotice(dropZone, msg, { id: 'ico-notice', kind: 'warning' }); }
 function esc(v) { const d = document.createElement('div'); d.textContent = v; return d.innerHTML; }
