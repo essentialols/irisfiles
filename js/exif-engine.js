@@ -159,6 +159,13 @@ export async function readMetadata(file) {
     result.gps['Altitude'] = getTagValue(exif.GPSAltitude);
   }
 
+  // ExifReader keeps XMP separate from the EXIF GPS group. Surface XMP GPS too,
+  // otherwise a JPEG can visibly look location-free while still carrying coordinates.
+  const xmpGps = readXmpGpsFromJpeg(new Uint8Array(buffer));
+  if (result.gps['Latitude'] == null && xmpGps.latitude != null) result.gps['Latitude'] = xmpGps.latitude;
+  if (result.gps['Longitude'] == null && xmpGps.longitude != null) result.gps['Longitude'] = xmpGps.longitude;
+  if (result.gps['Altitude'] == null && xmpGps.altitude != null) result.gps['Altitude'] = xmpGps.altitude;
+
   // Check if all groups empty
   const hasData = Object.values(result).some(group => {
     if (typeof group !== 'object') return false;
@@ -214,6 +221,189 @@ function dataUrlToBlob(dataUrl) {
   const arr = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
   return new Blob([arr], { type: mime });
+}
+
+const XMP_STANDARD_HEADER = new TextEncoder().encode('http://ns.adobe.com/xap/1.0/\0');
+const XMP_EXTENDED_HEADER = new TextEncoder().encode('http://ns.adobe.com/xmp/extension/\0');
+const XMP_EXIF_NS = 'http://ns.adobe.com/exif/1.0/';
+const XMP_EXIF_EXT_NS = 'http://cipa.jp/exif/1.0/';
+const XMP_PHOTOSHOP_NS = 'http://ns.adobe.com/photoshop/1.0/';
+const XMP_IPTC_CORE_NS = 'http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/';
+const XMP_IPTC_EXT_NS = 'http://iptc.org/std/Iptc4xmpExt/2008-02-29/';
+
+const XMP_LOCATION_FIELDS = new Map([
+  [XMP_PHOTOSHOP_NS, new Set(['City', 'State', 'Country', 'CountryCode', 'Location'])],
+  [XMP_IPTC_CORE_NS, new Set(['Location', 'CountryCode'])],
+  [XMP_IPTC_EXT_NS, new Set(['LocationCreated', 'LocationShown'])],
+]);
+
+function bytesStartWith(input, offset, prefix) {
+  if (offset + prefix.length > input.length) return false;
+  for (let i = 0; i < prefix.length; i++) {
+    if (input[offset + i] !== prefix[i]) return false;
+  }
+  return true;
+}
+
+function forEachJpegHeaderSegment(input, callback) {
+  if (input.length < 4 || input[0] !== 0xff || input[1] !== 0xd8) {
+    throw new Error('Could not decode JPEG. The file may be corrupted or unsupported.');
+  }
+
+  let pos = 2;
+  while (pos < input.length) {
+    const markerStart = pos;
+    if (input[pos] !== 0xff) {
+      throw new Error('Could not decode JPEG. The file may be corrupted or unsupported.');
+    }
+    while (pos < input.length && input[pos] === 0xff) pos++;
+    if (pos >= input.length) {
+      throw new Error('Could not decode JPEG. The file may be corrupted or unsupported.');
+    }
+
+    const marker = input[pos++];
+    if (marker === 0xda || marker === 0xd9) return;
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+
+    if (pos + 2 > input.length) {
+      throw new Error('Could not decode JPEG. The file may be corrupted or unsupported.');
+    }
+    const length = (input[pos] << 8) | input[pos + 1];
+    if (length < 2 || pos + length > input.length) {
+      throw new Error('Could not decode JPEG. The file may be corrupted or unsupported.');
+    }
+
+    const segmentEnd = pos + length;
+    callback({ marker, markerStart, payloadStart: pos + 2, segmentEnd });
+    pos = segmentEnd;
+  }
+}
+
+function parseXmpDocument(xmlBytes) {
+  let xml;
+  try {
+    xml = new TextDecoder('utf-8', { fatal: true }).decode(xmlBytes);
+  } catch {
+    throw new Error('Could not safely read XMP location metadata. Use Strip All Metadata instead.');
+  }
+
+  const doc = new DOMParser().parseFromString(xml, 'application/xml');
+  if (doc.getElementsByTagName('parsererror').length > 0) {
+    throw new Error('Could not safely read XMP location metadata. Use Strip All Metadata instead.');
+  }
+  return doc;
+}
+
+function isXmpLocationField(namespaceURI, localName) {
+  if ((namespaceURI === XMP_EXIF_NS || namespaceURI === XMP_EXIF_EXT_NS) && localName.startsWith('GPS')) {
+    return true;
+  }
+  return XMP_LOCATION_FIELDS.get(namespaceURI)?.has(localName) || false;
+}
+
+function firstXmpGpsValue(doc, localName) {
+  for (const namespaceURI of [XMP_EXIF_NS, XMP_EXIF_EXT_NS]) {
+    const elements = doc.getElementsByTagNameNS(namespaceURI, localName);
+    if (elements.length > 0) {
+      const value = elements[0].textContent?.trim();
+      if (value) return value;
+    }
+  }
+
+  for (const el of doc.getElementsByTagName('*')) {
+    for (const attr of Array.from(el.attributes || [])) {
+      if ((attr.namespaceURI === XMP_EXIF_NS || attr.namespaceURI === XMP_EXIF_EXT_NS) &&
+          attr.localName === localName && attr.value) {
+        return attr.value;
+      }
+    }
+  }
+  return null;
+}
+
+function readXmpGpsFromJpeg(input) {
+  const result = {};
+  try {
+    forEachJpegHeaderSegment(input, ({ marker, payloadStart, segmentEnd }) => {
+      if (marker !== 0xe1 || !bytesStartWith(input, payloadStart, XMP_STANDARD_HEADER)) return;
+      const doc = parseXmpDocument(input.slice(payloadStart + XMP_STANDARD_HEADER.length, segmentEnd));
+      result.latitude ??= firstXmpGpsValue(doc, 'GPSLatitude');
+      result.longitude ??= firstXmpGpsValue(doc, 'GPSLongitude');
+      result.altitude ??= firstXmpGpsValue(doc, 'GPSAltitude');
+    });
+  } catch {
+    // Metadata display should still work when an optional XMP packet is malformed.
+    // The destructive GPS-strip path below refuses to make an unverifiable privacy claim.
+  }
+  return result;
+}
+
+function stripXmpLocationMetadata(input) {
+  const replacements = [];
+
+  forEachJpegHeaderSegment(input, ({ marker, markerStart, payloadStart, segmentEnd }) => {
+    if (marker !== 0xe1) return;
+
+    if (bytesStartWith(input, payloadStart, XMP_EXTENDED_HEADER)) {
+      throw new Error('This JPEG uses extended XMP metadata that cannot be safely edited in place. Use Strip All Metadata to remove location data.');
+    }
+    if (!bytesStartWith(input, payloadStart, XMP_STANDARD_HEADER)) return;
+
+    const doc = parseXmpDocument(input.slice(payloadStart + XMP_STANDARD_HEADER.length, segmentEnd));
+    let removed = 0;
+
+    for (const el of Array.from(doc.getElementsByTagName('*'))) {
+      for (const attr of Array.from(el.attributes || [])) {
+        if (isXmpLocationField(attr.namespaceURI, attr.localName)) {
+          el.removeAttributeNode(attr);
+          removed++;
+        }
+      }
+    }
+
+    for (const el of Array.from(doc.getElementsByTagName('*'))) {
+      if (isXmpLocationField(el.namespaceURI, el.localName) && el.parentNode) {
+        el.parentNode.removeChild(el);
+        removed++;
+      }
+    }
+
+    if (removed === 0) return;
+
+    const xmlBytes = new TextEncoder().encode(new XMLSerializer().serializeToString(doc));
+    const payloadLength = XMP_STANDARD_HEADER.length + xmlBytes.length;
+    if (payloadLength + 2 > 0xffff) {
+      throw new Error('The cleaned XMP metadata is too large for a JPEG APP1 segment. Use Strip All Metadata instead.');
+    }
+
+    const replacement = new Uint8Array(4 + payloadLength);
+    replacement[0] = 0xff;
+    replacement[1] = 0xe1;
+    const jpegLength = payloadLength + 2;
+    replacement[2] = jpegLength >> 8;
+    replacement[3] = jpegLength & 0xff;
+    replacement.set(XMP_STANDARD_HEADER, 4);
+    replacement.set(xmlBytes, 4 + XMP_STANDARD_HEADER.length);
+    replacements.push({ start: markerStart, end: segmentEnd, bytes: replacement });
+  });
+
+  if (replacements.length === 0) return input;
+
+  const total = input.length + replacements.reduce((sum, replacement) =>
+    sum + replacement.bytes.length - (replacement.end - replacement.start), 0);
+  const output = new Uint8Array(total);
+  let sourcePos = 0;
+  let outputPos = 0;
+
+  for (const replacement of replacements) {
+    output.set(input.slice(sourcePos, replacement.start), outputPos);
+    outputPos += replacement.start - sourcePos;
+    output.set(replacement.bytes, outputPos);
+    outputPos += replacement.bytes.length;
+    sourcePos = replacement.end;
+  }
+  output.set(input.slice(sourcePos), outputPos);
+  return output;
 }
 
 /**
@@ -370,16 +560,20 @@ export async function stripAllMetadata(file) {
 }
 
 /**
- * Strip only GPS data from a JPEG, preserving all other EXIF. Lossless.
+ * Strip location data from JPEG EXIF and standard XMP without re-encoding pixels.
+ * Refuse extended/malformed XMP rather than claiming a privacy cleanup we cannot verify.
  */
 export async function stripGpsOnly(file) {
+  const source = new Uint8Array(await file.arrayBuffer());
+  const xmpClean = stripXmpLocationMetadata(source);
+
   await ensurePiexif();
-  const dataUrl = await fileToDataUrl(file);
+  const dataUrl = await fileToDataUrl(new Blob([xmpClean], { type: 'image/jpeg' }));
   let exifObj;
   try {
     exifObj = piexif.load(dataUrl);
   } catch {
-    return dataUrlToBlob(dataUrl);
+    throw new Error('Could not safely read EXIF location metadata. Use Strip All Metadata instead.');
   }
   exifObj['GPS'] = {};
   const exifBytes = piexif.dump(exifObj);
