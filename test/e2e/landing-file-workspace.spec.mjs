@@ -52,4 +52,37 @@ test.describe('Landing active-file workspace', () => {
     await expect(page.locator('#smart-drop')).toBeVisible();
     await expect(page.locator('#active-file-focus')).toHaveCount(0);
   });
+
+  test('dismissing the file while the handoff write is in flight cancels the navigation', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#smart-file-input').setInputFiles(fixture('sample.mp4'));
+
+    // /video-metadata is a native Smart Drop route (not one of the persistent
+    // action-matrix buttons layered on top, which has no selectionToken of its
+    // own), and it isn't inline-resolvable, so its click handler is the one
+    // that awaits the pending-store write before navigating.
+    const workspace = page.locator('#route-panel');
+    const metadata = workspace.locator('[data-href="/video-metadata"]');
+    await expect(metadata).toBeVisible();
+
+    // The route click's handler awaits an IndexedDB write, then only checked
+    // whether the click itself was stale, not whether the selection changed
+    // underneath it. Firing both clicks synchronously in one page turn lands
+    // the dismiss's selectionToken bump before that write's promise settles,
+    // which is exactly the ordering a fast second drop produced in production.
+    await page.evaluate(() => {
+      document.querySelector('[data-href="/video-metadata"]').click();
+      document.querySelector('.route-dismiss').click();
+    });
+
+    await page.waitForTimeout(500);
+    await expect(page).toHaveURL(/\/$/);
+
+    // The write itself must also have been unwound, not just the navigation
+    // skipped, or the abandoned file would still be waiting for whoever visits
+    // /video-metadata next.
+    await page.goto('/video-metadata');
+    await page.waitForTimeout(500);
+    await expect(page.locator('.file-item')).toHaveCount(0);
+  });
 });
