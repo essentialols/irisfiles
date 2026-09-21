@@ -120,9 +120,14 @@ function updateBatch() {
 async function downloadAll() {
   const done = queue.filter(x => x.status === 'done' && x.outputBlob); if (done.length < 2) return;
   downloadAllBtn.disabled = true; downloadAllBtn.textContent = 'Zipping...';
-  const entries = await Promise.all(done.map(async x => ({ name: x.outputName, data: new Uint8Array(await x.outputBlob.arrayBuffer()) })));
-  await downloadAsZip(entries, `irisfiles-video-to-${targetExt}.zip`);
-  downloadAllBtn.disabled = false; downloadAllBtn.textContent = 'Download All as ZIP';
+  try {
+    const entries = await Promise.all(done.map(async x => ({ name: x.outputName, data: new Uint8Array(await x.outputBlob.arrayBuffer()) })));
+    await downloadAsZip(entries, `irisfiles-video-to-${targetExt}.zip`);
+  } catch (err) {
+    showNotice(`Failed to create ZIP: ${err.message}`);
+  } finally {
+    downloadAllBtn.disabled = false; downloadAllBtn.textContent = 'Download All as ZIP';
+  }
 }
 function showNotice(msg) { showPersistentNotice(dropZone, msg, { id: 'media-audio-notice', kind: 'warning' }); }
 function esc(value) { const d = document.createElement('div'); d.textContent = value; return d.innerHTML; }
