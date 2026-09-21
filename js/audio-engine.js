@@ -21,6 +21,17 @@ const MP3_SAMPLE_RATES = new Set([
 let lameReady = null; // Promise that resolves when lamejs is loaded
 
 /**
+ * Whether an MP3 at `sampleRate` can carry `kbps`. MPEG-1 (32/44.1/48 kHz)
+ * reaches 320, MPEG-2 (16/22.05/24 kHz) stops at 160 and MPEG-2.5
+ * (8/11.025/12 kHz) at 64. Measured against lamejs 1.2.1, which clamps
+ * silently rather than throwing.
+ */
+function mp3CanCarry(sampleRate, kbps) {
+  if (!MP3_SAMPLE_RATES.has(sampleRate)) return false;
+  return kbps <= (sampleRate >= 32000 ? 320 : sampleRate >= 16000 ? 160 : 64);
+}
+
+/**
  * Read the sample rate from the mandatory FLAC STREAMINFO block.
  * Web Audio decodes into the AudioContext's sample rate, so using the
  * browser default would silently resample browser-native FLAC conversions.
@@ -248,11 +259,13 @@ export async function convertAudio(
     readFlacSampleRate(arrayBuffer) ||
     readAdtsSampleRate(arrayBuffer) ||
     readMp4AudioSampleRate(arrayBuffer);
-  // lamejs only accepts MPEG audio sample rates. Keep the previous default-
-  // context fallback for higher/unusual source rates rather than making MP3
-  // conversions that currently work fail at encoder construction.
+  // Preserving a source rate MP3 cannot pair with the requested bitrate would
+  // silently downgrade it: LAME clamps to the table for that rate, so a 24 kHz
+  // source asked for 320 kbps yields 160 while the UI still promises 320. Fall
+  // back to the default context in that case, as this path did before.
   const sourceSampleRate =
-    targetFormat === "mp3" && !MP3_SAMPLE_RATES.has(detectedSourceSampleRate)
+    targetFormat === "mp3" &&
+    !mp3CanCarry(detectedSourceSampleRate, opts.bitrate || 128)
       ? null
       : detectedSourceSampleRate;
   let audioCtx = null;

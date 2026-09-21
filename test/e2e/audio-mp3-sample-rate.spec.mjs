@@ -83,4 +83,17 @@ test.describe('MP3 source sample-rate preservation', () => {
     const sampleRate = await convertToMp3(page, '/m4a-to-mp3', 'sample.m4a');
     expect(sampleRate).toBe(44100);
   });
+
+  // MPEG-2 rates are a separate frame-header version from the 44.1/48 kHz
+  // cases above, and this page converts at the 128 kbps default, which that
+  // version can carry. A source rate is only worth keeping when the requested
+  // bitrate survives it; see mp3CanCarry in js/audio-engine.js.
+  test('keeps a 22.05 kHz FLAC at 22.05 kHz in the downloaded MP3', async ({ page }) => {
+    const sampleRate = await convertToMp3(
+      page,
+      '/flac-to-mp3',
+      'stereo-22050.flac',
+    );
+    expect(sampleRate).toBe(22050);
+  });
 });
