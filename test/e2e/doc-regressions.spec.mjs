@@ -165,6 +165,54 @@ test('EPUB keeps the chapters that parsed when one chapter is malformed', async 
   expect(text).not.toMatch(/parsererror|error on line|not well-formed/i);
 });
 
+test('EPUB preserves ordered and bulleted list markers in downloaded text', async ({ page }) => {
+  const containerXml = `<?xml version="1.0"?>
+<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles><rootfile full-path="OEBPS/content.opf"/></rootfiles>
+</container>`;
+  const opf = `<?xml version="1.0"?>
+<package xmlns="http://www.idpf.org/2007/opf">
+  <manifest><item id="chapter" href="chapter.xhtml" media-type="application/xhtml+xml"/></manifest>
+  <spine><itemref idref="chapter"/></spine>
+</package>`;
+  const chapter = `<?xml version="1.0" encoding="utf-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml"><body>
+  <h1>Trip checklist</h1>
+  <ol start="3">
+    <li><p>Pack résumé papers</p></li>
+    <li><p>Confirm café booking</p><ul><li>Call Anna</li><li>Send 日本語 note</li></ul></li>
+    <li value="10">Board train</li>
+  </ol>
+  <h2>المهام</h2>
+  <ul><li>مرحبا بالعالم</li><li>قهوة</li></ul>
+</body></html>`;
+
+  await page.goto('/epub-to-txt');
+  await page.locator('#file-input').setInputFiles({
+    name: 'list-semantics.epub',
+    mimeType: 'application/epub+zip',
+    buffer: storedZip({
+      'META-INF/container.xml': containerXml,
+      'OEBPS/content.opf': opf,
+      'OEBPS/chapter.xhtml': chapter,
+    }),
+  });
+  await page.locator('#action-btn').click();
+  await expect(page.locator('#dl-doc')).toBeVisible({ timeout: 30000 });
+
+  expect(await downloadText(page)).toBe([
+    'Trip checklist',
+    '3. Pack résumé papers',
+    '4. Confirm café booking',
+    '  • Call Anna',
+    '  • Send 日本語 note',
+    '10. Board train',
+    'المهام',
+    '• مرحبا بالعالم',
+    '• قهوة',
+  ].join('\n'));
+});
+
 test('RTF honors group-scoped uc values and escaped fallback characters', async ({ page }) => {
   const rtf = '{\\rtf1\\ansi\\uc0 Unicode: \\u945X {\\uc2\\u946\\\'62?Y} \\u947Z; accent: {\\uc1\\u233\\\'e9}.}';
 
