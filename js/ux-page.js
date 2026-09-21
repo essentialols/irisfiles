@@ -1,4 +1,5 @@
 import { initPersistentFileFocus } from './file-focus.js';
+import { installFileThumbFallback } from './file-thumb-fallback.js';
 
 export function enableKeyboardDropZone(dropZoneSelector = '#drop-zone', fileInputSelector = '#file-input') {
   const dropZone = typeof dropZoneSelector === 'string'
@@ -125,6 +126,10 @@ function inferFormatPreflight(options) {
 
 export function applyPageUX(options = {}) {
   const resolvedOptions = inferFormatPreflight(options);
+  // Every page that renders a source thumbnail gets the fallback from here, so
+  // a new boot module cannot ship a broken <img> by forgetting to opt in. It
+  // lived in boot.js alone, which left /resize-image showing one for HEIC.
+  installFileThumbFallback();
   enableKeyboardDropZone(resolvedOptions.dropZoneSelector, resolvedOptions.fileInputSelector);
   enhanceFaqSemantics(document);
   normalizeActionLabels(document);
