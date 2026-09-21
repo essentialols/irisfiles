@@ -7,6 +7,17 @@
 import { withFFmpeg } from "./ffmpeg-shared.js";
 
 const LAMEJS_CDN = "https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js";
+const MP3_SAMPLE_RATES = new Set([
+  8000,
+  11025,
+  12000,
+  16000,
+  22050,
+  24000,
+  32000,
+  44100,
+  48000,
+]);
 let lameReady = null; // Promise that resolves when lamejs is loaded
 
 /**
@@ -232,10 +243,17 @@ export async function convertAudio(
   if (!Ctx)
     throw new Error("Audio processing is not supported in this browser.");
 
-  const sourceSampleRate =
+  const detectedSourceSampleRate =
     readFlacSampleRate(arrayBuffer) ||
     readAdtsSampleRate(arrayBuffer) ||
     readMp4AudioSampleRate(arrayBuffer);
+  // lamejs only accepts MPEG audio sample rates. Keep the previous default-
+  // context fallback for higher/unusual source rates rather than making MP3
+  // conversions that currently work fail at encoder construction.
+  const sourceSampleRate =
+    targetFormat === "mp3" && !MP3_SAMPLE_RATES.has(detectedSourceSampleRate)
+      ? null
+      : detectedSourceSampleRate;
   let audioCtx = null;
   if (sourceSampleRate) {
     try {
