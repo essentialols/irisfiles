@@ -17,6 +17,12 @@ Privacy-first client-side file converter. See [README.md](README.md) for project
 - `bash scripts/merge-pr.sh <n>` - Merge a PR after running the suite against its merge
   result in a throwaway worktree. Use this rather than `gh pr merge`: merging on GitHub
   deploys without running anything, because the pre-push hook only sees `git push`.
+- **Never run two suites at once on the same port.** `webServer.reuseExistingServer` is on
+  by default, and a reused server serves *its own* directory, so the second run grades the
+  first run's tree and can report green for code it never loaded. `merge-pr.sh` now exports
+  `IRIS_TEST_NO_REUSE=1` and a per-PR `IRIS_TEST_PORT`. For any manual run alongside one,
+  pass both yourself. `.git/hooks/pre-push` has the same exposure and cannot be fixed in the
+  repo, since it lives outside the working tree.
 - **There is no CI.** A PR's only checks are `Vercel` and `Vercel Preview Comments`, both
   preview builds. Green checks say nothing about tests. That gap let #166 merge carrying a
   test that could never pass.
