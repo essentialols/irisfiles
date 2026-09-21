@@ -49,7 +49,18 @@ ln -s "$repo_root/node_modules" node_modules
 
 log="$repo_root/.patrol/merge-pr-$pr-$(date +%Y%m%d-%H%M%S).log"
 mkdir -p "$repo_root/.patrol"
-echo "merge-pr: running the suite on the merge result (log: ${log#"$repo_root"/})"
+
+# The suite's webServer reuses an already-listening server by default, and that
+# server belongs to whatever directory started it. A dev server, a patrol run or
+# a second gate on the default port would therefore be graded INSTEAD of this
+# merge result, and the gate would report green for code it never loaded.
+# Observed 2026-09-20: a suite run alongside a gate silently tested the gate's
+# tree and reported pages as missing markup they in fact had.
+# So: refuse reuse, and take a per-PR port. If that port is busy the suite fails
+# to start and the merge is blocked, which is the safe direction.
+export IRIS_TEST_NO_REUSE=1
+export IRIS_TEST_PORT="${IRIS_TEST_PORT:-$((3990 + pr % 1000))}"
+echo "merge-pr: running the suite on the merge result (port $IRIS_TEST_PORT, log: ${log#"$repo_root"/})"
 
 if ! npm test >>"$log" 2>&1; then
   echo "merge-pr: BLOCKED. validation suite failed." >&2
