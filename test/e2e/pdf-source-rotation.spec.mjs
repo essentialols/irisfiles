@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { PDFDocument, StandardFonts, degrees } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFNumber, StandardFonts, degrees } from 'pdf-lib';
 import { test, expect } from '@playwright/test';
 
 async function makeRotatedPdf(angle = 90) {
@@ -11,6 +11,40 @@ async function makeRotatedPdf(angle = 90) {
   page.drawText(`Source rotation ${angle} degrees`, { x: 72, y: 700, size: 24, font });
   page.setRotation(degrees(angle));
   return Buffer.from(await doc.save());
+}
+
+// pdf-lib's setRotation refuses anything that is not a multiple of 90, so these
+// awkward /Rotate values have to be written onto the page dictionary directly.
+async function makeRawRotatedPdf(angle) {
+  const doc = await PDFDocument.create();
+  doc.setCreationDate(new Date('2000-01-01T00:00:00Z'));
+  doc.setModificationDate(new Date('2000-01-01T00:00:00Z'));
+  const page = doc.addPage([612, 792]);
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  page.drawText(`Source rotation ${angle} degrees`, { x: 72, y: 700, size: 24, font });
+  page.node.set(PDFName.of('Rotate'), PDFNumber.of(angle));
+  return Buffer.from(await doc.save());
+}
+
+async function rotateOnceAndSave(page, name, buffer) {
+  await page.goto('/rotate-pdf');
+  await page.locator('#file-input').setInputFiles({ name, mimeType: 'application/pdf', buffer });
+  const card = page.locator('.pdf-page-card').first();
+  await expect(card).toBeVisible({ timeout: 15_000 });
+  const badgeBefore = await card.locator('.pdf-page-card__badge').textContent();
+  await card.getByRole('button', { name: /Rotate page 1 90 degrees clockwise/ }).click();
+  const badgeAfter = await card.locator('.pdf-page-card__badge').textContent();
+  await page.locator('#action-btn').click();
+  const downloadButton = page.locator('#pdf-result-download');
+  await expect(downloadButton).toBeVisible({ timeout: 15_000 });
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    downloadButton.click(),
+  ]);
+  const downloadedPath = await download.path();
+  expect(downloadedPath).not.toBeNull();
+  const output = await PDFDocument.load(await readFile(downloadedPath));
+  return { badgeBefore, badgeAfter, angle: output.getPage(0).getRotation().angle };
 }
 
 test.describe('Rotate PDF existing page rotation', () => {
@@ -48,5 +82,19 @@ test.describe('Rotate PDF existing page rotation', () => {
     expect(downloadedPath).not.toBeNull();
     const output = await PDFDocument.load(await readFile(downloadedPath));
     expect(output.getPage(0).getRotation().angle).toBe(180);
+  });
+
+  test('a source rotation that is not a multiple of 90 still saves, matching the badge', async ({ page }) => {
+    const result = await rotateOnceAndSave(page, 'skewed.pdf', await makeRawRotatedPdf(45));
+    expect(result.badgeBefore).toBe('0°');
+    expect(result.badgeAfter).toBe('90°');
+    expect(result.angle).toBe(90);
+  });
+
+  test('a negative source rotation does not produce a negative angle in the output', async ({ page }) => {
+    const result = await rotateOnceAndSave(page, 'negative.pdf', await makeRawRotatedPdf(-270));
+    expect(result.badgeBefore).toBe('90°');
+    expect(result.badgeAfter).toBe('180°');
+    expect(result.angle).toBe(180);
   });
 });

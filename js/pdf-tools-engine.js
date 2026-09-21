@@ -33,7 +33,8 @@ export async function rebuildPdf(file,pageSpecs,onProgress=()=>{}){
   const PDFLib=await pdfLib();const src=await PDFLib.PDFDocument.load(new Uint8Array(await file.arrayBuffer()));const out=await PDFLib.PDFDocument.create();
   for(let i=0;i<pageSpecs.length;i++){
     const spec=pageSpecs[i];if(spec.index<0||spec.index>=src.getPageCount()) throw new Error('Invalid page selection.');
-    const [page]=await out.copyPages(src,[spec.index]);const delta=((spec.rotation||0)%360+360)%360;if(delta){const current=page.getRotation()?.angle||0;page.setRotation(PDFLib.degrees((current+delta)%360));}out.addPage(page);onProgress(Math.round((i+1)/pageSpecs.length*100));
+    // pdf.js treats a /Rotate that is not a multiple of 90 as 0, pdf-lib throws on one, so normalize the source angle the same way the preview did.
+    const [page]=await out.copyPages(src,[spec.index]);const delta=((spec.rotation||0)%360+360)%360;if(delta){const raw=page.getRotation()?.angle||0;const current=raw%90===0?((raw%360)+360)%360:0;page.setRotation(PDFLib.degrees(((current+delta)%360+360)%360));}out.addPage(page);onProgress(Math.round((i+1)/pageSpecs.length*100));
   }
   const bytes=await out.save({useObjectStreams:true});return new Blob([bytes],{type:'application/pdf'});
 }
