@@ -9,8 +9,41 @@
 #   bash patrol.sh --cleanup    # Delete local+remote patrol/* branches, close PRs
 #
 # Triggers:
-#   - Daily via launchd (com.irisfiles.patrol.plist)
-#   - On push via .git/hooks/pre-push
+#   - Daily via launchd (com.irisfiles.patrol.plist)  -- DISABLED 2026-09-21
+#   - On push via .git/hooks/pre-push (opt-in, PATROL_ON_PUSH=1, default off)
+#
+# ===========================================================================
+# TURNED OFF 2026-09-21. Too expensive to keep running, and its triage lane's
+# quota is exhausted.
+#
+# Triage runs on GPT-6 Astra via the Codex lane, and that lane has been at its
+# configured quota threshold for days: every attempt returns HTTP 429 with a
+# reset measured in tens of hours. Patrol failed four nights running,
+# 2026-09-18 through 2026-09-21, with the identical "Triage failed after 3
+# attempts" after three 429s each. It produced nothing on any of them.
+#
+# Nothing surfaced that. launchd records exit 1 and moves on, so four dead
+# nights looked the same from outside as four quiet ones. The same exhaustion
+# blocked every codex-reviewer dispatch on 2026-09-21 (errlog #2096, #2119,
+# #2120, #2121).
+#
+# Disabled with:
+#   launchctl bootout  gui/$(id -u)/com.irisfiles.patrol
+#   launchctl disable  gui/$(id -u)/com.irisfiles.patrol
+# The plist is untouched on disk. Re-enable with `launchctl enable` then
+# `bootstrap`, but do not bother until BOTH are true:
+#   1. the Codex quota is actually available (a 429 here is silent), and
+#   2. cost is worth it -- a full run spends a triage pass plus a fix and a
+#      test-writing pass per finding, and re-runs the Playwright suite for
+#      each one.
+# A cheaper triage lane, or a fallback when Codex 429s, would be the thing to
+# fix first.
+#
+# Note: the `automation/*` PRs on this repo do NOT come from patrol. Patrol
+# creates `patrol/<timestamp>-<idx>` branches (see FIX_BRANCH below), and it
+# was already dead by 04:02 on the night those were filed. Their producer is
+# unidentified and is NOT disabled by turning patrol off.
+# ===========================================================================
 
 set -euo pipefail
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
