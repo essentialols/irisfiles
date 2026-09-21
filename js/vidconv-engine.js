@@ -11,6 +11,11 @@ import { withFFmpeg } from "./ffmpeg-shared.js";
 export const WARN_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB soft warning
 export const MAX_DURATION = 600; // 10 minutes
 
+// libx264 rejects odd dimensions, and a 4:4:4 or 10-bit source otherwise
+// produces a High 4:4:4 stream that most players and Safari refuse. Every
+// libx264 target needs both this filter and -pix_fmt yuv420p, not just mp4.
+export const H264_COMPAT_FILTER = "pad=ceil(iw/2)*2:ceil(ih/2)*2";
+
 const FORMATS = {
   mp4: {
     ext: "mp4",
@@ -23,7 +28,7 @@ const FORMATS = {
       "-crf",
       "23",
       "-vf",
-      "pad=ceil(iw/2)*2:ceil(ih/2)*2",
+      H264_COMPAT_FILTER,
       "-pix_fmt",
       "yuv420p",
       "-c:a",
@@ -65,6 +70,10 @@ const FORMATS = {
       "fast",
       "-crf",
       "23",
+      "-vf",
+      H264_COMPAT_FILTER,
+      "-pix_fmt",
+      "yuv420p",
       "-c:a",
       "aac",
       "-b:a",
@@ -81,6 +90,10 @@ const FORMATS = {
       "fast",
       "-crf",
       "23",
+      "-vf",
+      H264_COMPAT_FILTER,
+      "-pix_fmt",
+      "yuv420p",
       "-c:a",
       "aac",
       "-b:a",
@@ -331,6 +344,8 @@ async function runVideoCompression(ffmpeg, file, opts, onProgress, onStatus) {
     "fast",
     "-crf",
     crf,
+    "-pix_fmt",
+    "yuv420p",
     "-c:a",
     "aac",
     "-b:a",
@@ -339,13 +354,17 @@ async function runVideoCompression(ffmpeg, file, opts, onProgress, onStatus) {
     "+faststart",
   ];
 
-  // Add scale filter if downscaling requested and source is larger
+  // One -vf only: a second occurrence replaces the first rather than adding to
+  // it, so an optional scale and the compatibility pad have to be chained.
+  const filters = [];
   if (opts.maxHeight > 0) {
     const meta = await getVideoMetadata(file);
     if (meta.height > opts.maxHeight) {
-      args.push("-vf", `scale=-2:${opts.maxHeight}`);
+      filters.push(`scale=-2:${opts.maxHeight}`);
     }
   }
+  filters.push(H264_COMPAT_FILTER);
+  args.push("-vf", filters.join(","));
 
   args.push("-y", outputName);
 
