@@ -993,6 +993,35 @@ async function extractMobiText(file, onProgress) {
     throw new Error('Unsupported MOBI compression type. Only uncompressed and PalmDOC-compressed files are supported.');
   }
 
+  // Prefer the encoding declared by the MOBI header. PalmDOC-only files may
+  // not have one, so fall back to strict UTF-8 before trying Windows-1252.
+  // The same header also declares auxiliary bytes appended to every text
+  // record; those must be removed before PalmDOC decompression.
+  let encoding;
+  let extraDataFlags = 0;
+  const mobiHeaderStart = rec0Start + 16;
+  if (
+    mobiHeaderStart + 16 <= rec0End &&
+    buf[mobiHeaderStart] === 0x4D &&
+    buf[mobiHeaderStart + 1] === 0x4F &&
+    buf[mobiHeaderStart + 2] === 0x42 &&
+    buf[mobiHeaderStart + 3] === 0x49
+  ) {
+    const mobiEncoding = view.getUint32(mobiHeaderStart + 12, false);
+    if (mobiEncoding === 1252) encoding = 'windows-1252';
+    else if (mobiEncoding === 65001) encoding = 'utf-8';
+
+    const mobiHeaderLength = view.getUint32(mobiHeaderStart + 4, false);
+    const mobiVersion = mobiHeaderStart + 92 <= rec0End
+      ? view.getUint32(mobiHeaderStart + 88, false)
+      : 0;
+    // Extra Data Flags occupy bytes 242-243 of record 0 when the MOBI header
+    // is long enough. They are defined for modern (v5+) Mobipocket records.
+    if (mobiHeaderLength >= 228 && mobiVersion >= 5 && rec0Start + 244 <= rec0End) {
+      extraDataFlags = view.getUint16(rec0Start + 242, false);
+    }
+  }
+
   if (onProgress) onProgress(20);
 
   // Extract text from records 1..recordCount
@@ -1004,7 +1033,7 @@ async function extractMobiText(file, onProgress) {
     const start = recordOffsets[r];
     if (start >= buf.length) continue;
     const end = r + 1 < recordOffsets.length ? recordOffsets[r + 1] : buf.length;
-    const recordData = buf.slice(start, end);
+    const recordData = stripMobiTrailingData(buf.subarray(start, end), extraDataFlags);
 
     let decoded;
     if (compression === 1) {
@@ -1031,33 +1060,6 @@ async function extractMobiText(file, onProgress) {
   }
 
   if (onProgress) onProgress(65);
-
-  // Prefer the encoding declared by the MOBI header. PalmDOC-only files may
-  // not have one, so fall back to strict UTF-8 before trying Windows-1252.
-  let encoding;
-  let extraDataFlags = 0;
-  const mobiHeaderStart = rec0Start + 16;
-  if (
-    mobiHeaderStart + 16 <= rec0End &&
-    buf[mobiHeaderStart] === 0x4D &&
-    buf[mobiHeaderStart + 1] === 0x4F &&
-    buf[mobiHeaderStart + 2] === 0x42 &&
-    buf[mobiHeaderStart + 3] === 0x49
-  ) {
-    const mobiEncoding = view.getUint32(mobiHeaderStart + 12, false);
-    if (mobiEncoding === 1252) encoding = 'windows-1252';
-    else if (mobiEncoding === 65001) encoding = 'utf-8';
-
-    const mobiHeaderLength = view.getUint32(mobiHeaderStart + 4, false);
-    const mobiVersion = mobiHeaderStart + 92 <= rec0End
-      ? view.getUint32(mobiHeaderStart + 88, false)
-      : 0;
-    // Extra Data Flags occupy bytes 242-243 of record 0 when the MOBI header
-    // is long enough. They are defined for modern (v5+) Mobipocket records.
-    if (mobiHeaderLength >= 228 && mobiVersion >= 5 && rec0Start + 244 <= rec0End) {
-      extraDataFlags = view.getUint16(rec0Start + 242, false);
-    }
-  }
 
   let text;
   if (encoding) {
