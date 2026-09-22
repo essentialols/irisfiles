@@ -12,6 +12,7 @@ let dropZone, fileInput, fileList, langSelect, actionBtn, clearBtn;
 let progressArea, progressStatus, progressBar;
 let resultsArea, resultsText, copyBtn, downloadBtn, summaryEl;
 let currentFile = null;
+let inputRevision = 0;
 
 function formatSize(bytes) {
   if (bytes < 1024) return bytes + ' B';
@@ -31,7 +32,16 @@ async function populateLanguages() {
   }
 }
 
+function resetRunControls() {
+  actionBtn.disabled = false;
+  actionBtn.textContent = 'Extract Text';
+  langSelect.disabled = false;
+  progressBar.classList.remove('done');
+  progressBar.style.background = '';
+}
+
 function showFile(file) {
+  inputRevision++;
   currentFile = file;
   fileList.innerHTML = '';
   const item = document.createElement('div');
@@ -39,6 +49,7 @@ function showFile(file) {
   item.innerHTML = '<span class="file-item__name">' + file.name + '</span>' +
     '<span class="file-item__size">' + formatSize(file.size) + '</span>';
   fileList.appendChild(item);
+  resetRunControls();
   actionBtn.style.display = '';
   clearBtn.style.display = '';
   resultsArea.style.display = 'none';
@@ -46,8 +57,10 @@ function showFile(file) {
 }
 
 function clearAll() {
+  if (currentFile) inputRevision++;
   currentFile = null;
   fileList.innerHTML = '';
+  resetRunControls();
   actionBtn.style.display = 'none';
   clearBtn.style.display = 'none';
   resultsArea.style.display = 'none';
@@ -57,27 +70,33 @@ function clearAll() {
 async function runOcr() {
   if (!currentFile) return;
 
-  const warn = checkWorkload({ fileSizeMb: currentFile.size / 1e6, isOcr: true });
+  const runRevision = inputRevision;
+  const sourceFile = currentFile;
+  const current = () => runRevision === inputRevision;
+  const warn = checkWorkload({ fileSizeMb: sourceFile.size / 1e6, isOcr: true });
   if (warn) showNotice(warn);
 
   actionBtn.disabled = true;
   actionBtn.textContent = 'Processing...';
+  langSelect.disabled = true;
   progressArea.style.display = '';
   resultsArea.style.display = 'none';
   progressBar.style.width = '0%';
   progressBar.classList.remove('done');
+  progressBar.style.background = '';
 
   try {
-    const result = await ocrPdf(currentFile, {
+    const result = await ocrPdf(sourceFile, {
       lang: langSelect.value,
       onPageProgress(pageNum, total, status) {
-        progressStatus.textContent = 'Page ' + pageNum + '/' + total + ': ' + status;
+        if (current()) progressStatus.textContent = 'Page ' + pageNum + '/' + total + ': ' + status;
       },
       onOverallProgress(pct) {
-        progressBar.style.width = Math.round(pct * 100) + '%';
+        if (current()) progressBar.style.width = Math.round(pct * 100) + '%';
       },
     });
 
+    if (!current()) return;
     progressBar.style.width = '100%';
     progressBar.classList.add('done');
     progressStatus.textContent = 'Done!';
@@ -90,13 +109,17 @@ async function runOcr() {
     resultsText.value = result.fullText;
     resultsArea.style.display = '';
   } catch (e) {
+    if (!current()) return;
     progressStatus.textContent = 'Error: ' + (e.message || 'OCR failed');
     progressBar.style.width = '100%';
     progressBar.classList.remove('done');
     progressBar.style.background = 'var(--danger)';
   } finally {
-    actionBtn.disabled = false;
-    actionBtn.textContent = 'Extract Text';
+    if (current()) {
+      actionBtn.disabled = false;
+      actionBtn.textContent = 'Extract Text';
+      langSelect.disabled = false;
+    }
   }
 }
 
