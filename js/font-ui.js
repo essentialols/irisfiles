@@ -15,7 +15,7 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB per font file
 let targetFormat = 'ttf';
 let dropZone, fileInput, fileList, actionBtn, clearBtn;
 const files = [];
-const results = []; // { name, blob }
+const results = []; // { name, sourceName, blob } | { sourceName, error }
 let generation = 0;
 let activeOperation = false;
 
