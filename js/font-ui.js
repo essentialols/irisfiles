@@ -197,16 +197,41 @@ async function runConversion() {
 }
 
 function showResults(durationMs) {
+  const failures = results.filter(r => r.error);
+  const successes = results.filter(r => r.blob);
+
+  // Preserve the familiar single-file error treatment while giving mixed
+  // batches per-file results below.
+  if (results.length === 1 && failures.length === 1) {
+    showError(failures[0].error);
+    return;
+  }
+
   const div = makeResultsDiv();
   const dur = durationMs < 1000 ? durationMs + 'ms' : (durationMs / 1000).toFixed(1) + 's';
-  const totalSize = results.reduce((s, r) => s + r.blob.size, 0);
+  const totalSize = successes.reduce((s, r) => s + r.blob.size, 0);
 
   let html = '';
   if (results.length > 1) {
-    html += `<div class="batch-summary">${results.length} files \u00b7 ${formatSize(totalSize)} \u00b7 ${dur}</div>`;
+    const failedPart = failures.length ? ` \u00b7 ${failures.length} failed` : '';
+    html += `<div class="batch-summary">${successes.length} converted${failedPart} \u00b7 ${formatSize(totalSize)} \u00b7 ${dur}</div>`;
   }
 
   results.forEach((r, i) => {
+    if (r.error) {
+      html += `
+        <div class="file-item failed">
+          <div class="file-item__info">
+            <div class="file-item__name">${esc(r.sourceName)}</div>
+            <div class="file-item__meta">${esc(r.error)}</div>
+          </div>
+          <div class="file-item__actions">
+            <span class="file-item__status error">Failed</span>
+          </div>
+        </div>`;
+      return;
+    }
+
     html += `
       <div class="file-item done">
         <div class="file-item__info">
@@ -219,7 +244,7 @@ function showResults(durationMs) {
       </div>`;
   });
 
-  if (results.length >= 2) {
+  if (successes.length >= 2) {
     html += `<button class="btn btn--primary" id="dl-all-zip" style="margin-top:0.75rem">Download All as ZIP</button>`;
   }
 
@@ -238,7 +263,7 @@ function showResults(durationMs) {
       zipBtn.disabled = true;
       zipBtn.textContent = 'Zipping...';
       try {
-        const entries = await Promise.all(results.map(async r => ({
+        const entries = await Promise.all(results.filter(r => r.blob).map(async r => ({
           name: r.name,
           data: new Uint8Array(await r.blob.arrayBuffer()),
         })));
