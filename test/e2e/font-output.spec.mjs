@@ -183,6 +183,36 @@ test.describe('font conversion output', () => {
     expect((await readFile(outputPath)).length).toBeGreaterThan(1_000);
   });
 
+  test('one malformed font does not discard the successful files in a batch', async ({ page }) => {
+    await page.goto('/ttf-to-woff');
+    await page.locator('#file-input').setInputFiles([
+      fixture('sample.ttf'),
+      {
+        name: 'broken.ttf',
+        mimeType: 'font/ttf',
+        buffer: Buffer.from('not a real font'),
+      },
+    ]);
+    await page.locator('#action-btn').click();
+
+    await expect(page.locator('#font-results .file-item.done')).toHaveCount(1, { timeout: 30_000 });
+    await expect(page.locator('#font-results .file-item.failed')).toHaveCount(1);
+    await expect(page.locator('#font-results .file-item.failed')).toContainText('broken.ttf');
+    await expect(page.locator('#font-results .file-item.failed')).toContainText('corrupted or unsupported');
+    await expect(page.locator('#font-results .batch-summary')).toContainText('1 converted · 1 failed');
+    await expect(page.locator('#font-results .dl-btn')).toHaveCount(1);
+    await expect(page.locator('#dl-all-zip')).toHaveCount(0);
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator('#font-results .dl-btn').click();
+    const download = await downloadPromise;
+    const outputPath = await download.path();
+    expect(outputPath).toBeTruthy();
+    const output = await readFile(outputPath);
+    expect(Array.from(output.subarray(0, 4))).toEqual([0x77, 0x4f, 0x46, 0x46]);
+    await expectBrowserLoadsFont(page, output);
+  });
+
   test('changing the queue after conversion removes downloads from the old queue', async ({ page }) => {
     await page.goto('/otf-to-woff');
     await page.locator('#file-input').setInputFiles(fixture('sample.otf'));
