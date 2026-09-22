@@ -9,8 +9,55 @@
 #   bash patrol.sh --cleanup    # Delete local+remote patrol/* branches, close PRs
 #
 # Triggers:
-#   - Daily via launchd (com.irisfiles.patrol.plist)
-#   - On push via .git/hooks/pre-push
+#   - Daily via launchd (com.irisfiles.patrol.plist)  -- DISABLED 2026-09-21
+#   - On push via .git/hooks/pre-push (opt-in, PATROL_ON_PUSH=1, default off)
+#
+# ===========================================================================
+# TURNED OFF 2026-09-21. Too expensive to keep running, and its triage lane's
+# quota is exhausted.
+#
+# Triage runs on GPT-6 Astra via the Codex lane, and that lane has been at its
+# configured quota threshold for days: every attempt returns HTTP 429 with a
+# reset measured in tens of hours. Patrol failed four nights running,
+# 2026-09-18 through 2026-09-21, with the identical "Triage failed after 3
+# attempts" after three 429s each. It produced nothing on any of them.
+#
+# Nothing surfaced that. launchd records exit 1 and moves on, so four dead
+# nights looked the same from outside as four quiet ones. The same exhaustion
+# blocked every codex-reviewer dispatch on 2026-09-21 (errlog #2096, #2119,
+# #2120, #2121).
+#
+# Disabled with:
+#   launchctl bootout  gui/$(id -u)/com.irisfiles.patrol
+#   launchctl disable  gui/$(id -u)/com.irisfiles.patrol
+# The plist is untouched on disk. Re-enable with `launchctl enable` then
+# `bootstrap`, but do not bother until BOTH are true:
+#   1. the Codex quota is actually available (a 429 here is silent), and
+#   2. cost is worth it -- a full run spends a triage pass plus a fix and a
+#      test-writing pass per finding, and re-runs the Playwright suite for
+#      each one.
+# A cheaper triage lane, or a fallback when Codex 429s, would be the thing to
+# fix first.
+#
+# Note: the `automation/*` PRs on this repo do NOT come from patrol, and are
+# NOT stopped by disabling it. Patrol creates `patrol/<timestamp>-<idx>`
+# branches (see FIX_BRANCH below) and was already dead by 04:02 on the night
+# those were filed.
+#
+# They come from three GPT agents that run nightly against the repo through
+# the ChatGPT GitHub connector. Nothing on this Mac is involved: no launchd
+# job, no cron entry, no local branch or reflog entry, no transcript. The
+# branch is written and the PR opened directly against GitHub.
+#
+# Read their bodies to the end before trusting one. Each states its own
+# validation limits, and they are severe: the repo archive exceeds the
+# connector's `max_bytes`/50-file caps so it never materializes under
+# `/mnt/data`, the repo-native Playwright suite therefore does not run, and
+# direct Chromium navigation is blocked by sandbox administrator policy, so
+# "visual checks" are an in-memory harness rather than the real page. On
+# 2026-09-21 that mattered: #223's central claim about lamejs behaviour was
+# wrong, and only running the encoder locally caught it.
+# ===========================================================================
 
 set -euo pipefail
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -28,10 +75,21 @@ TRIAGE_RUNNER="${PATROL_TRIAGE_RUNNER:-$HOME/.claude/bin/codex-native-worker}"
 FIX_MODEL="${PATROL_FIX_MODEL:-claude-sonnet-5}"
 
 # --- Behavioural gate ---
-# Each fix is checked against a baseline of origin/main rather than against a
-# green suite. Gating on "all green" deadlocks: the suite carries long-standing
-# failures, so no fix could ever pass and the only agent able to repair the
-# tests would be blocked by them.
+# A green suite on origin/main is REQUIRED. The baseline is still measured, but
+# it now has to come back empty: a non-empty one aborts the run instead of
+# being tolerated.
+#
+# This was a "no worse than main" gate until 2026-09-21, written on 2026-09-08
+# when the suite did carry long-standing failures and requiring green would have
+# deadlocked the only agent able to repair the tests. That is over: the baseline
+# file is empty and five full-suite runs on 2026-09-21 reported 1142-1148 passed
+# with zero failures. Tolerating baseline failures now buys nothing and costs
+# something real, because a test that starts failing on main gets silently
+# absorbed into the baseline and stops blocking anything.
+#
+# Override for the case this was built for: if main genuinely goes red and you
+# need patrol to keep working the backlog, PATROL_ALLOW_RED_BASELINE=1 restores
+# the old "no new failures" behaviour for one run.
 PW_WORKERS="${PATROL_TEST_WORKERS:-4}"
 # Each run reviews by hand, so cap the batch rather than emitting fixes all night.
 MAX_FIXES="${PATROL_MAX_FIXES:-5}"
@@ -294,7 +352,23 @@ if grep -q "PW_REPORT_UNREADABLE" "$BASELINE_FILE"; then
   echo "ERROR: could not measure a baseline; refusing to gate fixes blind." | tee -a "$LOG"
   exit 1
 fi
-echo "Baseline: $(wc -l < "$BASELINE_FILE" | tr -d ' ') failing test(s) on origin/main." | tee -a "$LOG"
+BASELINE_COUNT=$(wc -l < "$BASELINE_FILE" | tr -d ' ')
+echo "Baseline: $BASELINE_COUNT failing test(s) on origin/main." | tee -a "$LOG"
+
+# Green main is a precondition, not a preference. A red main means every
+# candidate below is graded against a moving target, and the failing tests stop
+# blocking anything the moment they are recorded here.
+if [[ "$BASELINE_COUNT" != "0" ]]; then
+  if [[ "${PATROL_ALLOW_RED_BASELINE:-0}" == "1" ]]; then
+    echo "WARNING: main is red and PATROL_ALLOW_RED_BASELINE=1; grading against it anyway." | tee -a "$LOG"
+    sed 's/^/  /' "$BASELINE_FILE" | tee -a "$LOG"
+  else
+    echo "ABORT: origin/main is not green. Patrol requires a green baseline." | tee -a "$LOG"
+    sed 's/^/  /' "$BASELINE_FILE" | tee -a "$LOG"
+    echo "Fix main first, or re-run once with PATROL_ALLOW_RED_BASELINE=1." | tee -a "$LOG"
+    exit 1
+  fi
+fi
 
 # Files an open PR already changes. Triage re-finds a bug for as long as its fix
 # sits unmerged, so on 2026-09-12 three findings were re-reported against files
@@ -540,9 +614,9 @@ rm -f "$TEST_DEV_ERR"
 echo "$TEST_DEV_OUTPUT" | tail -10 | tee -a "$LOG"
 
 if [[ -n "$(git -C "$WORKTREE_DIR" status --porcelain)" ]]; then
-  # Same baseline gate as the fix phase. Requiring a green suite here is what
-  # silently disabled test-writing: the suite has never been green, so the only
-  # agent able to repair the tests was blocked by the tests.
+  # Same gate as the fix phase. The baseline is empty unless
+  # PATROL_ALLOW_RED_BASELINE=1 was set, so in normal operation this requires
+  # the new tests to leave the suite green.
   echo "  Gate: running e2e against the new tests..." | tee -a "$LOG"
   TESTDEV_FAILURES=$(pw_failures "$WORKTREE_DIR")
   TESTDEV_NEW=$(comm -13 "$BASELINE_FILE" <(echo "$TESTDEV_FAILURES" | sed '/^$/d' | sort -u))
