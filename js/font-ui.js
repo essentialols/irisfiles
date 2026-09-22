@@ -164,11 +164,18 @@ async function runConversion() {
       // past it would leave the button disabled for good.
       if (myGen !== generation) break;
       actionBtn.textContent = `Converting ${i + 1}/${snapshot.length}...`;
-      const blob = await convertFont(f, targetFormat, pct => {
-        if (myGen === generation) actionBtn.textContent = `Converting ${i + 1}/${snapshot.length}... ${pct}%`;
-      });
-      const outName = f.name.replace(/\.[^.]+$/, '') + '.' + targetFormat;
-      localResults.push({ name: outName, blob });
+      try {
+        const blob = await convertFont(f, targetFormat, pct => {
+          if (myGen === generation) actionBtn.textContent = `Converting ${i + 1}/${snapshot.length}... ${pct}%`;
+        });
+        const outName = f.name.replace(/\.[^.]+$/, '') + '.' + targetFormat;
+        localResults.push({ name: outName, sourceName: f.name, blob });
+      } catch (err) {
+        // A batch is useful even when one source is malformed or unsupported.
+        // Keep converting the remaining files and surface this failure next to
+        // its source instead of discarding every successful result in the batch.
+        localResults.push({ sourceName: f.name, error: err.message });
+      }
     }
 
     if (myGen === generation) {
