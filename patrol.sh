@@ -39,10 +39,24 @@
 # A cheaper triage lane, or a fallback when Codex 429s, would be the thing to
 # fix first.
 #
-# Note: the `automation/*` PRs on this repo do NOT come from patrol. Patrol
-# creates `patrol/<timestamp>-<idx>` branches (see FIX_BRANCH below), and it
-# was already dead by 04:02 on the night those were filed. Their producer is
-# unidentified and is NOT disabled by turning patrol off.
+# Note: the `automation/*` PRs on this repo do NOT come from patrol, and are
+# NOT stopped by disabling it. Patrol creates `patrol/<timestamp>-<idx>`
+# branches (see FIX_BRANCH below) and was already dead by 04:02 on the night
+# those were filed.
+#
+# They come from three GPT agents that run nightly against the repo through
+# the ChatGPT GitHub connector. Nothing on this Mac is involved: no launchd
+# job, no cron entry, no local branch or reflog entry, no transcript. The
+# branch is written and the PR opened directly against GitHub.
+#
+# Read their bodies to the end before trusting one. Each states its own
+# validation limits, and they are severe: the repo archive exceeds the
+# connector's `max_bytes`/50-file caps so it never materializes under
+# `/mnt/data`, the repo-native Playwright suite therefore does not run, and
+# direct Chromium navigation is blocked by sandbox administrator policy, so
+# "visual checks" are an in-memory harness rather than the real page. On
+# 2026-09-21 that mattered: #223's central claim about lamejs behaviour was
+# wrong, and only running the encoder locally caught it.
 # ===========================================================================
 
 set -euo pipefail
