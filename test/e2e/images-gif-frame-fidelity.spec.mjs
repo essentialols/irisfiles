@@ -162,10 +162,11 @@ test.describe('Images to GIF frame fidelity', () => {
   });
 
   test('keeps source transparency in the downloaded GIF', async ({ page }) => {
+    const transparent = await readFile(fixture('transparent.png'));
     await page.goto('/images-to-gif');
     await page.locator('#file-input').setInputFiles([
-      fixture('transparent.png'),
-      fixture('transparent.png'),
+      { name: 'transparent-a.png', mimeType: 'image/png', buffer: transparent },
+      { name: 'transparent-b.png', mimeType: 'image/png', buffer: transparent },
     ]);
     await page.locator('.frame-item').nth(1).waitFor({ timeout: 5000 });
     await page.locator('#convert-btn').click();
