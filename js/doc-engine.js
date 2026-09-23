@@ -795,6 +795,56 @@ function docxListLabel(paragraph, numbering) {
   });
 }
 
+function docxAncestor(node, name) {
+  for (let parent = node?.parentNode; parent; parent = parent.parentNode) {
+    if (parent.nodeType === 1 && docxLocalName(parent) === name) return parent;
+  }
+  return null;
+}
+
+function docxParagraphLine(paragraph, numbering) {
+  const text = extractDocxParagraphText(paragraph);
+  const label = docxListLabel(paragraph, numbering);
+  return label ? `${label} ${text}` : text;
+}
+
+/**
+ * Render a simple Word table row as tab-separated text.
+ *
+ * The old paragraph-only walker turned a two-column row into two unrelated
+ * lines, losing the fact that the values belonged beside each other. For
+ * ordinary tables, keep cells as columns and pair multiple paragraphs in a
+ * cell onto continuation rows. Nested tables fall back to the established
+ * paragraph order because flattening two table grids into one TSV row would be
+ * more misleading than the existing behavior.
+ */
+function docxTableRowLines(row, numbering) {
+  if (row.getElementsByTagNameNS(DOCX_WORD_NS, 'tbl').length > 0) return null;
+
+  const cells = [];
+  for (const child of row.childNodes) {
+    if (child.nodeType !== 1 || docxLocalName(child) !== 'tc') continue;
+
+    let paragraphs = child.getElementsByTagNameNS(DOCX_WORD_NS, 'p');
+    if (paragraphs.length === 0) paragraphs = child.querySelectorAll('p');
+
+    const cellLines = [];
+    for (const paragraph of paragraphs) {
+      if (docxAncestor(paragraph, 'tc') !== child) continue;
+      cellLines.push(docxParagraphLine(paragraph, numbering));
+    }
+    cells.push(cellLines);
+  }
+
+  if (cells.length === 0) return null;
+  const height = Math.max(1, ...cells.map(cell => cell.length));
+  const lines = [];
+  for (let line = 0; line < height; line++) {
+    lines.push(cells.map(cell => cell[line] ?? '').join('\t'));
+  }
+  return lines;
+}
+
 /** Parse DOCX (ZIP) and extract text from word/document.xml. */
 async function extractDocxText(file, onProgress) {
   if (onProgress) onProgress(10);
@@ -836,10 +886,22 @@ async function extractDocxText(file, onProgress) {
   }
 
   const lines = [];
+  const renderedTableRows = new Set();
   for (let i = 0; i < paragraphs.length; i++) {
-    const text = extractDocxParagraphText(paragraphs[i]);
-    const label = docxListLabel(paragraphs[i], numbering);
-    lines.push(label ? `${label} ${text}` : text);
+    const paragraph = paragraphs[i];
+    const tableRow = docxAncestor(paragraph, 'tr');
+
+    if (tableRow && !renderedTableRows.has(tableRow)) {
+      const tableLines = docxTableRowLines(tableRow, numbering);
+      if (tableLines) {
+        lines.push(...tableLines);
+        renderedTableRows.add(tableRow);
+      } else {
+        lines.push(docxParagraphLine(paragraph, numbering));
+      }
+    } else if (!tableRow) {
+      lines.push(docxParagraphLine(paragraph, numbering));
+    }
 
     if (onProgress) onProgress(40 + Math.round((i / paragraphs.length) * 30));
   }
