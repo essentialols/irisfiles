@@ -42,12 +42,23 @@ export async function imagesToGif(files, opts = {}) {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) throw new Error('Could not get canvas context');
 
+  // Keep the first frame's output canvas, but fit every image inside it without
+  // stretching or cropping. Differing aspect ratios use transparent padding.
+  function drawFrame(img) {
+    ctx.clearRect(0, 0, w, h);
+    const fit = Math.min(w / img.width, h / img.height);
+    const drawW = Math.max(1, Math.round(img.width * fit));
+    const drawH = Math.max(1, Math.round(img.height * fit));
+    const x = Math.round((w - drawW) / 2);
+    const y = Math.round((h - drawH) / 2);
+    ctx.drawImage(img, x, y, drawW, drawH);
+  }
+
   // Step 2: Sample pixels from all frames for global palette
   onProgress(5, 'Building color palette...');
   const samplePixels = [];
   for (const img of images) {
-    ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(img, 0, 0, w, h);
+    drawFrame(img);
     const data = ctx.getImageData(0, 0, w, h).data;
     const step = Math.max(1, Math.floor(data.length / 4 / 512));
     for (let j = 0; j < data.length; j += step * 4) {
@@ -59,17 +70,31 @@ export async function imagesToGif(files, opts = {}) {
   }
 
   const { GIFEncoder, quantize, applyPalette } = gifenc;
-  const palette = quantize(new Uint8Array(samplePixels), 256);
+  const palette = quantize(new Uint8Array(samplePixels), 256, {
+    format: 'rgba4444',
+    oneBitAlpha: true,
+  });
+  const transparentIndex = palette.findIndex(color => color[3] === 0);
+  if (transparentIndex > 0) {
+    [palette[0], palette[transparentIndex]] = [palette[transparentIndex], palette[0]];
+  }
+  const hasTransparency = palette[0]?.[3] === 0;
 
   // Step 3: Encode each frame
   const gif = GIFEncoder();
   try {
     for (let i = 0; i < images.length; i++) {
-      ctx.clearRect(0, 0, w, h);
-      ctx.drawImage(images[i], 0, 0, w, h);
+      drawFrame(images[i]);
       const imageData = ctx.getImageData(0, 0, w, h);
-      const index = applyPalette(imageData.data, palette);
-      gif.writeFrame(index, w, h, { palette, delay, dispose: 0, ...(i === 0 ? { repeat: loop } : {}) });
+      const index = applyPalette(imageData.data, palette, 'rgba4444');
+      gif.writeFrame(index, w, h, {
+        palette,
+        delay,
+        dispose: hasTransparency ? 2 : 0,
+        transparent: hasTransparency,
+        transparentIndex: 0,
+        ...(i === 0 ? { repeat: loop } : {}),
+      });
 
       const pct = 10 + Math.round((i / images.length) * 90);
       onProgress(pct, `Encoding frame ${i + 1} of ${images.length}...`);
