@@ -184,7 +184,21 @@ async function runVideoConversion(ffmpeg, file, fmt, onProgress, onStatus, opts)
   const args = applyQualityToArgs(fmt.args, opts.quality);
   let exitCode;
   try {
-    exitCode = await ffmpeg.exec(["-i", inputName, ...args, "-y", outputName]);
+    // FFmpeg's default stream selection keeps only one audio stream. Explicitly
+    // map the primary video plus every audio track so alternate languages,
+    // commentary, and accessibility audio are not silently discarded. The
+    // optional audio map keeps video-only inputs working unchanged.
+    exitCode = await ffmpeg.exec([
+      "-i",
+      inputName,
+      "-map",
+      "0:v:0",
+      "-map",
+      "0:a?",
+      ...args,
+      "-y",
+      outputName,
+    ]);
   } finally {
     ffmpeg.off("progress", progressHandler);
   }
