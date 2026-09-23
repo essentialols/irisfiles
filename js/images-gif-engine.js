@@ -57,9 +57,21 @@ export async function imagesToGif(files, opts = {}) {
   // Step 2: Sample pixels from all frames for global palette
   onProgress(5, 'Building color palette...');
   const samplePixels = [];
+  let hasTransparency = false;
+  let transparentSampleAdded = false;
   for (const img of images) {
     drawFrame(img);
     const data = ctx.getImageData(0, 0, w, h).data;
+    for (let j = 3; j < data.length; j += 4) {
+      if (data[j] < 128) {
+        hasTransparency = true;
+        if (!transparentSampleAdded) {
+          samplePixels.push(data[j - 3], data[j - 2], data[j - 1], data[j]);
+          transparentSampleAdded = true;
+        }
+        break;
+      }
+    }
     const step = Math.max(1, Math.floor(data.length / 4 / 512));
     for (let j = 0; j < data.length; j += step * 4) {
       // Keep alpha: quantize() reads the sample as RGBA and reinterprets the
@@ -70,15 +82,15 @@ export async function imagesToGif(files, opts = {}) {
   }
 
   const { GIFEncoder, quantize, applyPalette } = gifenc;
-  const palette = quantize(new Uint8Array(samplePixels), 256, {
-    format: 'rgba4444',
-    oneBitAlpha: true,
-  });
-  const transparentIndex = palette.findIndex(color => color[3] === 0);
-  if (transparentIndex > 0) {
-    [palette[0], palette[transparentIndex]] = [palette[transparentIndex], palette[0]];
+  const palette = hasTransparency
+    ? quantize(new Uint8Array(samplePixels), 256, { format: 'rgba4444', oneBitAlpha: true })
+    : quantize(new Uint8Array(samplePixels), 256);
+  if (hasTransparency) {
+    const transparentIndex = palette.findIndex(color => color[3] === 0);
+    if (transparentIndex > 0) {
+      [palette[0], palette[transparentIndex]] = [palette[transparentIndex], palette[0]];
+    }
   }
-  const hasTransparency = palette[0]?.[3] === 0;
 
   // Step 3: Encode each frame
   const gif = GIFEncoder();
@@ -86,7 +98,7 @@ export async function imagesToGif(files, opts = {}) {
     for (let i = 0; i < images.length; i++) {
       drawFrame(images[i]);
       const imageData = ctx.getImageData(0, 0, w, h);
-      const index = applyPalette(imageData.data, palette, 'rgba4444');
+      const index = applyPalette(imageData.data, palette, hasTransparency ? 'rgba4444' : 'rgb565');
       gif.writeFrame(index, w, h, {
         palette,
         delay,
