@@ -322,6 +322,73 @@ test.describe('Document Pages - DOCX Visible Text', () => {
     });
   }
 
+  function tableDocx() {
+    const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`;
+    const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+  <w:p><w:r><w:t>Quarterly contacts</w:t></w:r></w:p>
+  <w:tbl>
+    <w:tr>
+      <w:tc><w:p><w:r><w:t>Name</w:t></w:r></w:p></w:tc>
+      <w:tc><w:p><w:r><w:t>Phone</w:t></w:r></w:p></w:tc>
+      <w:tc><w:p><w:r><w:t>Notes</w:t></w:r></w:p></w:tc>
+    </w:tr>
+    <w:tr>
+      <w:tc><w:p><w:r><w:t>Zoë 日本語</w:t></w:r></w:p></w:tc>
+      <w:tc><w:p><w:r><w:t>+1 415 555 0100</w:t></w:r></w:p></w:tc>
+      <w:tc><w:p><w:r><w:t>Café résumé</w:t></w:r></w:p></w:tc>
+    </w:tr>
+    <w:tr>
+      <w:tc><w:p><w:r><w:t>Berlin</w:t></w:r></w:p></w:tc>
+      <w:tc><w:p/></w:tc>
+      <w:tc><w:p><w:r><w:t>No phone listed</w:t></w:r></w:p></w:tc>
+    </w:tr>
+  </w:tbl>
+  <w:p><w:r><w:t>End notes</w:t></w:r></w:p>
+  <w:sectPr/>
+</w:body></w:document>`;
+
+    return storedZip({
+      '[Content_Types].xml': contentTypes,
+      '_rels/.rels': rels,
+      'word/document.xml': documentXml,
+    });
+  }
+
+  test('keeps table cells on tab-separated rows in visible text', async ({ page }) => {
+    await page.goto('/docx-to-txt');
+    await page.locator('#file-input').setInputFiles({
+      name: 'contacts-日本語.docx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      buffer: tableDocx(),
+    });
+
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#dl-doc')).toBeVisible({ timeout: 30000 });
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator('#dl-doc').click();
+    const download = await downloadPromise;
+    const text = await readFile(await download.path(), 'utf8');
+
+    expect(text).toBe([
+      'Quarterly contacts',
+      'Name\tPhone\tNotes',
+      'Zoë 日本語\t+1 415 555 0100\tCafé résumé',
+      'Berlin\t\tNo phone listed',
+      'End notes',
+    ].join('\n'));
+  });
+
   test('keeps numbered and bulleted list markers in visible text', async ({ page }) => {
     await page.goto('/docx-to-txt');
     await page.locator('#file-input').setInputFiles({
