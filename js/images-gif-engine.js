@@ -6,6 +6,8 @@
 
 const DEFAULT_DELAY = 100; // ms per frame
 const DEFAULT_MAX_WIDTH = 640;
+// GIF transparency is one bit, so alpha is a threshold, not a gradient.
+const ALPHA_CUTOFF = 128;
 
 /**
  * Convert multiple image files into an animated GIF.
@@ -44,11 +46,16 @@ export async function imagesToGif(files, opts = {}) {
 
   // Keep the first frame's output canvas, but fit every image inside it without
   // stretching or cropping. Differing aspect ratios use transparent padding.
+  // The canvas rounds width and height independently, so the frame that defined
+  // the canvas can fit a pixel short and end up inset behind a transparent seam.
+  // Close any sub-pixel gap instead of padding it.
   function drawFrame(img) {
     ctx.clearRect(0, 0, w, h);
     const fit = Math.min(w / img.width, h / img.height);
-    const drawW = Math.max(1, Math.round(img.width * fit));
-    const drawH = Math.max(1, Math.round(img.height * fit));
+    const fitW = img.width * fit;
+    const fitH = img.height * fit;
+    const drawW = w - fitW <= 1 ? w : Math.max(1, Math.round(fitW));
+    const drawH = h - fitH <= 1 ? h : Math.max(1, Math.round(fitH));
     const x = Math.round((w - drawW) / 2);
     const y = Math.round((h - drawH) / 2);
     ctx.drawImage(img, x, y, drawW, drawH);
@@ -58,47 +65,51 @@ export async function imagesToGif(files, opts = {}) {
   onProgress(5, 'Building color palette...');
   const samplePixels = [];
   let hasTransparency = false;
-  let transparentSampleAdded = false;
   for (const img of images) {
     drawFrame(img);
     const data = ctx.getImageData(0, 0, w, h).data;
-    for (let j = 3; j < data.length; j += 4) {
-      if (data[j] < 128) {
-        hasTransparency = true;
-        if (!transparentSampleAdded) {
-          samplePixels.push(data[j - 3], data[j - 2], data[j - 1], data[j]);
-          transparentSampleAdded = true;
+    if (!hasTransparency) {
+      for (let j = 3; j < data.length; j += 4) {
+        if (data[j] < ALPHA_CUTOFF) {
+          hasTransparency = true;
+          break;
         }
-        break;
       }
     }
     const step = Math.max(1, Math.floor(data.length / 4 / 512));
     for (let j = 0; j < data.length; j += step * 4) {
+      // Transparent pixels never reach the quantizer: index 0 is reserved for
+      // them below, so every entry it produces is a colour a frame needs.
+      if (data[j + 3] < ALPHA_CUTOFF) continue;
       // Keep alpha: quantize() reads the sample as RGBA and reinterprets the
       // buffer as a Uint32Array, which needs a length divisible by four.
       // Sampling only RGB made that throw and killed every GIF build.
-      samplePixels.push(data[j], data[j + 1], data[j + 2], data[j + 3]);
+      samplePixels.push(data[j], data[j + 1], data[j + 2], 255);
     }
   }
 
   const { GIFEncoder, quantize, applyPalette } = gifenc;
-  const palette = hasTransparency
-    ? quantize(new Uint8Array(samplePixels), 256, { format: 'rgba4444', oneBitAlpha: true })
-    : quantize(new Uint8Array(samplePixels), 256);
-  if (hasTransparency) {
-    const transparentIndex = palette.findIndex(color => color[3] === 0);
-    if (transparentIndex > 0) {
-      [palette[0], palette[transparentIndex]] = [palette[transparentIndex], palette[0]];
-    }
-  }
+  // Reserve index 0 for transparency rather than asking the quantizer to keep a
+  // zero-alpha entry: its cluster merge ignores alpha and can drop it, which
+  // used to punch an opaque colour out of every frame. Reserving it also keeps
+  // rgb565 (65536 buckets) for the colours instead of falling back to rgba4444.
+  const colors = samplePixels.length
+    ? quantize(new Uint8Array(samplePixels), hasTransparency ? 255 : 256)
+    : [[0, 0, 0]];
+  const palette = hasTransparency ? [[0, 0, 0, 0], ...colors] : colors;
 
   // Step 3: Encode each frame
   const gif = GIFEncoder();
   try {
     for (let i = 0; i < images.length; i++) {
       drawFrame(images[i]);
-      const imageData = ctx.getImageData(0, 0, w, h);
-      const index = applyPalette(imageData.data, palette, hasTransparency ? 'rgba4444' : 'rgb565');
+      const { data } = ctx.getImageData(0, 0, w, h);
+      const index = applyPalette(data, colors, 'rgb565');
+      if (hasTransparency) {
+        for (let p = 0; p < index.length; p++) {
+          index[p] = data[p * 4 + 3] < ALPHA_CUTOFF ? 0 : index[p] + 1;
+        }
+      }
       gif.writeFrame(index, w, h, {
         palette,
         delay,
