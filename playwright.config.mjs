@@ -16,12 +16,17 @@ const RETRIES = Number(process.env.IRIS_TEST_RETRIES ?? 1);
 // vercel.json. A test must therefore build its input in-page or load it from
 // test/fixtures, never fetch a fixture over HTTP: that directory is not deployed.
 const BASE_URL = process.env.IRIS_TEST_BASE_URL;
+// Specs tagged @evidence produce artifacts for the privacy guide rather than
+// guarding a behaviour, and one of them spends a minute doing two full FFmpeg
+// conversions. They are not part of the gate; opt in with IRIS_TEST_EVIDENCE=1.
+const EVIDENCE = process.env.IRIS_TEST_EVIDENCE === '1';
 
 export default defineConfig({
   testDir: './test/e2e',
   timeout: 60_000,
   retries: RETRIES,
   workers: WORKERS,
+  ...(EVIDENCE ? {} : { grepInvert: /@evidence/ }),
   use: {
     baseURL: BASE_URL || `http://localhost:${PORT}`,
     headless: true,

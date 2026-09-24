@@ -221,7 +221,7 @@ test.describe('AVI to WebM - conversion correctness', () => {
   });
 });
 
-test.describe('AVI to WebM - network and privacy observation', () => {
+test.describe('AVI to WebM - network and privacy observation @evidence', () => {
   test.setTimeout(180_000);
 
   test('records every network request from load through conversion completion', async ({ page, browser }) => {
@@ -327,6 +327,10 @@ test.describe('AVI to WebM - network and privacy observation', () => {
       outcome = 'failed-or-timed-out';
     }
 
+    // Asserted, not just recorded: the whole point of the claim in the privacy
+    // guide is that a warm cache means a second conversion needs no network.
+    expect(outcome).toBe('succeeded');
+
     writeRaw('second-conversion-blocked-cdn.json', {
       blockedRequestCount: blockedCount,
       blockedPattern: '**://cdn.jsdelivr.net/**',
@@ -336,7 +340,7 @@ test.describe('AVI to WebM - network and privacy observation', () => {
   });
 });
 
-test.describe('AVI to WebM - screenshots', () => {
+test.describe('AVI to WebM - screenshots @evidence', () => {
   test('desktop and mobile viewport screenshots', async ({ browser }) => {
     const desktopContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const desktopPage = await desktopContext.newPage();
