@@ -352,10 +352,64 @@ test.describe('Document Pages - DOCX Visible Text', () => {
       <w:tc><w:p/></w:tc>
       <w:tc><w:p><w:r><w:t>No phone listed</w:t></w:r></w:p></w:tc>
     </w:tr>
+    <w:tr>
+      <w:tc>
+        <w:p><w:r><w:t>Munich</w:t></w:r></w:p>
+        <w:p><w:r><w:t>Bavaria</w:t></w:r></w:p>
+      </w:tc>
+      <w:sdt>
+        <w:sdtPr><w:alias w:val="Phone"/></w:sdtPr>
+        <w:sdtContent><w:tc><w:p><w:r><w:t>+49 30 555 0100</w:t></w:r></w:p></w:tc></w:sdtContent>
+      </w:sdt>
+      <w:tc><w:p><w:r><w:t>Second office</w:t></w:r></w:p></w:tc>
+    </w:tr>
   </w:tbl>
   <w:p><w:r><w:t>End notes</w:t></w:r></w:p>
   <w:sectPr/>
 </w:body></w:document>`;
+
+    return storedZip({
+      '[Content_Types].xml': contentTypes,
+      '_rels/.rels': rels,
+      'word/document.xml': documentXml,
+    });
+  }
+
+  // No w:* namespace anywhere, so extractDocxText takes its querySelectorAll
+  // fallback. That is the only path on which the namespace-only nested-table
+  // probe can be wrong, and it is where flattening an outer row would drop the
+  // inner table's neighbours out of document order.
+  function nestedTableUnnamespacedDocx() {
+    const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`;
+    const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<document><body>
+  <p><r><t>Outer intro</t></r></p>
+  <tbl>
+    <tr>
+      <tc><p><r><t>Outer cell</t></r></p></tc>
+      <tc>
+        <p><r><t>Before inner</t></r></p>
+        <tbl>
+          <tr>
+            <tc><p><r><t>Inner A</t></r></p></tc>
+            <tc><p><r><t>Inner B</t></r></p></tc>
+          </tr>
+        </tbl>
+        <p><r><t>After inner</t></r></p>
+      </tc>
+    </tr>
+  </tbl>
+  <p><r><t>Outer end</t></r></p>
+</body></document>`;
 
     return storedZip({
       '[Content_Types].xml': contentTypes,
@@ -385,8 +439,99 @@ test.describe('Document Pages - DOCX Visible Text', () => {
       'Name\tPhone\tNotes',
       'Zoë 日本語\t+1 415 555 0100\tCafé résumé',
       'Berlin\t\tNo phone listed',
+      // A cell wrapped in a content control still holds its column, and a
+      // two-paragraph cell continues onto the next row.
+      'Munich\t+49 30 555 0100\tSecond office',
+      'Bavaria\t\t',
       'End notes',
     ].join('\n'));
+  });
+
+  test('falls back to paragraph order for a nested table without namespaces', async ({ page }) => {
+    await page.goto('/docx-to-txt');
+    await page.locator('#file-input').setInputFiles({
+      name: 'nested.docx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      buffer: nestedTableUnnamespacedDocx(),
+    });
+
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#dl-doc')).toBeVisible({ timeout: 30000 });
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator('#dl-doc').click();
+    const download = await downloadPromise;
+    const text = await readFile(await download.path(), 'utf8');
+
+    // The outer row holds a grid, so its own paragraphs stay one per line in
+    // document order. The inner row is reached on its own and still renders as
+    // columns. Flattening the outer row would reorder "After inner".
+    expect(text).toBe([
+      'Outer intro',
+      'Outer cell',
+      'Before inner',
+      'Inner A\tInner B',
+      'After inner',
+      'Outer end',
+    ].join('\n'));
+  });
+
+  test('DOCX to PDF separates table columns with spaces jsPDF can render', async ({ page }) => {
+    await page.goto('/docx-to-pdf');
+    await page.locator('#file-input').setInputFiles({
+      name: 'contacts.docx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      buffer: tableDocx(),
+    });
+
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#dl-doc')).toBeVisible({ timeout: 30000 });
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator('#dl-doc').click();
+    const download = await downloadPromise;
+    const pdf = await readFile(await download.path());
+
+    // Render the PDF rather than assume a tab would have worked. jsPDF passes a
+    // tab through unexpanded and helvetica has no advance for it, so the text
+    // layer still reads as separate words while the page draws "NamePhoneNotes".
+    // Positions are the only evidence of what a reader sees, so measure them.
+    const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const doc = await getDocument({ data: new Uint8Array(pdf), useSystemFonts: false }).promise;
+    const items = [];
+    for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber++) {
+      const content = await (await doc.getPage(pageNumber)).getTextContent();
+      for (const item of content.items) {
+        if (item.str) items.push({ str: item.str, x: item.transform[4], width: item.width });
+      }
+    }
+    await doc.destroy();
+
+    const gapBefore = label => {
+      const index = items.findIndex(item => item.str === label);
+      expect(index, `no drawn text "${label}" in the PDF`).toBeGreaterThan(0);
+      let previous = index - 1;
+      while (previous >= 0 && !items[previous].str.trim()) previous--;
+      expect(previous, `nothing drawn before "${label}"`).toBeGreaterThanOrEqual(0);
+      return items[index].x - (items[previous].x + items[previous].width);
+    };
+
+    const rendered = items.map(item => item.str).join('');
+    expect(rendered).toContain('Name Phone Notes');
+    // The content-control cell has to reach the PDF too: docxToPdf shares the
+    // extractor, so text lost there is lost on both pages.
+    expect(rendered).toContain('+49 30 555 0100');
+
+    // Each gap is four space advances, ~3.34pt each at this size.
+    expect(gapBefore('Phone')).toBeGreaterThan(8);
+    expect(gapBefore('Notes')).toBeGreaterThan(8);
+    expect(gapBefore('Second office')).toBeGreaterThan(8);
+
+    // And the separation must not rest on a tab. jsPDF writes one through
+    // unexpanded, and the standard Helvetica this page references has no glyph
+    // for code 9, so its advance is whatever a given viewer guesses for an
+    // undefined code rather than anything the document states.
+    expect(pdf.includes(0x09)).toBe(false);
   });
 
   test('keeps numbered and bulleted list markers in visible text', async ({ page }) => {
