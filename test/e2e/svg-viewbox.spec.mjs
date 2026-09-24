@@ -18,7 +18,7 @@ async function convertSvgToPng(page, svg, name = 'input.svg', mimeType = 'image/
   await page.locator('#file-input').setInputFiles({
     name,
     mimeType,
-    buffer: Buffer.from(svg),
+    buffer: Buffer.isBuffer(svg) ? svg : Buffer.from(svg),
   });
   await page.locator('.file-item.done').waitFor({ timeout: 15_000 });
   const [download] = await Promise.all([
@@ -175,6 +175,40 @@ test.describe('SVG raster dimensions', () => {
     `, 'embedded.svg');
 
     expect(dimensions).toEqual({ width: 120, height: 80 });
+  });
+
+  test('UTF-16 SVGs are detected and rasterized in both byte orders', async ({ page }) => {
+    const svg = `<?xml version="1.0" encoding="UTF-16"?>
+      <svg xmlns="http://www.w3.org/2000/svg" width="160" height="90" viewBox="0 0 160 90">
+        <rect width="120" height="90" fill="#2563eb"/>
+        <circle cx="120" cy="45" r="22" fill="#ef4444" fill-opacity=".8"/>
+      </svg>`;
+    const utf16le = Buffer.from(`\uFEFF${svg}`, 'utf16le');
+    const utf16be = Buffer.from(utf16le).swap16();
+
+    expect(await convertSvgToPng(page, utf16le, 'Résumé_日本語-le.svg'))
+      .toEqual({ width: 160, height: 90 });
+    expect(await convertSvgToPng(page, utf16be, 'Résumé_日本語-be.svg'))
+      .toEqual({ width: 160, height: 90 });
+  });
+
+  test('UTF-16 SVGs still reject linked external resources', async ({ page }) => {
+    const svg = `<?xml version="1.0" encoding="UTF-16"?>
+      <svg xmlns="http://www.w3.org/2000/svg" width="120" height="80">
+        <image href="https://example.invalid/photo.png" width="120" height="80"/>
+      </svg>`;
+    const utf16le = Buffer.from(`\uFEFF${svg}`, 'utf16le');
+
+    await page.goto('/svg-to-png');
+    await page.locator('#file-input').setInputFiles({
+      name: 'linked-utf16.svg',
+      mimeType: 'image/svg+xml',
+      buffer: utf16le,
+    });
+
+    const item = page.locator('.file-item').first();
+    await expect(item.locator('.file-item__status.error')).toContainText(/references external files/i);
+    await expect(item.locator('.btn-download')).toHaveCount(0);
   });
 
 });
