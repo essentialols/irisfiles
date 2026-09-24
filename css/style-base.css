@@ -1183,6 +1183,9 @@ body {
 @media (max-width: 640px) {
   /* Keep primary, secondary, destructive, and result actions comfortable to tap. */
   .btn { min-height: 44px; justify-content: center; }
+  /* Smart Drop's close/remove control is not a .btn, so give it the same
+     phone-sized target without making the desktop control unnecessarily large. */
+  .route-dismiss { width: 44px; height: 44px; }
   .hero h1 { font-size: 1.6rem; }
   .hero p { font-size: 1rem; }
   .drop-zone { padding: 2rem 1rem; }
