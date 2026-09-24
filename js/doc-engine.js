@@ -890,18 +890,25 @@ function palmDocDecompress(data) {
   return new Uint8Array(out);
 }
 
-/** Decode the self-inclusive backwards VWI at the end of a MOBI trailing entry. */
+/**
+ * Decode the self-inclusive backwards VWI at the end of a MOBI trailing entry.
+ * The size counts the VWI bytes themselves, so an entry declaring fewer bytes
+ * than its own encoding occupies is malformed.
+ */
 function mobiTrailingEntrySize(record, end) {
   let size = 0;
   let multiplier = 1;
-  let bytes = 0;
 
-  for (let cursor = end - 1; cursor >= 0 && bytes < 8; cursor--, bytes++) {
+  for (let cursor = end - 1, consumed = 1; cursor >= 0 && consumed <= 8; cursor--, consumed++) {
     const byte = record[cursor];
     size += (byte & 0x7F) * multiplier;
-    if (byte & 0x80) return size;
+    if (byte & 0x80) {
+      if (size < consumed) {
+        throw new Error('Invalid MOBI file: malformed trailing record data.');
+      }
+      return size;
+    }
     multiplier *= 128;
-    if (!Number.isSafeInteger(multiplier)) break;
   }
 
   throw new Error('Invalid MOBI file: malformed trailing record data.');
@@ -912,15 +919,17 @@ function mobiTrailingEntrySize(record, end) {
  *
  * MOBI's Extra Data Flags field describes entries stored after the compressed
  * text payload. Feeding those bytes to the PalmDOC decoder corrupts the text;
- * for uncompressed books they become visible garbage between records. Entries
- * for flag bits 2-16 use a self-inclusive backwards VWI size, while bit 1 is
- * the UTF-8 overlap entry whose final byte stores a 0-3 byte overlap count.
+ * for uncompressed books they become visible garbage between records. Bits
+ * 0x0002..0x8000 each carry a self-inclusive backwards VWI size, while bit
+ * 0x0001 is the UTF-8 multibyte overlap entry whose final byte stores a 0-3
+ * byte overlap count.
  */
 function stripMobiTrailingData(record, extraDataFlags) {
   let end = record.length;
 
-  // Entries are written in increasing bit order, so strip the highest present
-  // bit first while walking backwards from the end of the record.
+  // Every VWI entry carries its own size, so the order the bits are visited
+  // does not matter. The overlap entry (0x0001) sits closest to the text and
+  // must therefore be removed after all of them.
   for (let bit = 0x8000; bit >= 0x0002; bit >>= 1) {
     if (!(extraDataFlags & bit)) continue;
     const size = mobiTrailingEntrySize(record, end);
@@ -1012,12 +1021,15 @@ async function extractMobiText(file, onProgress) {
     else if (mobiEncoding === 65001) encoding = 'utf-8';
 
     const mobiHeaderLength = view.getUint32(mobiHeaderStart + 4, false);
-    const mobiVersion = mobiHeaderStart + 92 <= rec0End
-      ? view.getUint32(mobiHeaderStart + 88, false)
+    // File version lives at MOBI header offset 20 (record 0 offset 36). The
+    // separate Min version at header offset 104 is a KF8 marker and is 0 on
+    // the common v6 layout, so reading it here would disable the check.
+    const mobiVersion = mobiHeaderStart + 24 <= rec0End
+      ? view.getUint32(mobiHeaderStart + 20, false)
       : 0;
     // Extra Data Flags occupy bytes 242-243 of record 0 when the MOBI header
     // is long enough. They are defined for modern (v5+) Mobipocket records.
-    if (mobiHeaderLength >= 228 && mobiVersion >= 5 && rec0Start + 244 <= rec0End) {
+    if (mobiHeaderLength >= 228 && mobiHeaderLength <= 500 && mobiVersion >= 5 && rec0Start + 244 <= rec0End) {
       extraDataFlags = view.getUint16(rec0Start + 242, false);
     }
   }
@@ -1033,7 +1045,18 @@ async function extractMobiText(file, onProgress) {
     const start = recordOffsets[r];
     if (start >= buf.length) continue;
     const end = r + 1 < recordOffsets.length ? recordOffsets[r + 1] : buf.length;
-    const recordData = stripMobiTrailingData(buf.subarray(start, end), extraDataFlags);
+    if (end <= start) continue;
+
+    // recordCount can overrun into FLIS/FCIS/EOF records, and a record may
+    // legitimately carry no entry despite the flag. Keeping the raw bytes
+    // leaves a little junk that the textLength clamp below discards; aborting
+    // the whole conversion over it would be worse.
+    let recordData;
+    try {
+      recordData = stripMobiTrailingData(buf.subarray(start, end), extraDataFlags);
+    } catch {
+      recordData = buf.subarray(start, end);
+    }
 
     let decoded;
     if (compression === 1) {

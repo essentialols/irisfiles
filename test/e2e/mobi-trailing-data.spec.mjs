@@ -13,7 +13,15 @@ function backwardVwi(value) {
 
 function trailingEntry(data) {
   const payload = Buffer.from(data, 'ascii');
-  return Buffer.concat([payload, backwardVwi(payload.length + 1)]);
+  // The declared size includes the VWI itself, so widening the VWI raises the
+  // value it has to encode. Iterate until the encoded width stops changing.
+  let vwi = backwardVwi(payload.length + 1);
+  for (;;) {
+    const next = backwardVwi(payload.length + vwi.length);
+    const settled = next.length === vwi.length;
+    vwi = next;
+    if (settled) return Buffer.concat([payload, vwi]);
+  }
 }
 
 function palmDocLiteralEncode(data) {
@@ -25,7 +33,11 @@ function palmDocLiteralEncode(data) {
   return Buffer.concat(out);
 }
 
-function mobiWithTrailingData({ compression = 1, malformedTrailing = false } = {}) {
+function mobiWithTrailingData({
+  compression = 1,
+  malformedTrailing = false,
+  entryPayloads = null,
+} = {}) {
   const textRecords = [
     Buffer.from('FIRST CHAPTER\n', 'utf8'),
     Buffer.from('SECOND CHAPTER — résumé 日本語\n', 'utf8'),
@@ -38,7 +50,8 @@ function mobiWithTrailingData({ compression = 1, malformedTrailing = false } = {
       // claims 127 bytes although this record is much smaller.
       return Buffer.concat([body, Buffer.from([0xff])]);
     }
-    return Buffer.concat([body, trailingEntry(`INDEX-${index + 1}`)]);
+    const payload = entryPayloads ? entryPayloads[index] : `INDEX-${index + 1}`;
+    return Buffer.concat([body, trailingEntry(payload)]);
   });
 
   const numRecords = 1 + records.length;
@@ -59,8 +72,9 @@ function mobiWithTrailingData({ compression = 1, malformedTrailing = false } = {
   record0.writeUInt32BE(2, 24);
   record0.writeUInt32BE(65001, 28);
   record0.writeUInt32BE(1, 32);
+  // File version. Min version at offset 104 stays 0, as real producers and
+  // this repo's own .mobi fixtures leave it, so reading the wrong field fails.
   record0.writeUInt32BE(6, 36);
-  record0.writeUInt32BE(6, 104);
   record0.writeUInt16BE(0x0002, 242);
 
   let offset = pdb.length;
@@ -105,17 +119,25 @@ for (const compression of [1, 2]) {
   });
 }
 
-test('MOBI to TXT rejects malformed declared trailing record data', async ({ page }) => {
-  const fixture = mobiWithTrailingData({ malformedTrailing: true });
-  await page.goto('/mobi-to-txt');
-  await page.locator('#file-input').setInputFiles({
-    name: 'malformed-trailing.mobi',
-    mimeType: 'application/x-mobipocket-ebook',
-    buffer: fixture.buffer,
+test('MOBI to TXT strips trailing entries whose size needs a multi-byte VWI', async ({ page }) => {
+  // 126 bytes of payload declare a 127-byte entry (one VWI byte); 127 bytes
+  // declare a 129-byte entry, which only fits in two.
+  const fixture = mobiWithTrailingData({
+    entryPayloads: ['A'.repeat(126), 'B'.repeat(127)],
   });
-  await page.locator('#action-btn').click();
+  const output = await convertAndRead(page, fixture, 'trailing-vwi.mobi');
 
-  const error = page.locator('#doc-results .notice[data-kind="error"]');
-  await expect(error).toHaveText('Invalid MOBI file: malformed trailing record data.');
-  await expect(page.locator('#dl-doc')).toHaveCount(0);
+  expect(output).toBe(fixture.expected);
+  expect(output).not.toContain('AAAA');
+  expect(output).not.toContain('BBBB');
+});
+
+test('MOBI to TXT still converts when a record carries no valid trailing entry', async ({ page }) => {
+  // recordCount routinely overruns into FLIS/FCIS/EOF records whose last byte
+  // is arbitrary, so an undecodable entry must not fail the document.
+  const fixture = mobiWithTrailingData({ malformedTrailing: true });
+  const output = await convertAndRead(page, fixture, 'malformed-trailing.mobi');
+
+  expect(output).toBe(fixture.expected);
+  await expect(page.locator('#doc-results .notice[data-kind="error"]')).toHaveCount(0);
 });
