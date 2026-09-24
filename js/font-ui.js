@@ -174,7 +174,7 @@ async function runConversion() {
         // A batch is useful even when one source is malformed or unsupported.
         // Keep converting the remaining files and surface this failure next to
         // its source instead of discarding every successful result in the batch.
-        localResults.push({ sourceName: f.name, error: err.message });
+        localResults.push({ sourceName: f.name, error: (err && err.message) || 'Conversion failed.' });
       }
     }
 
@@ -197,13 +197,16 @@ async function runConversion() {
 }
 
 function showResults(durationMs) {
-  const failures = results.filter(r => r.error);
-  const successes = results.filter(r => r.blob);
+  // Discriminate structurally, not on truthiness: a falsy error message would
+  // otherwise land an entry in neither list and render as a success with no blob.
+  const failures = results.filter(r => 'error' in r);
+  const successes = results.filter(r => !('error' in r));
 
   // Preserve the familiar single-file error treatment while giving mixed
-  // batches per-file results below.
-  if (results.length === 1 && failures.length === 1) {
-    showError(failures[0].error);
+  // batches per-file results below. A batch where everything failed created no
+  // file either, so it gets the same refusal wording rather than a 0-converted summary.
+  if (successes.length === 0 && failures.length) {
+    showError(failures.length === 1 ? failures[0].error : `All ${failures.length} fonts failed to convert; no file was created.`);
     return;
   }
 
@@ -218,7 +221,7 @@ function showResults(durationMs) {
   }
 
   results.forEach((r, i) => {
-    if (r.error) {
+    if ('error' in r) {
       html += `
         <div class="file-item failed">
           <div class="file-item__info">

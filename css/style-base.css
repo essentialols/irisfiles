@@ -326,6 +326,9 @@ body {
   transition: color .3s;
 }
 .file-item.done .file-item__meta { color: var(--success); font-weight: 500; }
+.file-item.failed { border-color: var(--danger); }
+/* Engine refusals are full sentences, so this one stays readable rather than muted. */
+.file-item.failed .file-item__meta { color: var(--danger); font-weight: 500; white-space: normal; }
 .file-item__progress {
   width: 120px;
   height: 6px;

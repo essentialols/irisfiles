@@ -185,14 +185,13 @@ test.describe('font conversion output', () => {
 
   test('one malformed font does not discard the successful files in a batch', async ({ page }) => {
     await page.goto('/ttf-to-woff');
+    // Playwright refuses to mix fixture paths with inline buffers in one call,
+    // so the good font is read into a buffer too.
+    const good = await readFile(fixture('sample.ttf'));
     await page.locator('#file-input').setInputFiles([
-      fixture('sample.ttf'),
-      {
-        name: 'broken.ttf',
-        mimeType: 'font/ttf',
-        buffer: Buffer.from('not a real font'),
-      },
-      fixture('sample.ttf'),
+      { name: 'first.ttf', mimeType: 'font/ttf', buffer: good },
+      { name: 'broken.ttf', mimeType: 'font/ttf', buffer: Buffer.from('not a real font') },
+      { name: 'third.ttf', mimeType: 'font/ttf', buffer: good },
     ]);
     await page.locator('#action-btn').click();
 
@@ -222,6 +221,21 @@ test.describe('font conversion output', () => {
     const zipPath = await zip.path();
     expect(zipPath).toBeTruthy();
     expect((await readFile(zipPath)).length).toBeGreaterThan(1_000);
+  });
+
+  test('a batch where every font fails keeps the refusal wording instead of a 0 converted summary', async ({ page }) => {
+    await page.goto('/ttf-to-woff');
+    await page.locator('#file-input').setInputFiles([
+      { name: 'a.ttf', mimeType: 'font/ttf', buffer: Buffer.from('not a real font') },
+      { name: 'b.ttf', mimeType: 'font/ttf', buffer: Buffer.from('also not a font') },
+    ]);
+    await page.locator('#action-btn').click();
+
+    const notice = page.locator('#font-results .notice');
+    await expect(notice).toBeVisible({ timeout: 30_000 });
+    await expect(notice).toContainText('no file was created');
+    await expect(page.locator('#font-results .batch-summary')).toHaveCount(0);
+    await expect(page.locator('#font-results .dl-btn')).toHaveCount(0);
   });
 
   test('changing the queue after conversion removes downloads from the old queue', async ({ page }) => {
