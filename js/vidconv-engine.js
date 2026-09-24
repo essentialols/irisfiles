@@ -64,6 +64,17 @@ const FORMATS = {
     ext: "mkv",
     mime: "video/x-matroska",
     args: [
+      // Matroska is the only target that carried a subtitle stream through
+      // ffmpeg's default stream selection, and any explicit -map turns that
+      // selection off, so the map has to be restated here or the patch that
+      // stops dropping audio tracks starts dropping subtitles instead.
+      // No -c:s: the muxer default (S_TEXT/ASS) reproduces the pre-map
+      // behaviour exactly, while "-c:s copy" hard-fails on an MP4/MOV source
+      // because Matroska cannot mux mov_text ("Could not write header
+      // (incorrect codec parameters ?)"), and mp4-to-mkv and mov-to-mkv are
+      // two of the four routes into this target.
+      "-map",
+      "0:s?",
       "-c:v",
       "libx264",
       "-preset",
@@ -186,13 +197,17 @@ async function runVideoConversion(ffmpeg, file, fmt, onProgress, onStatus, opts)
   try {
     // FFmpeg's default stream selection keeps only one audio stream. Explicitly
     // map the primary video plus every audio track so alternate languages,
-    // commentary, and accessibility audio are not silently discarded. The
-    // optional audio map keeps video-only inputs working unchanged.
+    // commentary, and accessibility audio are not silently discarded.
+    // Both maps are optional: "0:a?" keeps video-only inputs working, and the
+    // "?" on the video map keeps an audio-only container (a sound-only MKV or
+    // MOV) converting instead of failing "Stream map matches no streams".
+    // Capital V excludes attached_pic streams, so an MP4 whose first video
+    // stream is embedded cover art is not converted into a still image.
     exitCode = await ffmpeg.exec([
       "-i",
       inputName,
       "-map",
-      "0:v:0",
+      "0:V:0?",
       "-map",
       "0:a?",
       ...args,
