@@ -5,7 +5,12 @@ import { defineConfig } from '@playwright/test';
 // a gate that runs in a worktree would then be grading the main checkout.
 const PORT = Number(process.env.IRIS_TEST_PORT || 3988);
 const REUSE = process.env.IRIS_TEST_NO_REUSE !== '1';
-const WORKERS = Number(process.env.IRIS_TEST_WORKERS || 1);
+// Measured on the 12-core M2 this repo is developed on: the same 1001 tests took
+// 13.6m at 1 worker and 6.9m at 4, and the serial runs were the ones that flaked
+// (two timeout failures each, different tests) while the parallel run was clean.
+// Most of a test here is waiting on a CDN fetch or FFmpeg.wasm, so overlapping
+// the waits costs little CPU. Drop to 1 if a machine cannot take it.
+const WORKERS = Number(process.env.IRIS_TEST_WORKERS || 4);
 // Retrying a failure costs a second full timeout. The patrol gate compares
 // failure sets rather than chasing flakes, so it turns retries off.
 const RETRIES = Number(process.env.IRIS_TEST_RETRIES ?? 1);
