@@ -164,8 +164,15 @@ function showExtractResults(entries, durationMs) {
   const div = makeResultsDiv();
   const dur = durationMs < 1000 ? durationMs + 'ms' : (durationMs / 1000).toFixed(1) + 's';
   const totalSize = entries.reduce((s, e) => s + e.size, 0);
+  const sanitizedCount = entries.filter(entry => entry.pathSanitized).length;
 
-  let html = `<div class="batch-summary">${entries.length} files extracted · ${formatSize(totalSize)} · ${dur}</div>`;
+  let html = '';
+  if (sanitizedCount > 0) {
+    const noun = sanitizedCount === 1 ? 'path' : 'paths';
+    const target = sanitizedCount === 1 ? 'name' : 'names';
+    html += `<div class="notice" data-kind="info"><span class="notice__text">${sanitizedCount} unsafe archive ${noun} normalized to safe relative ${target}.</span></div>`;
+  }
+  html += `<div class="batch-summary">${entries.length} files extracted · ${formatSize(totalSize)} · ${dur}</div>`;
 
   entries.forEach((entry, i) => {
     html += `
