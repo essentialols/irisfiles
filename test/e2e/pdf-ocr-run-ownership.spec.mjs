@@ -45,19 +45,21 @@ test.describe('PDF OCR run ownership', () => {
     });
 
     await expect(page.locator('.file-item__name')).toHaveText('second.pdf');
-    await expect(page.locator('#action-btn')).toBeEnabled();
+    // The abandoned run still holds a Tesseract worker, so the button must stay
+    // disabled until it settles. Enabling it here would allow a second
+    // concurrent OCR, which is the condition the generation token assumes away.
+    await expect(page.locator('#action-btn')).toBeDisabled({ timeout: 300 });
     await expect(page.locator('#action-btn')).toHaveText('Extract Text');
-    await expect(page.locator('#ocr-lang')).toBeEnabled();
     await expect(page.locator('#ocr-progress')).toBeHidden();
     await expect(page.locator('#ocr-results')).toBeHidden();
 
     await page.waitForFunction(() => window.__firstPdfReadDone === true);
-    await page.waitForTimeout(1500);
 
+    await expect(page.locator('#action-btn')).toBeEnabled();
+    await expect(page.locator('#ocr-lang')).toBeEnabled();
     await expect(page.locator('.file-item__name')).toHaveText('second.pdf');
     await expect(page.locator('#ocr-results')).toBeHidden();
     await expect(page.locator('#ocr-progress')).toBeHidden();
-    await expect(page.locator('#action-btn')).toBeEnabled();
   });
 
   test('clearing during extraction keeps the cleared state after the old run finishes', async ({ page }) => {
@@ -78,7 +80,6 @@ test.describe('PDF OCR run ownership', () => {
     await expect(page.locator('#ocr-results')).toBeHidden();
 
     await page.waitForFunction(() => window.__firstPdfReadDone === true);
-    await page.waitForTimeout(1500);
 
     await expect(page.locator('.file-item')).toHaveCount(0);
     await expect(page.locator('#action-btn')).toBeHidden();

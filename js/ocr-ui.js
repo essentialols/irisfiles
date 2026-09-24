@@ -13,6 +13,7 @@ let progressArea, progressStatus, progressBar;
 let resultsArea, resultsText, copyBtn, downloadBtn, summaryEl;
 let currentFile = null;
 let inputRevision = 0;
+let activeOperation = false;
 
 function formatSize(bytes) {
   if (bytes < 1024) return bytes + ' B';
@@ -33,11 +34,17 @@ async function populateLanguages() {
 }
 
 function resetRunControls() {
-  actionBtn.disabled = false;
+  // Left disabled while a run is still in flight: ocrPdf holds a Tesseract
+  // worker and the page's own low-memory warning exists for a reason, so a
+  // second concurrent run must stay impossible even after the source changes.
+  actionBtn.disabled = activeOperation;
   actionBtn.textContent = 'Extract Text';
-  langSelect.disabled = false;
+  langSelect.disabled = activeOperation;
   progressBar.classList.remove('done');
   progressBar.style.background = '';
+  progressStatus.textContent = '';
+  const notice = document.getElementById('cf-notice');
+  if (notice) notice.style.display = 'none';
 }
 
 function showFile(file) {
@@ -57,7 +64,7 @@ function showFile(file) {
 }
 
 function clearAll() {
-  if (currentFile) inputRevision++;
+  inputRevision++;
   currentFile = null;
   fileList.innerHTML = '';
   resetRunControls();
@@ -76,6 +83,7 @@ async function runOcr() {
   const warn = checkWorkload({ fileSizeMb: sourceFile.size / 1e6, isOcr: true });
   if (warn) showNotice(warn);
 
+  activeOperation = true;
   actionBtn.disabled = true;
   actionBtn.textContent = 'Processing...';
   langSelect.disabled = true;
@@ -94,6 +102,7 @@ async function runOcr() {
       onOverallProgress(pct) {
         if (current()) progressBar.style.width = Math.round(pct * 100) + '%';
       },
+      shouldContinue: current,
     });
 
     if (!current()) return;
@@ -115,11 +124,10 @@ async function runOcr() {
     progressBar.classList.remove('done');
     progressBar.style.background = 'var(--danger)';
   } finally {
-    if (current()) {
-      actionBtn.disabled = false;
-      actionBtn.textContent = 'Extract Text';
-      langSelect.disabled = false;
-    }
+    activeOperation = false;
+    actionBtn.disabled = !currentFile;
+    actionBtn.textContent = 'Extract Text';
+    langSelect.disabled = false;
   }
 }
 
