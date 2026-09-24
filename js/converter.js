@@ -4,6 +4,7 @@
  */
 
 import { convertHeicFile } from './heic-worker.js';
+import { safeArchiveName, createArchiveNames, uniqueArchiveName } from './archive-name.js';
 
 const FORMAT_SIGNATURES = [
   { mime: 'image/heic',  ext: 'heic', offsets: [[4, [0x66,0x74,0x79,0x70,0x68,0x65,0x69,0x63]],  // ftypheic
@@ -420,9 +421,11 @@ export async function downloadAsZip(files, zipName) {
   // fflate is loaded as a global from fflate.min.js
   if (typeof fflate === 'undefined') throw new Error('ZIP library not loaded. Please reload the page.');
   const zipInput = Object.create(null);
-  const usedNames = new Set();
+  // Same allocator as archive-engine.js createZip: this is the second
+  // ZIP-writing sink and the member-name invariant has to hold in both.
+  const names = createArchiveNames();
   for (const file of files) {
-    const name = uniqueDownloadName(file.name, usedNames);
+    const name = uniqueArchiveName(safeArchiveName(file.name) || 'unnamed', names);
     zipInput[name] = file.data;
   }
   const zipData = fflate.zipSync(
@@ -431,30 +434,6 @@ export async function downloadAsZip(files, zipName) {
   );
   const blob = new Blob([zipData], { type: 'application/zip' });
   downloadBlob(blob, zipName);
-}
-
-function uniqueDownloadName(name, usedNames) {
-  if (!usedNames.has(name)) {
-    usedNames.add(name);
-    return name;
-  }
-
-  const slash = name.lastIndexOf('/');
-  const dir = slash === -1 ? '' : name.slice(0, slash + 1);
-  const filename = slash === -1 ? name : name.slice(slash + 1);
-  const dot = filename.lastIndexOf('.');
-  const stem = dot > 0 ? filename.slice(0, dot) : filename;
-  const ext = dot > 0 ? filename.slice(dot) : '';
-
-  let suffix = 2;
-  let candidate;
-  do {
-    candidate = `${dir}${stem} (${suffix})${ext}`;
-    suffix++;
-  } while (usedNames.has(candidate));
-
-  usedNames.add(candidate);
-  return candidate;
 }
 
 /**
