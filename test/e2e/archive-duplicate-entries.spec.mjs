@@ -118,4 +118,73 @@ test.describe('Extract ZIP duplicate paths', () => {
     expect(unpacked['nested/日本語.txt']).toBe('秘密のメモ\n');
     expect(Object.prototype.hasOwnProperty.call(unpacked, 'empty.bin')).toBe(true);
   });
+
+  test('normalizes traversal and absolute member paths before exposing or rezipping them', async ({ page }) => {
+    const zip = makeStoredZip([
+      { name: 'docs/readme.txt', data: Buffer.from('SAFE DOC\n') },
+      { name: '../escape.txt', data: Buffer.from('ESCAPE ONE\n') },
+      { name: 'safe/../../escape.txt', data: Buffer.from('ESCAPE TWO\n') },
+      { name: '..\\windows.txt', data: Buffer.from('WINDOWS ESCAPE\n') },
+      { name: '/absolute.txt', data: Buffer.from('ABSOLUTE\n') },
+      { name: 'C:/drive.txt', data: Buffer.from('DRIVE\n') },
+      { name: 'nested/./keep.txt', data: Buffer.from('KEEP\n') },
+      { name: '日本語/../résumé.txt', data: Buffer.from('UNICODE\n') },
+    ]);
+
+    await page.goto('/extract-zip');
+    await page.locator('#file-input').setInputFiles({
+      name: 'unsafe-paths.zip',
+      mimeType: 'application/zip',
+      buffer: zip,
+    });
+    await page.locator('#action-btn').click();
+    await page.locator('#archive-results').waitFor({ timeout: 10000 });
+
+    await expect(page.locator('#archive-results .notice')).toContainText(
+      '7 unsafe archive paths normalized to safe relative names.'
+    );
+    await expect(page.locator('#archive-results .file-item__name')).toHaveText([
+      'docs/readme.txt',
+      'escape.txt',
+      'escape (2).txt',
+      'windows.txt',
+      'absolute.txt',
+      'drive.txt',
+      'nested/keep.txt',
+      'résumé.txt',
+    ]);
+
+    const [batchDownload] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('#dl-all').click(),
+    ]);
+    const batchBytes = await readFile(await batchDownload.path());
+    const unpacked = await page.evaluate(bytes => {
+      const entries = fflate.unzipSync(Uint8Array.from(bytes));
+      return Object.fromEntries(Object.entries(entries).map(([name, data]) => [
+        name,
+        new TextDecoder().decode(data),
+      ]));
+    }, Array.from(batchBytes));
+
+    expect(Object.keys(unpacked).sort()).toEqual([
+      'absolute.txt',
+      'docs/readme.txt',
+      'drive.txt',
+      'escape (2).txt',
+      'escape.txt',
+      'nested/keep.txt',
+      'résumé.txt',
+      'windows.txt',
+    ].sort());
+    expect(Object.keys(unpacked).every(name =>
+      !name.startsWith('/') &&
+      !name.includes('\\\\') &&
+      !/(^|\/)\.\.(\/|$)/.test(name) &&
+      !/^[A-Za-z]:/.test(name)
+    )).toBe(true);
+    expect(unpacked['escape.txt']).toBe('ESCAPE ONE\n');
+    expect(unpacked['escape (2).txt']).toBe('ESCAPE TWO\n');
+    expect(unpacked['résumé.txt']).toBe('UNICODE\n');
+  });
 });

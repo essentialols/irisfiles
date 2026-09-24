@@ -7,7 +7,7 @@
  * Extract all files from a ZIP archive.
  * @param {File} file - ZIP file
  * @param {function} onProgress - Progress callback (0-100)
- * @returns {Promise<Array<{name: string, blob: Blob, size: number}>>}
+ * @returns {Promise<Array<{name: string, blob: Blob, size: number, pathSanitized?: boolean}>>}
  */
 export async function extractZip(file, onProgress) {
   if (onProgress) onProgress(10);
@@ -23,10 +23,12 @@ export async function extractZip(file, onProgress) {
   for (const { name: rawName, data } of extracted) {
     // Skip directory entries (they end with / and have zero length)
     if (rawName.endsWith('/') && data.length === 0) continue;
+    const safeName = safeArchiveName(rawName) || 'unnamed';
     entries.push({
-      name: uniqueArchiveName(rawName, usedNames),
+      name: uniqueArchiveName(safeName, usedNames),
       blob: new Blob([data]),
       size: data.length,
+      pathSanitized: safeName !== rawName || undefined,
     });
   }
 
@@ -150,7 +152,8 @@ export async function createZip(files, onProgress) {
 
   for (let i = 0; i < files.length; i++) {
     const buffer = await files[i].blob.arrayBuffer();
-    const name = uniqueArchiveName(files[i].name, usedNames);
+    const safeName = safeArchiveName(files[i].name) || 'unnamed';
+    const name = uniqueArchiveName(safeName, usedNames);
     zipInput[name] = new Uint8Array(buffer);
     if (onProgress) onProgress(Math.round(((i + 1) / files.length) * 60));
   }
@@ -162,6 +165,26 @@ export async function createZip(files, onProgress) {
   const blob = new Blob([zipped], { type: 'application/zip' });
   if (onProgress) onProgress(100);
   return blob;
+}
+
+function safeArchiveName(name) {
+  // ZIP member names are paths, not just display labels. Keep them relative so
+  // a Download All archive cannot carry traversal, absolute, or drive-qualified
+  // paths into a later filesystem extraction step.
+  let normalized = String(name).replace(/\\/g, '/').replace(/^[A-Za-z]:/, '');
+  const parts = [];
+
+  for (let part of normalized.split('/')) {
+    part = part.replace(/[\u0000-\u001f\u007f]/g, '');
+    if (!part || part === '.') continue;
+    if (part === '..') {
+      if (parts.length) parts.pop();
+      continue;
+    }
+    parts.push(part);
+  }
+
+  return parts.join('/');
 }
 
 function uniqueArchiveName(name, usedNames) {
@@ -204,8 +227,9 @@ export async function zipToFileList(file) {
   const usedNames = new Set();
   for (const { name: rawName, data } of unpacked) {
     if (rawName.endsWith('/') && data.length === 0) continue;
+    const safeName = safeArchiveName(rawName) || 'unnamed';
     entries.push({
-      name: uniqueArchiveName(rawName, usedNames),
+      name: uniqueArchiveName(safeName, usedNames),
       compressedSize: 0, // fflate doesn't expose per-entry compressed sizes
       uncompressedSize: data.length,
     });
