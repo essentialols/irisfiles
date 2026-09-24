@@ -26,6 +26,11 @@ Privacy-first client-side file converter. See [README.md](README.md) for project
   exports `IRIS_TEST_NO_REUSE=1` and pins port 3989, below the 3990+ range `merge-pr.sh`
   allocates per PR. Moving the hook into the tracked `.githooks/` is what made that
   fixable in the repo at all.
+- **A describe tagged `@evidence` is excluded by default**; run it with `IRIS_TEST_EVIDENCE=1`.
+  That tag is for blocks whose product is an artifact (a network trace, a screenshot) rather
+  than a guarded behaviour. Tag a block rather than letting it sit in the gate: one
+  blocked-CDN case ran two full conversions for 64s, 11% of the whole suite, asserting nothing.
+- **Default is 4 workers** (`IRIS_TEST_WORKERS` overrides). Serial was both slower and flakier.
 - `npx playwright install webkit` - one-time, enables the Safari capability check.
   `test/e2e/tiff-webkit-capability.spec.mjs` launches WebKit directly to verify the
   claim that Safari decodes TIFF; it skips if WebKit is absent. Any page copy that
