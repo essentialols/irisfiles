@@ -118,4 +118,59 @@ test.describe('Extract ZIP duplicate paths', () => {
     expect(unpacked['nested/日本語.txt']).toBe('秘密のメモ\n');
     expect(Object.prototype.hasOwnProperty.call(unpacked, 'empty.bin')).toBe(true);
   });
+
+  // The sanitizer's own edge cases live in test/archive-name.mjs, which costs a
+  // function call instead of a browser round trip. What only the browser can
+  // prove is the wiring: the extract page renders the sanitized names, counts
+  // only the genuinely unsafe ones, and re-zips from the sanitized names.
+  test('renders sanitized member names and rezips them', async ({ page }) => {
+    const zip = makeStoredZip([
+      { name: 'docs/readme.txt', data: Buffer.from('SAFE DOC\n') },
+      { name: '/C:/drive.txt', data: Buffer.from('DRIVE\n') },
+      { name: '../escape.txt', data: Buffer.from('ESCAPE\n') },
+      { name: 'nested/./keep.txt', data: Buffer.from('KEEP\n') },
+    ]);
+
+    await page.goto('/extract-zip');
+    await page.locator('#file-input').setInputFiles({
+      name: 'unsafe-paths.zip',
+      mimeType: 'application/zip',
+      buffer: zip,
+    });
+    await page.locator('#action-btn').click();
+    await page.locator('#archive-results').waitFor({ timeout: 10000 });
+
+    // "nested/./keep.txt" is a cosmetic rewrite and must not inflate the count.
+    await expect(page.locator('#archive-results .notice')).toContainText(
+      '2 unsafe archive paths normalized to safe relative names.'
+    );
+    await expect(page.locator('#archive-results .file-item__name')).toHaveText([
+      'docs/readme.txt',
+      'drive.txt',
+      'escape.txt',
+      'nested/keep.txt',
+    ]);
+
+    const [batchDownload] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('#dl-all').click(),
+    ]);
+    const batchBytes = await readFile(await batchDownload.path());
+    const unpacked = await page.evaluate(bytes => {
+      const entries = fflate.unzipSync(Uint8Array.from(bytes));
+      return Object.fromEntries(Object.entries(entries).map(([name, data]) => [
+        name,
+        new TextDecoder().decode(data),
+      ]));
+    }, Array.from(batchBytes));
+
+    expect(Object.keys(unpacked).sort()).toEqual([
+      'docs/readme.txt',
+      'drive.txt',
+      'escape.txt',
+      'nested/keep.txt',
+    ]);
+    expect(unpacked['drive.txt']).toBe('DRIVE\n');
+    expect(unpacked['escape.txt']).toBe('ESCAPE\n');
+  });
 });

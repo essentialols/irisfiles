@@ -2,12 +2,13 @@
  * IrisFiles - Archive engine
  * ZIP extraction and creation using fflate (window.fflate from js/fflate.min.js).
  */
+import { safeArchiveName, isUnsafeArchiveName, createArchiveNames, uniqueArchiveName } from './archive-name.js';
 
 /**
  * Extract all files from a ZIP archive.
  * @param {File} file - ZIP file
  * @param {function} onProgress - Progress callback (0-100)
- * @returns {Promise<Array<{name: string, blob: Blob, size: number}>>}
+ * @returns {Promise<Array<{name: string, blob: Blob, size: number, pathSanitized: boolean}>>}
  */
 export async function extractZip(file, onProgress) {
   if (onProgress) onProgress(10);
@@ -19,14 +20,18 @@ export async function extractZip(file, onProgress) {
   if (onProgress) onProgress(80);
 
   const entries = [];
-  const usedNames = new Set();
+  const names = createArchiveNames();
   for (const { name: rawName, data } of extracted) {
     // Skip directory entries (they end with / and have zero length)
     if (rawName.endsWith('/') && data.length === 0) continue;
+    const safeName = safeArchiveName(rawName) || 'unnamed';
     entries.push({
-      name: uniqueArchiveName(rawName, usedNames),
+      name: uniqueArchiveName(safeName, names),
       blob: new Blob([data]),
       size: data.length,
+      // Only genuinely dangerous rewrites, so the notice count is not inflated
+      // by a cosmetic one such as "nested/./keep.txt".
+      pathSanitized: isUnsafeArchiveName(rawName),
     });
   }
 
@@ -146,11 +151,12 @@ function unzipEntriesPreservingDuplicates(raw) {
  */
 export async function createZip(files, onProgress) {
   const zipInput = Object.create(null);
-  const usedNames = new Set();
+  const names = createArchiveNames();
 
   for (let i = 0; i < files.length; i++) {
     const buffer = await files[i].blob.arrayBuffer();
-    const name = uniqueArchiveName(files[i].name, usedNames);
+    const safeName = safeArchiveName(files[i].name) || 'unnamed';
+    const name = uniqueArchiveName(safeName, names);
     zipInput[name] = new Uint8Array(buffer);
     if (onProgress) onProgress(Math.round(((i + 1) / files.length) * 60));
   }
@@ -164,51 +170,3 @@ export async function createZip(files, onProgress) {
   return blob;
 }
 
-function uniqueArchiveName(name, usedNames) {
-  if (!usedNames.has(name)) {
-    usedNames.add(name);
-    return name;
-  }
-
-  const slash = name.lastIndexOf('/');
-  const dir = slash === -1 ? '' : name.slice(0, slash + 1);
-  const filename = slash === -1 ? name : name.slice(slash + 1);
-  const dot = filename.lastIndexOf('.');
-  const stem = dot > 0 ? filename.slice(0, dot) : filename;
-  const ext = dot > 0 ? filename.slice(dot) : '';
-
-  let suffix = 2;
-  let candidate;
-  do {
-    candidate = `${dir}${stem} (${suffix})${ext}`;
-    suffix++;
-  } while (usedNames.has(candidate));
-
-  usedNames.add(candidate);
-  return candidate;
-}
-
-/**
- * List files inside a ZIP without keeping extracted data.
- * fflate has no list-only mode, so this does a full unzip and returns metadata.
- * @param {File} file - ZIP file
- * @returns {Promise<Array<{name: string, compressedSize: number, uncompressedSize: number}>>}
- */
-export async function zipToFileList(file) {
-  if (typeof fflate === 'undefined') throw new Error('ZIP library not loaded. Please reload the page.');
-  const buffer = await file.arrayBuffer();
-  const raw = new Uint8Array(buffer);
-  const unpacked = await unzipEntries(raw);
-
-  const entries = [];
-  const usedNames = new Set();
-  for (const { name: rawName, data } of unpacked) {
-    if (rawName.endsWith('/') && data.length === 0) continue;
-    entries.push({
-      name: uniqueArchiveName(rawName, usedNames),
-      compressedSize: 0, // fflate doesn't expose per-entry compressed sizes
-      uncompressedSize: data.length,
-    });
-  }
-  return entries;
-}
