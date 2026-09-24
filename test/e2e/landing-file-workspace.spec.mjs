@@ -53,6 +53,19 @@ test.describe('Landing active-file workspace', () => {
     await expect(page.locator('#active-file-focus')).toHaveCount(0);
   });
 
+  test('active-file dismiss target stays finger-sized on phones', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await page.locator('#smart-file-input').setInputFiles(fixture('sample.avif'));
+
+    const dismiss = page.locator('#route-panel .route-dismiss');
+    await expect(dismiss).toBeVisible();
+    const box = await dismiss.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+  });
+
   test('dismissing the file while the handoff write is in flight cancels the navigation', async ({ page }) => {
     await page.goto('/');
     await page.locator('#smart-file-input').setInputFiles(fixture('sample.mp4'));
