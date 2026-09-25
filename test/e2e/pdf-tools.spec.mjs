@@ -156,16 +156,16 @@ test.describe('Merge PDF', () => {
 
     const rows = page.locator('#file-list .file-item');
     await expect(rows).toHaveCount(2);
-    await expect(rows.nth(0).getByRole('button', { name: 'Move up' })).toBeDisabled();
-    await expect(rows.nth(0).getByRole('button', { name: 'Move down' })).toBeEnabled();
+    await expect(rows.nth(0).getByRole('button', { name: 'Move Résumé_日本語-portrait.pdf up' })).toBeDisabled();
+    await expect(rows.nth(0).getByRole('button', { name: 'Move Résumé_日本語-portrait.pdf down' })).toBeEnabled();
 
-    const moveDownBox = await rows.nth(0).getByRole('button', { name: 'Move down' }).boundingBox();
+    const moveDownBox = await rows.nth(0).getByRole('button', { name: 'Move Résumé_日本語-portrait.pdf down' }).boundingBox();
     expect(moveDownBox.height).toBeGreaterThanOrEqual(44);
 
     await page.locator('#action-btn').click();
     await expect(page.locator('#dl-single')).toBeVisible({ timeout: 15000 });
 
-    await rows.nth(0).getByRole('button', { name: 'Move down' }).click();
+    await rows.nth(0).getByRole('button', { name: 'Move Résumé_日本語-portrait.pdf down' }).click();
     await expect(page.locator('.file-item__name')).toHaveText([
       'landscape.pdf',
       'Résumé_日本語-portrait.pdf',

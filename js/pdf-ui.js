@@ -110,7 +110,9 @@ function renderFileEntry(file) {
       <button type="button" class="btn btn--danger btn-remove">Remove</button>
     </div>
   `;
-  div.querySelector('.btn-remove').addEventListener('click', () => {
+  const removeBtn = div.querySelector('.btn-remove');
+  removeBtn.setAttribute('aria-label', `Remove ${file.name}`);
+  removeBtn.addEventListener('click', () => {
     if (operationActive) return;
     const idx = files.indexOf(file);
     if (idx !== -1) files.splice(idx, 1);
@@ -119,8 +121,12 @@ function renderFileEntry(file) {
     updateControls();
   });
   if (canReorder) {
-    div.querySelector('.btn-move-up').addEventListener('click', () => moveFile(file, div, -1));
-    div.querySelector('.btn-move-down').addEventListener('click', () => moveFile(file, div, 1));
+    const moveUp = div.querySelector('.btn-move-up');
+    const moveDown = div.querySelector('.btn-move-down');
+    moveUp.setAttribute('aria-label', `Move ${file.name} up`);
+    moveDown.setAttribute('aria-label', `Move ${file.name} down`);
+    moveUp.addEventListener('click', () => moveFile(file, div, -1));
+    moveDown.addEventListener('click', () => moveFile(file, div, 1));
     setupDragReorder(div);
   }
   fileList.appendChild(div);

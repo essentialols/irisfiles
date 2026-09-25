@@ -37,9 +37,9 @@ test.describe('PDF operations remain consistent during file-list changes', () =>
     await expect.poll(() => page.evaluate(() => typeof window.__releasePdfRead)).toBe('function');
 
     await expect(page.locator('#action-btn')).toBeDisabled();
-    await expect(page.locator('.btn-remove')).toBeDisabled();
-    await expect(page.locator('.btn-move-up')).toBeDisabled();
-    await expect(page.locator('.btn-move-down')).toBeDisabled();
+    await expect(page.locator('.btn-remove').first()).toBeDisabled();
+    await expect(page.locator('.btn-move-up').first()).toBeDisabled();
+    await expect(page.locator('.btn-move-down').first()).toBeDisabled();
 
     await page.evaluate(() => window.__releasePdfRead());
     await expect(page.locator('#dl-single')).toBeVisible({ timeout: 15000 });
