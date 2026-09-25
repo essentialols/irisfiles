@@ -81,12 +81,16 @@ export function init() {
 }
 
 function addFiles(fileList_) {
+  if (operationActive) return;
   const maxFiles = mode === 'split' ? 1 : 50;
+  let added = false;
   for (const f of fileList_) {
     if (files.length >= maxFiles) break;
     files.push(f);
     renderFileEntry(f);
+    added = true;
   }
+  if (added) removeResults();
   updateControls();
 }
 
@@ -96,28 +100,55 @@ function renderFileEntry(file) {
   const canReorder = mode === 'merge';
   if (canReorder) div.draggable = true;
   div.innerHTML = `
-    ${canReorder ? '<span class="drag-handle" title="Drag to reorder">&#x2630;</span>' : ''}
+    ${canReorder ? '<span class="drag-handle" title="Drag to reorder" aria-hidden="true">&#x2630;</span>' : ''}
     <div class="file-item__info">
       <div class="file-item__name">${esc(file.name)}</div>
       <div class="file-item__meta">${formatSize(file.size)}</div>
     </div>
     <div class="file-item__actions">
-      <button class="btn btn--danger btn-remove">Remove</button>
+      ${canReorder ? '<button type="button" class="btn btn--secondary btn-move-up" aria-label="Move up" title="Move up">&#x2191;</button><button type="button" class="btn btn--secondary btn-move-down" aria-label="Move down" title="Move down">&#x2193;</button>' : ''}
+      <button type="button" class="btn btn--danger btn-remove">Remove</button>
     </div>
   `;
   div.querySelector('.btn-remove').addEventListener('click', () => {
+    if (operationActive) return;
     const idx = files.indexOf(file);
     if (idx !== -1) files.splice(idx, 1);
     div.remove();
+    removeResults();
     updateControls();
   });
-  if (canReorder) setupDragReorder(div);
+  if (canReorder) {
+    div.querySelector('.btn-move-up').addEventListener('click', () => moveFile(file, div, -1));
+    div.querySelector('.btn-move-down').addEventListener('click', () => moveFile(file, div, 1));
+    setupDragReorder(div);
+  }
   fileList.appendChild(div);
+}
+
+function moveFile(file, el, delta) {
+  if (operationActive) return;
+  const fromIdx = files.indexOf(file);
+  const toIdx = fromIdx + delta;
+  if (fromIdx < 0 || toIdx < 0 || toIdx >= files.length) return;
+
+  const target = fileList.children[toIdx];
+  if (delta < 0) target.before(el);
+  else target.after(el);
+
+  const [moved] = files.splice(fromIdx, 1);
+  files.splice(toIdx, 0, moved);
+  removeResults();
+  updateControls();
 }
 
 let dragSrc = null;
 function setupDragReorder(el) {
   el.addEventListener('dragstart', e => {
+    if (operationActive) {
+      e.preventDefault();
+      return;
+    }
     dragSrc = el;
     el.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
@@ -136,7 +167,7 @@ function setupDragReorder(el) {
   el.addEventListener('drop', e => {
     e.preventDefault();
     el.classList.remove('drag-over');
-    if (!dragSrc || dragSrc === el) return;
+    if (operationActive || !dragSrc || dragSrc === el) return;
     // Swap DOM positions
     const items = [...fileList.children];
     const fromIdx = items.indexOf(dragSrc);
@@ -146,16 +177,31 @@ function setupDragReorder(el) {
     // Sync the files array to match new DOM order
     const [moved] = files.splice(fromIdx, 1);
     files.splice(toIdx, 0, moved);
+    removeResults();
+    updateControls();
   });
 }
 
 function updateControls() {
+  if (fileInput) fileInput.disabled = operationActive;
   if (actionBtn) {
     const minFiles = (mode === 'merge') ? 2 : 1;
     actionBtn.disabled = operationActive || files.length < minFiles;
     actionBtn.style.display = files.length > 0 ? '' : 'none';
   }
   if (clearBtn) clearBtn.style.display = files.length > 0 ? '' : 'none';
+
+  const items = [...fileList.querySelectorAll('.file-item')];
+  items.forEach((item, index) => {
+    const remove = item.querySelector('.btn-remove');
+    if (remove) remove.disabled = operationActive;
+
+    const moveUp = item.querySelector('.btn-move-up');
+    const moveDown = item.querySelector('.btn-move-down');
+    if (moveUp) moveUp.disabled = operationActive || index === 0;
+    if (moveDown) moveDown.disabled = operationActive || index === items.length - 1;
+    if (mode === 'merge') item.draggable = !operationActive;
+  });
 }
 
 function clearAll() {

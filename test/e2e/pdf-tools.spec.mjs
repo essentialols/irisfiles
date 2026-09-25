@@ -1,6 +1,14 @@
 import { readFile } from 'node:fs/promises';
+import { PDFDocument } from 'pdf-lib';
 import { test, expect } from '@playwright/test';
 import { fixture } from './helpers.mjs';
+
+async function sizedPdf(width, height, label) {
+  const doc = await PDFDocument.create();
+  const page = doc.addPage([width, height]);
+  page.drawText(label, { x: 18, y: height - 32, size: 14 });
+  return Buffer.from(await doc.save());
+}
 
 test.describe('JPG to PDF', () => {
   test('upload JPG and convert to PDF', async ({ page }) => {
@@ -133,6 +141,49 @@ test.describe('Merge PDF', () => {
     await page.locator('#pdf-results').waitFor({ timeout: 15000 });
     const readOrder = await page.evaluate(() => window.__irisfilesPdfReadOrder);
     expect(readOrder).toEqual(['beta.pdf', 'gamma.pdf', 'alpha.pdf']);
+  });
+
+  test('mobile move controls invalidate stale output and define merged page order', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/merge-pdf');
+
+    const portrait = await sizedPdf(200, 400, 'portrait first');
+    const landscape = await sizedPdf(500, 250, 'landscape second');
+    await page.locator('#file-input').setInputFiles([
+      { name: 'Résumé_日本語-portrait.pdf', mimeType: 'application/pdf', buffer: portrait },
+      { name: 'landscape.pdf', mimeType: 'application/pdf', buffer: landscape },
+    ]);
+
+    const rows = page.locator('#file-list .file-item');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0).getByRole('button', { name: 'Move up' })).toBeDisabled();
+    await expect(rows.nth(0).getByRole('button', { name: 'Move down' })).toBeEnabled();
+
+    const moveDownBox = await rows.nth(0).getByRole('button', { name: 'Move down' }).boundingBox();
+    expect(moveDownBox.height).toBeGreaterThanOrEqual(44);
+
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#dl-single')).toBeVisible({ timeout: 15000 });
+
+    await rows.nth(0).getByRole('button', { name: 'Move down' }).click();
+    await expect(page.locator('.file-item__name')).toHaveText([
+      'landscape.pdf',
+      'Résumé_日本語-portrait.pdf',
+    ]);
+    await expect(page.locator('#pdf-results')).toHaveCount(0);
+
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#dl-single')).toBeVisible({ timeout: 15000 });
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('#dl-single').click(),
+    ]);
+    const mergedBytes = await readFile(await download.path());
+    const merged = await PDFDocument.load(mergedBytes);
+    expect(merged.getPages().map(p => [p.getWidth(), p.getHeight()])).toEqual([
+      [500, 250],
+      [200, 400],
+    ]);
   });
 });
 

@@ -28,16 +28,19 @@ async function addNamedPdfs(page, names) {
 }
 
 test.describe('PDF operations remain consistent during file-list changes', () => {
-  test('merge reads the original file snapshot and cannot be started twice', async ({ page }) => {
+  test('merge locks queue edits and cannot be started twice', async ({ page }) => {
     await installPdfReadGate(page);
     await page.goto('/merge-pdf');
     await addNamedPdfs(page, ['alpha.pdf', 'beta.pdf', 'gamma.pdf']);
 
     await page.locator('#action-btn').click();
     await expect.poll(() => page.evaluate(() => typeof window.__releasePdfRead)).toBe('function');
-    await page.locator('.btn-remove').first().click();
 
     await expect(page.locator('#action-btn')).toBeDisabled();
+    await expect(page.locator('.btn-remove')).toBeDisabled();
+    await expect(page.locator('.btn-move-up')).toBeDisabled();
+    await expect(page.locator('.btn-move-down')).toBeDisabled();
+
     await page.evaluate(() => window.__releasePdfRead());
     await expect(page.locator('#dl-single')).toBeVisible({ timeout: 15000 });
     await expect.poll(() => page.evaluate(() => window.__pdfReads)).toEqual([
