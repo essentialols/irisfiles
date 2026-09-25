@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { fixture, dropFile, expectDownloadOnClick } from './helpers.mjs';
+import { fixture, dropFile, expectDownloadOnClick, cacheCdnAssets, expectNoCrashOnBadFile } from './helpers.mjs';
+
+// Each test gets a fresh context, so each one refetched the ~25MB FFmpeg core.
+test.beforeEach(async ({ page }) => { await cacheCdnAssets(page); });
 
 test.describe('Audio Conversion - WAV to MP3', () => {
   test.beforeEach(async ({ page }) => {
@@ -341,10 +344,7 @@ test.describe('Audio Compression - download extension', () => {
 test.describe('Audio Compression - wrong format rejected', () => {
   test('uploading a PDF to compress-audio shows error or no crash', async ({ page }) => {
     await page.goto('/compress-audio');
-    const errors = [];
-    page.on('pageerror', (error) => errors.push(error.message));
-    await dropFile(page, '#drop-zone', fixture('sample.pdf'));
-    await page.waitForTimeout(3000);
+    const errors = await expectNoCrashOnBadFile(page, () => dropFile(page, '#drop-zone', fixture('sample.pdf')));
     const hasError = await page.locator('.file-item__status.error, .file-item__status:has-text("Error")').count();
     if (hasError === 0) {
       expect(errors).toHaveLength(0);

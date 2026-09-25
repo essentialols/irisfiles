@@ -1,6 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
-import { fixture, getFileItemCount, waitForStatus } from './helpers.mjs';
+import { fixture, getFileItemCount, waitForStatus, cacheCdnAssets, expectNoCrashOnBadFile } from './helpers.mjs';
+
+// Each test gets a fresh context, so each one refetched the ~25MB FFmpeg core.
+test.beforeEach(async ({ page }) => { await cacheCdnAssets(page); });
 
 function pngDimensions(buffer) {
   if (buffer.length < 24 || buffer.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') {
@@ -923,10 +926,7 @@ test.describe('PDF OCR - clear all resets', () => {
 test.describe('Resize Image - wrong format handling', () => {
   test('uploading a PDF to resize shows no crash', async ({ page }) => {
     await page.goto('/resize-image');
-    const errors = [];
-    page.on('pageerror', (error) => errors.push(error.message));
-    await page.locator('#file-input').setInputFiles(fixture('sample.pdf'));
-    await page.waitForTimeout(3000);
+    const errors = await expectNoCrashOnBadFile(page, () => page.locator('#file-input').setInputFiles(fixture('sample.pdf')));
     expect(errors).toHaveLength(0);
   });
 });

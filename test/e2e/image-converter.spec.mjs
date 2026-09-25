@@ -1,6 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
-import { fixture } from './helpers.mjs';
+import { fixture, cacheCdnAssets } from './helpers.mjs';
+
+// Each test gets a fresh context, so each one refetched the ~25MB FFmpeg core.
+test.beforeEach(async ({ page }) => { await cacheCdnAssets(page); });
 
 function zipCentralEntries(buffer) {
   let eocd = -1;

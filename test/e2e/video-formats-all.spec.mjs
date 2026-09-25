@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { fixture, getFileItemCount } from './helpers.mjs';
+import { fixture, getFileItemCount, cacheCdnAssets } from './helpers.mjs';
+
+// Each test gets a fresh context, so each one refetched the ~25MB FFmpeg core.
+test.beforeEach(async ({ page }) => { await cacheCdnAssets(page); });
 
 test.setTimeout(90000);
 
@@ -35,16 +38,7 @@ test.describe('MP4 Conversions', () => {
     const pageUrl = `/mp4-to-${target}`;
 
     test.describe(`MP4 to ${target.toUpperCase()}`, () => {
-      test('page loads with drop zone', async ({ page }) => {
-        await page.goto(pageUrl);
-        await expect(page.locator('#drop-zone')).toBeVisible();
-      });
 
-      test('config has correct target format', async ({ page }) => {
-        await page.goto(pageUrl);
-        const config = page.locator('#converter-config');
-        await expect(config).toHaveAttribute('data-target-format', target);
-      });
 
       test('action button hidden initially', async ({ page }) => {
         await page.goto(pageUrl);
@@ -105,16 +99,7 @@ test.describe('MOV Conversions', () => {
     const pageUrl = `/mov-to-${target}`;
 
     test.describe(`MOV to ${target.toUpperCase()}`, () => {
-      test('page loads with drop zone', async ({ page }) => {
-        await page.goto(pageUrl);
-        await expect(page.locator('#drop-zone')).toBeVisible();
-      });
 
-      test('config has correct target format', async ({ page }) => {
-        await page.goto(pageUrl);
-        const config = page.locator('#converter-config');
-        await expect(config).toHaveAttribute('data-target-format', target);
-      });
 
       test('action button hidden initially', async ({ page }) => {
         await page.goto(pageUrl);
@@ -175,16 +160,7 @@ test.describe('AVI Conversions', () => {
     const pageUrl = `/avi-to-${target}`;
 
     test.describe(`AVI to ${target.toUpperCase()}`, () => {
-      test('page loads with drop zone', async ({ page }) => {
-        await page.goto(pageUrl);
-        await expect(page.locator('#drop-zone')).toBeVisible();
-      });
 
-      test('config has correct target format', async ({ page }) => {
-        await page.goto(pageUrl);
-        const config = page.locator('#converter-config');
-        await expect(config).toHaveAttribute('data-target-format', target);
-      });
 
       test('action button hidden initially', async ({ page }) => {
         await page.goto(pageUrl);
@@ -245,16 +221,7 @@ test.describe('MKV Conversions', () => {
     const pageUrl = `/mkv-to-${target}`;
 
     test.describe(`MKV to ${target.toUpperCase()}`, () => {
-      test('page loads with drop zone', async ({ page }) => {
-        await page.goto(pageUrl);
-        await expect(page.locator('#drop-zone')).toBeVisible();
-      });
 
-      test('config has correct target format', async ({ page }) => {
-        await page.goto(pageUrl);
-        const config = page.locator('#converter-config');
-        await expect(config).toHaveAttribute('data-target-format', target);
-      });
 
       test('action button hidden initially', async ({ page }) => {
         await page.goto(pageUrl);
@@ -285,16 +252,7 @@ test.describe('WebM Conversions', () => {
     const pageUrl = `/webm-to-${target}`;
 
     test.describe(`WebM to ${target.toUpperCase()}`, () => {
-      test('page loads with drop zone', async ({ page }) => {
-        await page.goto(pageUrl);
-        await expect(page.locator('#drop-zone')).toBeVisible();
-      });
 
-      test('config has correct target format', async ({ page }) => {
-        await page.goto(pageUrl);
-        const config = page.locator('#converter-config');
-        await expect(config).toHaveAttribute('data-target-format', target);
-      });
 
       test('action button hidden initially', async ({ page }) => {
         await page.goto(pageUrl);
@@ -325,22 +283,8 @@ test.describe('GIF Conversions', () => {
     const pageUrl = `/gif-to-${target}`;
 
     test.describe(`GIF to ${target.toUpperCase()}`, () => {
-      test('page loads with drop zone', async ({ page }) => {
-        await page.goto(pageUrl);
-        await expect(page.locator('#drop-zone')).toBeVisible();
-      });
 
-      test('config has correct target format', async ({ page }) => {
-        await page.goto(pageUrl);
-        const config = page.locator('#converter-config');
-        await expect(config).toHaveAttribute('data-target-format', target);
-      });
 
-      test('config has gif source type', async ({ page }) => {
-        await page.goto(pageUrl);
-        const config = page.locator('#converter-config');
-        await expect(config).toHaveAttribute('data-source-type', 'gif');
-      });
 
       test('action button hidden initially', async ({ page }) => {
         await page.goto(pageUrl);
@@ -396,10 +340,6 @@ test.describe('GIF Conversions', () => {
 test.describe('MOV to MP4 (remux)', () => {
   const pageUrl = '/mov-to-mp4';
 
-  test('page loads with drop zone', async ({ page }) => {
-    await page.goto(pageUrl);
-    await expect(page.locator('#drop-zone')).toBeVisible();
-  });
 
   test('remuxes on drop without an action button', async ({ page }) => {
     await page.goto(pageUrl);

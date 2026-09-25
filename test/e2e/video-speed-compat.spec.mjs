@@ -1,5 +1,9 @@
 import fs from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
+import { cacheCdnAssets } from './helpers.mjs';
+
+// Each test gets a fresh context, so each one refetched the ~25MB FFmpeg core.
+test.beforeEach(async ({ page }) => { await cacheCdnAssets(page); });
 
 test.setTimeout(120_000);
 

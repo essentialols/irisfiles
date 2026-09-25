@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { fixture } from './helpers.mjs';
+import { fixture, cacheCdnAssets } from './helpers.mjs';
+
+// Each test gets a fresh context, so each one refetched the ~25MB FFmpeg core.
+test.beforeEach(async ({ page }) => { await cacheCdnAssets(page); });
 
 // Every pair asserted the same page shell across four separate tests, each
 // paying its own navigation, and the twelve converting pairs ran the same

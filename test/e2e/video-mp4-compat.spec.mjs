@@ -1,7 +1,9 @@
 import fs from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
+import { cacheCdnAssets } from './helpers.mjs';
 
 test.setTimeout(120000);
+test.beforeEach(async ({ page }) => { await cacheCdnAssets(page); });
 
 // Genuine 17x15 VP9 WebM encoded as yuv444p. Odd dimensions make the
 // compatibility regression explicit: H.264 4:2:0 requires even dimensions.

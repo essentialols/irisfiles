@@ -192,6 +192,79 @@ async function validatePage(path) {
     if (src.startsWith('http://') || src.startsWith('https://')) continue;
     ok(existsSync(join(ROOT, src)), `${label}: missing script ${src}`);
   }
+
+  validateConverterShell(label, html);
+}
+
+const MIME = {
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp',
+  gif: 'image/gif', avif: 'image/avif', bmp: 'image/bmp', ico: 'image/x-icon',
+  tiff: 'image/tiff', heic: 'image/heic', svg: 'image/svg+xml', pdf: 'application/pdf',
+};
+// Only these targets carry an encoder quality setting.
+const LOSSY = new Set(['jpg', 'jpeg', 'webp', 'avif']);
+
+/**
+ * A converter page's shell is server-rendered, so it is assertable from the
+ * HTML we already fetched. These ran as ~90 Playwright tests that each booted a
+ * browser and navigated only to read an attribute out of the same markup.
+ *
+ * Derived from the filename rather than a per-route table, so a new
+ * `<src>-to-<dst>.html` is covered the moment it exists, and a page whose
+ * config disagrees with its own URL fails here instead of at runtime.
+ */
+function validateConverterShell(label, html) {
+  const route = label.match(/^([a-z0-9]+)-to-([a-z0-9]+)$/);
+  if (!route) return;
+  const [, src, dst] = route;
+
+  const configMatch = html.match(/id="converter-config"([^>]*)/);
+  if (!configMatch) return; // pdf-tools, remux and gif pages use their own boot
+  const attrs = Object.fromEntries(
+    [...configMatch[1].matchAll(/data-([a-z-]+)="([^"]*)"/g)].map(a => [a[1], a[2]]),
+  );
+
+  for (const key of ['target-ext', 'target-format']) {
+    if (key in attrs) {
+      ok(attrs[key] === dst, `${label}: data-${key} is "${attrs[key]}", URL says "${dst}"`);
+    }
+  }
+  if ('target-mime' in attrs && MIME[dst]) {
+    // The *-to-pdf pages build the document with pdf-lib rather than encoding a
+    // canvas, so they intentionally carry no target mime.
+    const expected = dst === 'pdf' ? '' : MIME[dst];
+    ok(attrs['target-mime'] === expected,
+      `${label}: data-target-mime is "${attrs['target-mime']}", expected "${expected}"`);
+  }
+  if ('source-formats' in attrs && MIME[src]) {
+    ok(attrs['source-formats'].includes(MIME[src]),
+      `${label}: data-source-formats "${attrs['source-formats']}" omits ${MIME[src]}`);
+  }
+
+  ok(html.includes('id="drop-zone"'), `${label}: missing #drop-zone`);
+  const fileInput = html.match(/id="file-input"([^>]*)/);
+  ok(fileInput, `${label}: missing #file-input`);
+  if (fileInput) {
+    const accept = fileInput[1].match(/accept="([^"]*)"/);
+    ok(accept, `${label}: #file-input has no accept attribute`);
+    if (accept) {
+      ok(accept[1].replace('jpeg', 'jpg').includes(src),
+        `${label}: accept "${accept[1]}" does not mention source "${src}"`);
+    }
+  }
+  // Only one direction is a site-wide rule: a lossy target always exposes the
+  // encoder quality. The converse is not true and should not be asserted as if
+  // it were, because slider presence on lossless targets is inconsistent
+  // (avif-to-png ships none, jpg-to-png does; most *-to-pdf have one, the
+  // document sources do not). NO_SLIDER carries only the pages an e2e test
+  // already pinned.
+  const NO_SLIDER = new Set(['avif-to-png']);
+  if (LOSSY.has(dst)) {
+    ok(html.includes('id="quality-slider"'), `${label}: lossy target has no #quality-slider`);
+  }
+  if (NO_SLIDER.has(label)) {
+    ok(!html.includes('id="quality-slider"'), `${label}: expected no #quality-slider`);
+  }
 }
 
 async function globalChecks() {

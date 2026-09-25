@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { fixture, dropFile, waitForDone, getFileItemCount } from './helpers.mjs';
+import { fixture, dropFile, waitForDone, getFileItemCount, cacheCdnAssets, expectNoCrashOnBadFile } from './helpers.mjs';
+
+// Each test gets a fresh context, so each one refetched the ~25MB FFmpeg core.
+test.beforeEach(async ({ page }) => { await cacheCdnAssets(page); });
 
 const TIMEOUT = 90_000;
 
@@ -302,6 +305,10 @@ test.describe('Video Tools E2E', () => {
 
   test.describe('FFmpeg.wasm CDN Loading', () => {
     test('should load FFmpeg from CDN on first use', async ({ page }) => {
+      // The one test that must reach the real CDN: the suite-wide cache would
+      // otherwise let it pass against a replayed response while jsDelivr was
+      // down, which is the failure it exists to catch.
+      await page.unroute('**://cdn.jsdelivr.net/**');
       await page.goto(`/compress-video`);
 
       const networkRequests = [];
@@ -339,10 +346,7 @@ test.describe('Video Tools E2E', () => {
 
     test('uploading wrong format to video converter shows no crash', async ({ page }) => {
       await page.goto('/mov-to-mp4');
-      const errors = [];
-      page.on('pageerror', (error) => errors.push(error.message));
-      await dropFile(page, '#drop-zone', fixture('sample.pdf'));
-      await page.waitForTimeout(3000);
+      const errors = await expectNoCrashOnBadFile(page, () => dropFile(page, '#drop-zone', fixture('sample.pdf')));
       expect(errors).toHaveLength(0);
     });
   });
@@ -523,10 +527,7 @@ test.describe('Video Tools E2E', () => {
   test.describe('Video Metadata - Wrong Format', () => {
     test('uploading non-video to video-metadata shows no crash', async ({ page }) => {
       await page.goto('/video-metadata');
-      const errors = [];
-      page.on('pageerror', (error) => errors.push(error.message));
-      await dropFile(page, '#drop-zone', fixture('sample.pdf'));
-      await page.waitForTimeout(3000);
+      const errors = await expectNoCrashOnBadFile(page, () => dropFile(page, '#drop-zone', fixture('sample.pdf')));
       expect(errors).toHaveLength(0);
     });
   });
