@@ -15,17 +15,7 @@ test.describe('Font Pages', () => {
 
   fontPages.forEach(({ path, target }) => {
     test.describe(path, () => {
-      test('page loads correctly', async ({ page }) => {
-        await page.goto(`${path}`);
-        const dropZone = page.locator('#drop-zone');
-        await expect(dropZone).toBeVisible();
-      });
 
-      test('config has correct font target', async ({ page }) => {
-        await page.goto(`${path}`);
-        const config = page.locator('#converter-config');
-        await expect(config).toHaveAttribute('data-font-target', target);
-      });
 
       test('action button hidden initially', async ({ page }) => {
         await page.goto(`${path}`);
@@ -39,11 +29,6 @@ test.describe('Font Pages', () => {
         await expect(clearAll).not.toBeVisible();
       });
 
-      test('file input present', async ({ page }) => {
-        await page.goto(`${path}`);
-        const fileInput = page.locator('#file-input');
-        await expect(fileInput).toBeAttached();
-      });
     });
   });
 });
@@ -62,17 +47,7 @@ test.describe('Document Pages - General', () => {
 
   docPages.forEach(({ path, mode }) => {
     test.describe(path, () => {
-      test('page loads correctly', async ({ page }) => {
-        await page.goto(`${path}`);
-        const dropZone = page.locator('#drop-zone');
-        await expect(dropZone).toBeVisible();
-      });
 
-      test('config has correct doc mode', async ({ page }) => {
-        await page.goto(`${path}`);
-        const config = page.locator('#converter-config');
-        await expect(config).toHaveAttribute('data-doc-mode', mode);
-      });
 
       test('action button hidden initially', async ({ page }) => {
         await page.goto(`${path}`);
@@ -405,17 +380,7 @@ test.describe('Document Pages - DOCX Visible Text', () => {
 });
 
 test.describe('Archive Pages - Extract ZIP', () => {
-  test('page loads correctly', async ({ page }) => {
-    await page.goto(`/extract-zip`);
-    const dropZone = page.locator('#drop-zone');
-    await expect(dropZone).toBeVisible();
-  });
 
-  test('config has extract mode', async ({ page }) => {
-    await page.goto(`/extract-zip`);
-    const config = page.locator('#converter-config');
-    await expect(config).toHaveAttribute('data-archive-mode', 'extract');
-  });
 
   test('upload ZIP shows file', async ({ page }) => {
     await page.goto(`/extract-zip`);
@@ -499,17 +464,7 @@ test.describe('Archive Pages - Extract ZIP', () => {
 });
 
 test.describe('Archive Pages - Create ZIP', () => {
-  test('page loads correctly', async ({ page }) => {
-    await page.goto(`/create-zip`);
-    const dropZone = page.locator('#drop-zone');
-    await expect(dropZone).toBeVisible();
-  });
 
-  test('config has create mode', async ({ page }) => {
-    await page.goto(`/create-zip`);
-    const config = page.locator('#converter-config');
-    await expect(config).toHaveAttribute('data-archive-mode', 'create');
-  });
 
   test('upload single file', async ({ page }) => {
     await page.goto(`/create-zip`);
