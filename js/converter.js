@@ -301,6 +301,76 @@ async function loadNativeImage(file, errorMessage) {
   }
 }
 
+function icoEntries(bytes) {
+  if (bytes.length < 6) return [];
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (view.getUint16(0, true) !== 0 || view.getUint16(2, true) !== 1) return [];
+
+  const count = view.getUint16(4, true);
+  if (count < 1 || 6 + count * 16 > bytes.length) return [];
+
+  const entries = [];
+  for (let index = 0; index < count; index++) {
+    const offset = 6 + index * 16;
+    const byteLength = view.getUint32(offset + 8, true);
+    const dataOffset = view.getUint32(offset + 12, true);
+    if (byteLength < 1 || dataOffset > bytes.length || byteLength > bytes.length - dataOffset) continue;
+    entries.push({
+      index,
+      width: bytes[offset] || 256,
+      height: bytes[offset + 1] || 256,
+      bitDepth: view.getUint16(offset + 6, true),
+      byteLength,
+      dataOffset,
+    });
+  }
+
+  return entries.sort((a, b) =>
+    (b.width * b.height) - (a.width * a.height)
+    || b.bitDepth - a.bitDepth
+    || a.index - b.index
+  );
+}
+
+function singleFrameIco(bytes, entry) {
+  const headerSize = 22;
+  const output = new Uint8Array(headerSize + entry.byteLength);
+  const view = new DataView(output.buffer);
+
+  view.setUint16(0, 0, true);
+  view.setUint16(2, 1, true);
+  view.setUint16(4, 1, true);
+  output.set(bytes.subarray(6 + entry.index * 16, 6 + (entry.index + 1) * 16), 6);
+  view.setUint32(18, headerSize, true);
+  output.set(bytes.subarray(entry.dataOffset, entry.dataOffset + entry.byteLength), headerSize);
+  return new Blob([output], { type: 'image/x-icon' });
+}
+
+async function loadIcoImage(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const entries = icoEntries(bytes);
+  if (entries.length === 0) {
+    throw new Error('Could not decode ICO. The icon directory is missing or corrupted.');
+  }
+
+  for (const entry of entries) {
+    try {
+      const image = await createImageBitmap(singleFrameIco(bytes, entry), { imageOrientation: 'from-image' });
+      return {
+        image,
+        width: image.width,
+        height: image.height,
+        cleanup: () => image.close(),
+      };
+    } catch {
+      // Keep trying smaller/lower-depth embedded frames. A partially damaged
+      // ICO can still contain a perfectly usable icon image.
+    }
+  }
+
+  throw new Error('Could not decode ICO. None of the embedded icon images could be decoded.');
+}
+
 /**
  * Convert an image using the Canvas API (for natively-supported formats).
  * @param {File|Blob} file - Source image
@@ -319,6 +389,12 @@ export async function convertWithCanvas(file, targetMime, quality) {
   let cleanup = () => {};
   if (fmt?.mime === 'image/svg+xml') {
     const loaded = await loadSvgImage(file);
+    source = loaded.image;
+    width = loaded.width;
+    height = loaded.height;
+    cleanup = loaded.cleanup;
+  } else if (fmt?.mime === 'image/x-icon') {
+    const loaded = await loadIcoImage(file);
     source = loaded.image;
     width = loaded.width;
     height = loaded.height;
