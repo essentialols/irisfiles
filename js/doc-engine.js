@@ -239,7 +239,7 @@ function resolveEpubPath(opfPath, href) {
 
 /** Parse EPUB (ZIP) and extract chapter text in spine order. */
 async function extractEpubText(file, onProgress, options = {}) {
-  const cellSeparator = options.cellSeparator ?? '\t';
+  options.cellSeparator = options.cellSeparator ?? '\t';
   if (onProgress) onProgress(10);
   const buf = new Uint8Array(await file.arrayBuffer());
   if (typeof fflate === 'undefined') throw new Error('ZIP library not loaded. Please reload the page.');
