@@ -795,8 +795,104 @@ function docxListLabel(paragraph, numbering) {
   });
 }
 
-/** Parse DOCX (ZIP) and extract text from word/document.xml. */
-async function extractDocxText(file, onProgress) {
+function docxAncestor(node, name) {
+  for (let parent = node?.parentNode; parent; parent = parent.parentNode) {
+    if (parent.nodeType === 1 && docxLocalName(parent) === name) return parent;
+  }
+  return null;
+}
+
+function docxParagraphLine(paragraph, numbering) {
+  const text = extractDocxParagraphText(paragraph);
+  const label = docxListLabel(paragraph, numbering);
+  return label ? `${label} ${text}` : text;
+}
+
+/** Every w:p under a node, with the namespace fallback the main walker uses. */
+function docxParagraphsUnder(node) {
+  const namespaced = node.getElementsByTagNameNS(DOCX_WORD_NS, 'p');
+  return namespaced.length > 0 ? namespaced : node.querySelectorAll('p');
+}
+
+/**
+ * The cells of a row in document order, descending through the w:sdt and
+ * w:sdtContent wrappers a content control puts around a cell. Word emits those
+ * routinely, and a cell only reachable through one still owns its paragraphs;
+ * treating it as absent would drop its text entirely.
+ */
+function docxRowCells(row) {
+  const cells = [];
+  const visit = node => {
+    for (const child of node.childNodes) {
+      if (child.nodeType !== 1) continue;
+      const name = docxLocalName(child);
+      if (name === 'tc') cells.push(child);
+      else if (name === 'sdt' || name === 'sdtContent') visit(child);
+    }
+  };
+  visit(row);
+  return cells;
+}
+
+/**
+ * Render a simple Word table row as one separated line per cell line.
+ *
+ * The old paragraph-only walker turned a two-column row into two unrelated
+ * lines, losing the fact that the values belonged beside each other. For
+ * ordinary tables, keep cells as columns and pair multiple paragraphs in a
+ * cell onto continuation rows.
+ *
+ * Returns null when the row cannot be represented that way: when it contains a
+ * nested table, or when any paragraph under it was not claimed by one of its
+ * cells. That is a correctness signal, not a fidelity one. The caller only
+ * suppresses the paragraphs a row reports back, so text inside a row shape this
+ * function does not understand still reaches the output on the old
+ * one-line-per-paragraph path.
+ *
+ * On the nested-table path the result is deliberately a mix: docxAncestor finds
+ * the NEAREST tr, so the inner table's own rows are still rendered as columns,
+ * while each paragraph of the outer row gets its own line. Flattening two grids
+ * into one row would invent a column layout the document does not have.
+ */
+function docxTableRowLines(row, numbering, separator) {
+  if (row.getElementsByTagNameNS(DOCX_WORD_NS, 'tbl').length > 0
+    || row.querySelectorAll('tbl').length > 0) return null;
+
+  // Collect first and render second: docxParagraphLine advances list counters,
+  // so it must not run for a row that is about to bail.
+  const cells = [];
+  let claimed = 0;
+  for (const cell of docxRowCells(row)) {
+    const cellParagraphs = [];
+    for (const paragraph of docxParagraphsUnder(cell)) {
+      if (docxAncestor(paragraph, 'tc') === cell) cellParagraphs.push(paragraph);
+    }
+    claimed += cellParagraphs.length;
+    cells.push(cellParagraphs);
+  }
+  if (cells.length === 0) return null;
+
+  const rowParagraphs = docxParagraphsUnder(row);
+  if (claimed !== rowParagraphs.length) return null;
+
+  const rendered = cells.map(cell => cell.map(p => docxParagraphLine(p, numbering)));
+  const height = Math.max(1, ...rendered.map(cell => cell.length));
+  const lines = [];
+  for (let line = 0; line < height; line++) {
+    lines.push(rendered.map(cell => cell[line] ?? '').join(separator));
+  }
+  return { lines, paragraphs: rowParagraphs };
+}
+
+/**
+ * Parse DOCX (ZIP) and extract text from word/document.xml.
+ *
+ * `options.cellSeparator` joins the columns of a table row. Plain text gets a
+ * tab; the PDF path passes spaces instead, because jsPDF writes a tab straight
+ * into the page and the standard Helvetica it references has no glyph for it.
+ */
+async function extractDocxText(file, onProgress, options = {}) {
+  const separator = options.cellSeparator ?? '\t';
   if (onProgress) onProgress(10);
   const buf = new Uint8Array(await file.arrayBuffer());
   if (typeof fflate === 'undefined') throw new Error('ZIP library not loaded. Please reload the page.');
@@ -836,10 +932,30 @@ async function extractDocxText(file, onProgress) {
   }
 
   const lines = [];
+  // tr -> its rendered lines, or null once it has bailed. Caching the null is
+  // what keeps the fallback linear: without it the nested-table probe rescans
+  // the whole row subtree once per paragraph in that row.
+  const tableRows = new Map();
+  // Only the paragraphs a row actually emitted are suppressed here. Anything a
+  // row could not claim still gets its own line below.
+  const consumed = new Set();
   for (let i = 0; i < paragraphs.length; i++) {
-    const text = extractDocxParagraphText(paragraphs[i]);
-    const label = docxListLabel(paragraphs[i], numbering);
-    lines.push(label ? `${label} ${text}` : text);
+    const paragraph = paragraphs[i];
+
+    if (!consumed.has(paragraph)) {
+      const tableRow = docxAncestor(paragraph, 'tr');
+      if (tableRow && !tableRows.has(tableRow)) {
+        tableRows.set(tableRow, docxTableRowLines(tableRow, numbering, separator));
+      }
+      const renderedRow = tableRow ? tableRows.get(tableRow) : null;
+
+      if (renderedRow) {
+        lines.push(...renderedRow.lines);
+        for (const rowParagraph of renderedRow.paragraphs) consumed.add(rowParagraph);
+      } else {
+        lines.push(docxParagraphLine(paragraph, numbering));
+      }
+    }
 
     if (onProgress) onProgress(40 + Math.round((i / paragraphs.length) * 30));
   }
@@ -1132,7 +1248,12 @@ export async function docxToText(file, onProgress) {
 }
 
 export async function docxToPdf(file, onProgress) {
-  const text = await extractDocxText(file, onProgress);
+  // Spaces, not a tab. jsPDF's splitTextToSize and text() pass a tab through
+  // unexpanded, and the standard Helvetica this output references has no glyph
+  // for code 9, so how wide that column gap comes out is left to whatever a
+  // given viewer guesses for an undefined code. Spaces make it a property of
+  // the document instead.
+  const text = await extractDocxText(file, onProgress, { cellSeparator: '    ' });
   if (onProgress) onProgress(50);
   const blob = await textToPdfBlob(text, onProgress);
   if (onProgress) onProgress(100);
