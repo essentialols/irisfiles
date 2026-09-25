@@ -222,6 +222,8 @@ test('EPUB preserves ordered and bulleted list markers in downloaded text', asyn
   ].join('\n'));
 });
 
+// EPUB table regression
+
 test('RTF honors group-scoped uc values and escaped fallback characters', async ({ page }) => {
   const rtf = '{\\rtf1\\ansi\\uc0 Unicode: \\u945X {\\uc2\\u946\\\'62?Y} \\u947Z; accent: {\\uc1\\u233\\\'e9}.}';
 
