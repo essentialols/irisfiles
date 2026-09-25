@@ -891,6 +891,65 @@ function palmDocDecompress(data) {
 }
 
 /**
+ * Decode the self-inclusive backwards VWI at the end of a MOBI trailing entry.
+ * The size counts the VWI bytes themselves, so an entry declaring fewer bytes
+ * than its own encoding occupies is malformed.
+ */
+function mobiTrailingEntrySize(record, end) {
+  let size = 0;
+  let multiplier = 1;
+
+  for (let cursor = end - 1, consumed = 1; cursor >= 0 && consumed <= 8; cursor--, consumed++) {
+    const byte = record[cursor];
+    size += (byte & 0x7F) * multiplier;
+    if (byte & 0x80) {
+      if (size < consumed) {
+        throw new Error('Invalid MOBI file: malformed trailing record data.');
+      }
+      return size;
+    }
+    multiplier *= 128;
+  }
+
+  throw new Error('Invalid MOBI file: malformed trailing record data.');
+}
+
+/**
+ * Remove auxiliary data appended to a MOBI text record before decompression.
+ *
+ * MOBI's Extra Data Flags field describes entries stored after the compressed
+ * text payload. Feeding those bytes to the PalmDOC decoder corrupts the text;
+ * for uncompressed books they become visible garbage between records. Bits
+ * 0x0002..0x8000 each carry a self-inclusive backwards VWI size, while bit
+ * 0x0001 is the UTF-8 multibyte overlap entry whose final byte stores a 0-3
+ * byte overlap count.
+ */
+function stripMobiTrailingData(record, extraDataFlags) {
+  let end = record.length;
+
+  // Every VWI entry carries its own size, so the order the bits are visited
+  // does not matter. The overlap entry (0x0001) sits closest to the text and
+  // must therefore be removed after all of them.
+  for (let bit = 0x8000; bit >= 0x0002; bit >>= 1) {
+    if (!(extraDataFlags & bit)) continue;
+    const size = mobiTrailingEntrySize(record, end);
+    if (size < 1 || size > end) {
+      throw new Error('Invalid MOBI file: malformed trailing record data.');
+    }
+    end -= size;
+  }
+
+  if (extraDataFlags & 0x0001) {
+    if (end < 1) throw new Error('Invalid MOBI file: malformed trailing record data.');
+    const size = (record[end - 1] & 0x03) + 1;
+    if (size > end) throw new Error('Invalid MOBI file: malformed trailing record data.');
+    end -= size;
+  }
+
+  return record.subarray(0, end);
+}
+
+/**
  * Parse a MOBI/PRC file and extract text content.
  * Handles uncompressed (1) and PalmDOC-compressed (2) records.
  * DRM-protected files will throw an error.
@@ -943,6 +1002,38 @@ async function extractMobiText(file, onProgress) {
     throw new Error('Unsupported MOBI compression type. Only uncompressed and PalmDOC-compressed files are supported.');
   }
 
+  // Prefer the encoding declared by the MOBI header. PalmDOC-only files may
+  // not have one, so fall back to strict UTF-8 before trying Windows-1252.
+  // The same header also declares auxiliary bytes appended to every text
+  // record; those must be removed before PalmDOC decompression.
+  let encoding;
+  let extraDataFlags = 0;
+  const mobiHeaderStart = rec0Start + 16;
+  if (
+    mobiHeaderStart + 16 <= rec0End &&
+    buf[mobiHeaderStart] === 0x4D &&
+    buf[mobiHeaderStart + 1] === 0x4F &&
+    buf[mobiHeaderStart + 2] === 0x42 &&
+    buf[mobiHeaderStart + 3] === 0x49
+  ) {
+    const mobiEncoding = view.getUint32(mobiHeaderStart + 12, false);
+    if (mobiEncoding === 1252) encoding = 'windows-1252';
+    else if (mobiEncoding === 65001) encoding = 'utf-8';
+
+    const mobiHeaderLength = view.getUint32(mobiHeaderStart + 4, false);
+    // File version lives at MOBI header offset 20 (record 0 offset 36). The
+    // separate Min version at header offset 104 is a KF8 marker and is 0 on
+    // the common v6 layout, so reading it here would disable the check.
+    const mobiVersion = mobiHeaderStart + 24 <= rec0End
+      ? view.getUint32(mobiHeaderStart + 20, false)
+      : 0;
+    // Extra Data Flags occupy bytes 242-243 of record 0 when the MOBI header
+    // is long enough. They are defined for modern (v5+) Mobipocket records.
+    if (mobiHeaderLength >= 228 && mobiHeaderLength <= 500 && mobiVersion >= 5 && rec0Start + 244 <= rec0End) {
+      extraDataFlags = view.getUint16(rec0Start + 242, false);
+    }
+  }
+
   if (onProgress) onProgress(20);
 
   // Extract text from records 1..recordCount
@@ -954,7 +1045,18 @@ async function extractMobiText(file, onProgress) {
     const start = recordOffsets[r];
     if (start >= buf.length) continue;
     const end = r + 1 < recordOffsets.length ? recordOffsets[r + 1] : buf.length;
-    const recordData = buf.slice(start, end);
+    if (end <= start) continue;
+
+    // recordCount can overrun into FLIS/FCIS/EOF records, and a record may
+    // legitimately carry no entry despite the flag. Keeping the raw bytes
+    // leaves a little junk that the textLength clamp below discards; aborting
+    // the whole conversion over it would be worse.
+    let recordData;
+    try {
+      recordData = stripMobiTrailingData(buf.subarray(start, end), extraDataFlags);
+    } catch {
+      recordData = buf.subarray(start, end);
+    }
 
     let decoded;
     if (compression === 1) {
@@ -981,22 +1083,6 @@ async function extractMobiText(file, onProgress) {
   }
 
   if (onProgress) onProgress(65);
-
-  // Prefer the encoding declared by the MOBI header. PalmDOC-only files may
-  // not have one, so fall back to strict UTF-8 before trying Windows-1252.
-  let encoding;
-  const mobiHeaderStart = rec0Start + 16;
-  if (
-    mobiHeaderStart + 16 <= rec0End &&
-    buf[mobiHeaderStart] === 0x4D &&
-    buf[mobiHeaderStart + 1] === 0x4F &&
-    buf[mobiHeaderStart + 2] === 0x42 &&
-    buf[mobiHeaderStart + 3] === 0x49
-  ) {
-    const mobiEncoding = view.getUint32(mobiHeaderStart + 12, false);
-    if (mobiEncoding === 1252) encoding = 'windows-1252';
-    else if (mobiEncoding === 65001) encoding = 'utf-8';
-  }
 
   let text;
   if (encoding) {
