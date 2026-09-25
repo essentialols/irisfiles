@@ -205,6 +205,137 @@ function readMp4AudioSampleRate(arrayBuffer) {
 }
 
 /**
+ * Read the decode sample rate from the first packet in an Ogg stream.
+ * Vorbis stores its rate in the identification header. Opus always decodes at
+ * 48 kHz; the input-sample-rate field in OpusHead is only informational.
+ *
+ * @param {ArrayBuffer} arrayBuffer
+ * @returns {number|null}
+ */
+function readOggSampleRate(arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+  if (
+    bytes.length < 28 ||
+    bytes[0] !== 0x4f ||
+    bytes[1] !== 0x67 ||
+    bytes[2] !== 0x67 ||
+    bytes[3] !== 0x53 ||
+    bytes[4] !== 0 ||
+    (bytes[5] & 0x01) !== 0
+  ) {
+    return null;
+  }
+
+  const segmentCount = bytes[26];
+  const packetStart = 27 + segmentCount;
+  if (packetStart > bytes.length) return null;
+
+  let packetLength = 0;
+  let packetComplete = false;
+  for (let i = 0; i < segmentCount; i++) {
+    const segmentLength = bytes[27 + i];
+    packetLength += segmentLength;
+    if (segmentLength < 255) {
+      packetComplete = true;
+      break;
+    }
+  }
+  if (!packetComplete || packetStart + packetLength > bytes.length) return null;
+
+  const asciiAt = (offset, text) => {
+    if (offset + text.length > bytes.length) return false;
+    for (let i = 0; i < text.length; i++) {
+      if (bytes[offset + i] !== text.charCodeAt(i)) return false;
+    }
+    return true;
+  };
+
+  if (
+    packetLength >= 16 &&
+    bytes[packetStart] === 0x01 &&
+    asciiAt(packetStart + 1, "vorbis")
+  ) {
+    const sampleRate = new DataView(
+      bytes.buffer,
+      bytes.byteOffset + packetStart + 12,
+      4,
+    ).getUint32(0, true);
+    return sampleRate >= 3000 && sampleRate <= 384000 ? sampleRate : null;
+  }
+
+  if (packetLength >= 19 && asciiAt(packetStart, "OpusHead")) {
+    return 48000;
+  }
+
+  return null;
+}
+
+/**
+ * Read the sample rate from the first MPEG audio frame. MP3 files either
+ * begin with a frame or with an ID3v2 tag whose synchsafe size points to it.
+ * Staying at that exact boundary avoids mistaking arbitrary bytes in another
+ * audio container for an MPEG frame sync.
+ *
+ * Scanning for a frame sync anywhere in the file is not safe: an MPEG sync
+ * pattern occurs by chance inside AAC and M4A data, and the looser reader
+ * this replaced reported 32000 for both of this repo's 44.1 kHz fixtures.
+ *
+ * @param {ArrayBuffer} arrayBuffer
+ * @returns {number|null}
+ */
+function readMp3SampleRate(arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+  let offset = 0;
+
+  if (
+    bytes.length >= 10 &&
+    bytes[0] === 0x49 &&
+    bytes[1] === 0x44 &&
+    bytes[2] === 0x33
+  ) {
+    if (
+      (bytes[6] & 0x80) ||
+      (bytes[7] & 0x80) ||
+      (bytes[8] & 0x80) ||
+      (bytes[9] & 0x80)
+    ) {
+      return null;
+    }
+    const tagSize =
+      (bytes[6] << 21) |
+      (bytes[7] << 14) |
+      (bytes[8] << 7) |
+      bytes[9];
+    offset = 10 + tagSize + ((bytes[5] & 0x10) ? 10 : 0);
+  }
+
+  if (offset + 4 > bytes.length) return null;
+  const b0 = bytes[offset];
+  const b1 = bytes[offset + 1];
+  const b2 = bytes[offset + 2];
+  if (b0 !== 0xff || (b1 & 0xe0) !== 0xe0) return null;
+
+  const version = (b1 >> 3) & 0x03;
+  const layer = (b1 >> 1) & 0x03;
+  const bitrateIndex = (b2 >> 4) & 0x0f;
+  const sampleRateIndex = (b2 >> 2) & 0x03;
+  if (
+    version === 1 ||
+    layer === 0 ||
+    bitrateIndex === 0 ||
+    bitrateIndex === 15 ||
+    sampleRateIndex === 3
+  ) {
+    return null;
+  }
+
+  const baseRate = [44100, 48000, 32000][sampleRateIndex];
+  if (version === 3) return baseRate; // MPEG-1
+  if (version === 2) return baseRate / 2; // MPEG-2
+  return baseRate / 4; // MPEG-2.5
+}
+
+/**
  * Lazy-load lamejs from CDN. Only called when MP3 output is needed.
  * @returns {Promise<void>}
  */
@@ -255,10 +386,14 @@ export async function convertAudio(
   if (!Ctx)
     throw new Error("Audio processing is not supported in this browser.");
 
+  // Ordered most specific first. readMp3SampleRate is last because it is the
+  // only one that reads a bare frame header rather than a container.
   const detectedSourceSampleRate =
     readFlacSampleRate(arrayBuffer) ||
     readAdtsSampleRate(arrayBuffer) ||
-    readMp4AudioSampleRate(arrayBuffer);
+    readMp4AudioSampleRate(arrayBuffer) ||
+    readOggSampleRate(arrayBuffer) ||
+    readMp3SampleRate(arrayBuffer);
   // Preserving a source rate MP3 cannot pair with the requested bitrate would
   // silently downgrade it: LAME clamps to the table for that rate, so a 24 kHz
   // source asked for 320 kbps yields 160 while the UI still promises 320. Fall
