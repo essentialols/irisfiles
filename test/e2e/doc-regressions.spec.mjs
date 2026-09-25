@@ -189,6 +189,7 @@ test('EPUB preserves ordered and bulleted list markers in downloaded text', asyn
   <ol type="A" reversed="reversed" start="3">
     <li>Third</li><li>Second</li><li value="5">Fifth<ol type="i"><li>Nested one</li></ol></li>
   </ol>
+  <table><tr><th>Name</th><th>Phone</th><th>Notes</th></tr><tr><td>Zoe</td><td></td><td>None</td></tr></table>
 </body></html>`;
 
   await page.goto('/epub-to-txt');
