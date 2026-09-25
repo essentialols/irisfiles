@@ -220,6 +220,8 @@ test('EPUB preserves ordered and bulleted list markers in downloaded text', asyn
     'B. Second',
     'E. Fifth',
     '  i. Nested one',
+    'Name\tPhone\tNotes',
+    'Zoe\t\tNone',
   ].join('\n'));
 });
 
