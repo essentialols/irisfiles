@@ -137,7 +137,7 @@ async function renderPageToCanvas(page, dpi) {
  * @returns {{ pages: Array<{ pageNum: number, text: string, method: string }>, fullText: string }}
  */
 export async function ocrPdf(file, opts = {}) {
-  const { lang = 'eng', onPageProgress, onOverallProgress } = opts;
+  const { lang = 'eng', onPageProgress, onOverallProgress, shouldContinue = () => true } = opts;
   const pdfjs = await loadPdfJs();
   const data = new Uint8Array(await file.arrayBuffer());
   const pdf = await pdfjs.getDocument({ data }).promise;
@@ -145,40 +145,50 @@ export async function ocrPdf(file, opts = {}) {
   const pages = [];
   const ocrNeeded = [];
 
-  // Stage 1: try text extraction for all pages
-  for (let i = 1; i <= totalPages; i++) {
-    if (onPageProgress) onPageProgress(i, totalPages, 'Extracting text...');
-    if (onOverallProgress) onOverallProgress((i - 1) / totalPages * 0.3);
-    const page = await pdf.getPage(i);
-    const text = await extractPageText(page);
-    if (text.length > 50) {
-      pages.push({ pageNum: i, text, method: 'text' });
-    } else {
-      pages.push({ pageNum: i, text: '', method: 'ocr' });
-      ocrNeeded.push(i);
-    }
-  }
-
-  // Stage 2: OCR for pages without text
-  if (ocrNeeded.length > 0) {
-    const Tesseract = await loadTesseract();
-    const worker = await Tesseract.createWorker(lang, 1);
-
-    for (let idx = 0; idx < ocrNeeded.length; idx++) {
-      const pageNum = ocrNeeded[idx];
-      if (onPageProgress) onPageProgress(pageNum, totalPages, 'Running OCR...');
-      if (onOverallProgress) onOverallProgress(0.3 + (idx / ocrNeeded.length) * 0.7);
-
-      const page = await pdf.getPage(pageNum);
-      const canvas = await renderPageToCanvas(page, 200);
-      preprocessCanvas(canvas);
-
-      const { data: result } = await worker.recognize(canvas);
-      const pageEntry = pages.find(p => p.pageNum === pageNum);
-      pageEntry.text = result.text.trim();
+  try {
+    // Stage 1: try text extraction for all pages
+    for (let i = 1; i <= totalPages; i++) {
+      if (!shouldContinue()) break;
+      if (onPageProgress) onPageProgress(i, totalPages, 'Extracting text...');
+      if (onOverallProgress) onOverallProgress((i - 1) / totalPages * 0.3);
+      const page = await pdf.getPage(i);
+      const text = await extractPageText(page);
+      if (text.length > 50) {
+        pages.push({ pageNum: i, text, method: 'text' });
+      } else {
+        pages.push({ pageNum: i, text: '', method: 'ocr' });
+        ocrNeeded.push(i);
+      }
     }
 
-    await worker.terminate();
+    // Stage 2: OCR for pages without text
+    if (ocrNeeded.length > 0 && shouldContinue()) {
+      const Tesseract = await loadTesseract();
+      const worker = await Tesseract.createWorker(lang, 1);
+
+      // A leaked worker holds its language data for the life of the tab, so the
+      // terminate has to survive a throw and an abandoned run alike.
+      try {
+        for (let idx = 0; idx < ocrNeeded.length; idx++) {
+          if (!shouldContinue()) break;
+          const pageNum = ocrNeeded[idx];
+          if (onPageProgress) onPageProgress(pageNum, totalPages, 'Running OCR...');
+          if (onOverallProgress) onOverallProgress(0.3 + (idx / ocrNeeded.length) * 0.7);
+
+          const page = await pdf.getPage(pageNum);
+          const canvas = await renderPageToCanvas(page, 200);
+          preprocessCanvas(canvas);
+
+          const { data: result } = await worker.recognize(canvas);
+          const pageEntry = pages.find(p => p.pageNum === pageNum);
+          pageEntry.text = result.text.trim();
+        }
+      } finally {
+        await worker.terminate();
+      }
+    }
+  } finally {
+    pdf.destroy();
   }
 
   if (onOverallProgress) onOverallProgress(1);
