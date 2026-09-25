@@ -183,6 +183,61 @@ test.describe('font conversion output', () => {
     expect((await readFile(outputPath)).length).toBeGreaterThan(1_000);
   });
 
+  test('one malformed font does not discard the successful files in a batch', async ({ page }) => {
+    await page.goto('/ttf-to-woff');
+    // Playwright refuses to mix fixture paths with inline buffers in one call,
+    // so the good font is read into a buffer too.
+    const good = await readFile(fixture('sample.ttf'));
+    await page.locator('#file-input').setInputFiles([
+      { name: 'first.ttf', mimeType: 'font/ttf', buffer: good },
+      { name: 'broken.ttf', mimeType: 'font/ttf', buffer: Buffer.from('not a real font') },
+      { name: 'third.ttf', mimeType: 'font/ttf', buffer: good },
+    ]);
+    await page.locator('#action-btn').click();
+
+    // The malformed middle item must not erase the first result or prevent the
+    // third item from converting.
+    await expect(page.locator('#font-results .file-item.done')).toHaveCount(2, { timeout: 30_000 });
+    await expect(page.locator('#font-results .file-item.failed')).toHaveCount(1);
+    await expect(page.locator('#font-results .file-item.failed')).toContainText('broken.ttf');
+    await expect(page.locator('#font-results .file-item.failed')).toContainText('corrupted or unsupported');
+    await expect(page.locator('#font-results .batch-summary')).toContainText('2 converted · 1 failed');
+    await expect(page.locator('#font-results .dl-btn')).toHaveCount(2);
+    await expect(page.locator('#dl-all-zip')).toBeVisible();
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator('#font-results .dl-btn').first().click();
+    const download = await downloadPromise;
+    const outputPath = await download.path();
+    expect(outputPath).toBeTruthy();
+    const output = await readFile(outputPath);
+    expect(Array.from(output.subarray(0, 4))).toEqual([0x77, 0x4f, 0x46, 0x46]);
+    await expectBrowserLoadsFont(page, output);
+
+    const zipPromise = page.waitForEvent('download');
+    await page.locator('#dl-all-zip').click();
+    const zip = await zipPromise;
+    expect(zip.suggestedFilename()).toBe('irisfiles-fonts.zip');
+    const zipPath = await zip.path();
+    expect(zipPath).toBeTruthy();
+    expect((await readFile(zipPath)).length).toBeGreaterThan(1_000);
+  });
+
+  test('a batch where every font fails keeps the refusal wording instead of a 0 converted summary', async ({ page }) => {
+    await page.goto('/ttf-to-woff');
+    await page.locator('#file-input').setInputFiles([
+      { name: 'a.ttf', mimeType: 'font/ttf', buffer: Buffer.from('not a real font') },
+      { name: 'b.ttf', mimeType: 'font/ttf', buffer: Buffer.from('also not a font') },
+    ]);
+    await page.locator('#action-btn').click();
+
+    const notice = page.locator('#font-results .notice');
+    await expect(notice).toBeVisible({ timeout: 30_000 });
+    await expect(notice).toContainText('no file was created');
+    await expect(page.locator('#font-results .batch-summary')).toHaveCount(0);
+    await expect(page.locator('#font-results .dl-btn')).toHaveCount(0);
+  });
+
   test('changing the queue after conversion removes downloads from the old queue', async ({ page }) => {
     await page.goto('/otf-to-woff');
     await page.locator('#file-input').setInputFiles(fixture('sample.otf'));
