@@ -66,7 +66,7 @@ const EPUB_BLOCK_ELEMENTS = new Set([
 ]);
 
 /** Convert an EPUB XHTML body to readable plain text while preserving block boundaries. */
-function htmlBodyToPlainText(root) {
+function htmlBodyToPlainText(root, options = {}) {
   let text = '';
   let preDepth = 0;
   let atListItemStart = false;
