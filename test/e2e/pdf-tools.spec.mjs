@@ -78,6 +78,7 @@ test.describe('Merge PDF', () => {
 
     const actionBtn = page.locator('#action-btn');
     await expect(actionBtn).toBeDisabled();
+    await expect(page.locator('.merge-reorder-actions')).toBeHidden();
   });
 
   test('multiple PDF upload enables action button', async ({ page }) => {

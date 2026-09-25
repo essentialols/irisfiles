@@ -135,7 +135,10 @@ function refreshMergeReorderControls() {
     const earlier = item.querySelector('[data-move="earlier"]');
     const later = item.querySelector('[data-move="later"]');
     const group = item.querySelector('.merge-reorder-actions');
-    if (group && file) group.setAttribute('aria-label', `Reorder ${file.name}`);
+    if (group && file) {
+      group.hidden = files.length < 2;
+      group.setAttribute('aria-label', `Reorder ${file.name}`);
+    }
     if (earlier && file) {
       earlier.disabled = index === 0;
       earlier.setAttribute('aria-label', `Move ${file.name} earlier`);

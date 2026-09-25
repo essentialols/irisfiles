@@ -362,6 +362,7 @@ body {
 }
 .merge-file-actions { flex-wrap: wrap; justify-content: flex-end; }
 .merge-reorder-actions { display: inline-flex; gap: 0.35rem; }
+.merge-reorder-actions[hidden] { display: none; }
 .merge-move-btn { min-width: 2.5rem; padding: 0.4rem 0.65rem; }
 .file-item.dragging { opacity: 0.4; }
 .file-item.drag-over { border-color: var(--primary); background: #eff6ff; }
