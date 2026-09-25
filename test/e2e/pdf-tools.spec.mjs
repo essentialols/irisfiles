@@ -187,7 +187,7 @@ test.describe('Merge PDF', () => {
   });
 });
 
-test.describe('Merge PDF size limit', () => {
+test.describe('Merge PDF validation', () => {
   test('merging files over the 50MB total limit shows an error', async ({ page }) => {
     await page.goto('/merge-pdf');
     // Playwright's setInputFiles rejects buffers over 50MB combined, so the
@@ -202,6 +202,19 @@ test.describe('Merge PDF size limit', () => {
     });
     await page.locator('#action-btn').click();
     await expect(page.locator('#pdf-results .notice')).toContainText('exceeds 50MB limit', { timeout: 15000 });
+  });
+
+  test('a malformed PDF fails without exposing a download', async ({ page }) => {
+    await page.goto('/merge-pdf');
+    const valid = await sizedPdf(300, 300, 'valid');
+    const malformed = Buffer.from([37, 80, 68, 70, 45, 49, 46, 55, 10, 60, 60]);
+    await page.locator('#file-input').setInputFiles([
+      { name: 'valid.pdf', mimeType: 'application/pdf', buffer: valid },
+      { name: 'truncated.pdf', mimeType: 'application/pdf', buffer: malformed },
+    ]);
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#pdf-results .notice')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#dl-single')).toHaveCount(0);
   });
 });
 
