@@ -107,7 +107,7 @@ test.describe('Merge PDF', () => {
     await expect(dragHandles).toHaveCount(2);
   });
 
-  test('move buttons are touch sized and their order is used for merging', async ({ page }) => {
+  test('move buttons are touch sized, keyboard usable, and set merge order', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.addInitScript(() => {
       const original = File.prototype.arrayBuffer;
@@ -132,11 +132,12 @@ test.describe('Merge PDF', () => {
     expect(box.width).toBeGreaterThanOrEqual(44);
     expect(box.height).toBeGreaterThanOrEqual(44);
 
-    await moveAlphaLater.click();
+    await moveAlphaLater.focus();
+    await page.keyboard.press('Enter');
     await expect(page.locator('.file-item__name')).toHaveText(['beta.pdf', 'alpha.pdf', 'gamma.pdf']);
     await expect(page.getByRole('button', { name: 'Move alpha.pdf later' })).toBeFocused();
 
-    await page.getByRole('button', { name: 'Move alpha.pdf later' }).click();
+    await page.keyboard.press('Enter');
     await expect(page.locator('.file-item__name')).toHaveText(['beta.pdf', 'gamma.pdf', 'alpha.pdf']);
 
     await page.locator('#action-btn').click();
