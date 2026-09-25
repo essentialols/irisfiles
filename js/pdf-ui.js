@@ -96,8 +96,8 @@ function addFiles(fileList_) {
 
 function renderFileEntry(file) {
   const div = document.createElement('div');
-  div.className = 'file-item';
   const canReorder = mode === 'merge';
+  div.className = canReorder ? 'file-item pdf-merge-item' : 'file-item';
   if (canReorder) div.draggable = true;
   div.innerHTML = `
     ${canReorder ? '<span class="drag-handle" title="Drag to reorder" aria-hidden="true">&#x2630;</span>' : ''}
