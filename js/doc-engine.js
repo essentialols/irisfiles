@@ -155,6 +155,25 @@ function htmlBodyToPlainText(root, options = {}) {
       return;
     }
 
+    // EPUB tables otherwise collapse adjacent cells into one run of text.
+    // Preserve ordinary rows when the caller supplies a column separator.
+    if (tag === 'tr' && cellSeparator != null) {
+      const cells = [...node.children]
+        .filter(child => ['td', 'th'].includes((child.localName || '').toLowerCase()));
+      const hasNestedTable = cells.some(cell =>
+        cell.getElementsByTagNameNS('*', 'table').length > 0
+      );
+      if (cells.length > 0 && !hasNestedTable) {
+        appendBreak();
+        text += cells.map(cell =>
+          htmlBodyToPlainText(cell, options).replace(/\n+/g, ' ').trim()
+        ).join(cellSeparator);
+        atListItemStart = false;
+        appendBreak(true);
+        return;
+      }
+    }
+
     if (tag === 'ol' || tag === 'ul') {
       // A nested list that is the first child of an li still needs to start on
       // its own line instead of running directly after the parent's marker.
