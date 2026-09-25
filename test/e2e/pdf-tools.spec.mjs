@@ -107,6 +107,52 @@ test.describe('Merge PDF', () => {
     await expect(dragHandles).toHaveCount(2);
   });
 
+  test('move buttons are touch sized and their order is used for merging', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.addInitScript(() => {
+      const original = File.prototype.arrayBuffer;
+      window.__irisfilesPdfReadOrder = [];
+      File.prototype.arrayBuffer = function (...args) {
+        window.__irisfilesPdfReadOrder.push(this.name);
+        return original.apply(this, args);
+      };
+    });
+    await page.goto('/merge-pdf');
+
+    const pdf = await readFile(fixture('sample.pdf'));
+    await page.locator('#file-input').setInputFiles([
+      { name: 'alpha.pdf', mimeType: 'application/pdf', buffer: pdf },
+      { name: 'beta.pdf', mimeType: 'application/pdf', buffer: pdf },
+      { name: 'gamma.pdf', mimeType: 'application/pdf', buffer: pdf },
+    ]);
+
+    const moveAlphaLater = page.getByRole('button', { name: 'Move alpha.pdf later' });
+    const box = await moveAlphaLater.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+
+    await moveAlphaLater.click();
+    await expect(page.locator('.file-item__name')).toHaveText(['beta.pdf', 'alpha.pdf', 'gamma.pdf']);
+    await expect(page.getByRole('button', { name: 'Move alpha.pdf later' })).toBeFocused();
+
+    await page.getByRole('button', { name: 'Move alpha.pdf later' }).click();
+    await expect(page.locator('.file-item__name')).toHaveText(['beta.pdf', 'gamma.pdf', 'alpha.pdf']);
+
+    await page.locator('#action-btn').click();
+    await page.locator('#pdf-results').waitFor({ timeout: 15000 });
+    await expect.poll(() => page.evaluate(() => window.__irisfilesPdfReadOrder)).toEqual([
+      'beta.pdf',
+      'gamma.pdf',
+      'alpha.pdf',
+    ]);
+
+    const overflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth - document.documentElement.clientWidth
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+
   test('forward drag order matches the order used for merging', async ({ page }) => {
     await page.addInitScript(() => {
       const original = File.prototype.arrayBuffer;

@@ -96,12 +96,18 @@ function renderFileEntry(file) {
   const canReorder = mode === 'merge';
   if (canReorder) div.draggable = true;
   div.innerHTML = `
-    ${canReorder ? '<span class="drag-handle" title="Drag to reorder">&#x2630;</span>' : ''}
+    ${canReorder ? '<span class="drag-handle" title="Drag to reorder" aria-hidden="true">&#x2630;</span>' : ''}
     <div class="file-item__info">
       <div class="file-item__name">${esc(file.name)}</div>
       <div class="file-item__meta">${formatSize(file.size)}</div>
     </div>
-    <div class="file-item__actions">
+    <div class="file-item__actions${canReorder ? ' merge-file-actions' : ''}">
+      ${canReorder ? `
+        <div class="merge-reorder-actions" role="group" aria-label="Reorder ${esc(file.name)}">
+          <button type="button" class="btn btn--secondary merge-move-btn" data-move="earlier" title="Move earlier">&uarr;</button>
+          <button type="button" class="btn btn--secondary merge-move-btn" data-move="later" title="Move later">&darr;</button>
+        </div>
+      ` : ''}
       <button class="btn btn--danger btn-remove">Remove</button>
     </div>
   `;
@@ -109,10 +115,56 @@ function renderFileEntry(file) {
     const idx = files.indexOf(file);
     if (idx !== -1) files.splice(idx, 1);
     div.remove();
+    if (canReorder) refreshMergeReorderControls();
     updateControls();
   });
-  if (canReorder) setupDragReorder(div);
+  if (canReorder) {
+    setupDragReorder(div);
+    div.querySelector('[data-move="earlier"]').addEventListener('click', () => moveMergeFile(file, -1, 'earlier'));
+    div.querySelector('[data-move="later"]').addEventListener('click', () => moveMergeFile(file, 1, 'later'));
+  }
   fileList.appendChild(div);
+  if (canReorder) refreshMergeReorderControls();
+}
+
+function refreshMergeReorderControls() {
+  if (mode !== 'merge') return;
+  const items = [...fileList.querySelectorAll('.file-item')];
+  items.forEach((item, index) => {
+    const file = files[index];
+    const earlier = item.querySelector('[data-move="earlier"]');
+    const later = item.querySelector('[data-move="later"]');
+    const group = item.querySelector('.merge-reorder-actions');
+    if (group && file) group.setAttribute('aria-label', `Reorder ${file.name}`);
+    if (earlier && file) {
+      earlier.disabled = index === 0;
+      earlier.setAttribute('aria-label', `Move ${file.name} earlier`);
+    }
+    if (later && file) {
+      later.disabled = index === files.length - 1;
+      later.setAttribute('aria-label', `Move ${file.name} later`);
+    }
+  });
+}
+
+function moveMergeFile(file, delta, focusAction) {
+  const from = files.indexOf(file);
+  const to = from + delta;
+  if (from < 0 || to < 0 || to >= files.length) return;
+
+  const item = fileList.children[from];
+  const target = fileList.children[to];
+  const [moved] = files.splice(from, 1);
+  files.splice(to, 0, moved);
+
+  if (delta < 0) fileList.insertBefore(item, target);
+  else fileList.insertBefore(item, target.nextSibling);
+
+  refreshMergeReorderControls();
+  const movedItem = fileList.children[to];
+  const preferred = movedItem?.querySelector(`[data-move="${focusAction}"]:not(:disabled)`);
+  const fallback = movedItem?.querySelector('.merge-move-btn:not(:disabled)');
+  (preferred || fallback)?.focus();
 }
 
 let dragSrc = null;
@@ -146,6 +198,7 @@ function setupDragReorder(el) {
     // Sync the files array to match new DOM order
     const [moved] = files.splice(fromIdx, 1);
     files.splice(toIdx, 0, moved);
+    refreshMergeReorderControls();
   });
 }
 
