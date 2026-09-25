@@ -337,7 +337,7 @@ async function extractEpubText(file, onProgress, options = {}) {
       continue;
     }
     const body = doc.body || doc.documentElement;
-    const text = htmlBodyToPlainText(body);
+    const text = htmlBodyToPlainText(body, options);
     if (text) chapters.push(text);
 
     if (onProgress) onProgress(30 + Math.round((i / orderedFiles.length) * 40));
