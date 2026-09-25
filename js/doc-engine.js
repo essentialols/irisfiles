@@ -357,7 +357,7 @@ export async function epubToText(file, onProgress) {
 }
 
 export async function epubToPdf(file, onProgress) {
-  const text = await extractEpubText(file, onProgress);
+  const text = await extractEpubText(file, onProgress, { cellSeparator: '    ' });
   if (onProgress) onProgress(50);
   const blob = await textToPdfBlob(text, onProgress);
   if (onProgress) onProgress(100);
