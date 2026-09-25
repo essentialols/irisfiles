@@ -15,7 +15,7 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB per font file
 let targetFormat = 'ttf';
 let dropZone, fileInput, fileList, actionBtn, clearBtn;
 const files = [];
-const results = []; // { name, blob }
+const results = []; // { name, sourceName, blob } | { sourceName, error }
 let generation = 0;
 let activeOperation = false;
 
@@ -164,11 +164,18 @@ async function runConversion() {
       // past it would leave the button disabled for good.
       if (myGen !== generation) break;
       actionBtn.textContent = `Converting ${i + 1}/${snapshot.length}...`;
-      const blob = await convertFont(f, targetFormat, pct => {
-        if (myGen === generation) actionBtn.textContent = `Converting ${i + 1}/${snapshot.length}... ${pct}%`;
-      });
-      const outName = f.name.replace(/\.[^.]+$/, '') + '.' + targetFormat;
-      localResults.push({ name: outName, blob });
+      try {
+        const blob = await convertFont(f, targetFormat, pct => {
+          if (myGen === generation) actionBtn.textContent = `Converting ${i + 1}/${snapshot.length}... ${pct}%`;
+        });
+        const outName = f.name.replace(/\.[^.]+$/, '') + '.' + targetFormat;
+        localResults.push({ name: outName, sourceName: f.name, blob });
+      } catch (err) {
+        // A batch is useful even when one source is malformed or unsupported.
+        // Keep converting the remaining files and surface this failure next to
+        // its source instead of discarding every successful result in the batch.
+        localResults.push({ sourceName: f.name, error: (err && err.message) || 'Conversion failed.' });
+      }
     }
 
     if (myGen === generation) {
@@ -190,16 +197,44 @@ async function runConversion() {
 }
 
 function showResults(durationMs) {
+  // Discriminate structurally, not on truthiness: a falsy error message would
+  // otherwise land an entry in neither list and render as a success with no blob.
+  const failures = results.filter(r => 'error' in r);
+  const successes = results.filter(r => !('error' in r));
+
+  // Preserve the familiar single-file error treatment while giving mixed
+  // batches per-file results below. A batch where everything failed created no
+  // file either, so it gets the same refusal wording rather than a 0-converted summary.
+  if (successes.length === 0 && failures.length) {
+    showError(failures.length === 1 ? failures[0].error : `All ${failures.length} fonts failed to convert; no file was created.`);
+    return;
+  }
+
   const div = makeResultsDiv();
   const dur = durationMs < 1000 ? durationMs + 'ms' : (durationMs / 1000).toFixed(1) + 's';
-  const totalSize = results.reduce((s, r) => s + r.blob.size, 0);
+  const totalSize = successes.reduce((s, r) => s + r.blob.size, 0);
 
   let html = '';
   if (results.length > 1) {
-    html += `<div class="batch-summary">${results.length} files \u00b7 ${formatSize(totalSize)} \u00b7 ${dur}</div>`;
+    const failedPart = failures.length ? ` \u00b7 ${failures.length} failed` : '';
+    html += `<div class="batch-summary">${successes.length} converted${failedPart} \u00b7 ${formatSize(totalSize)} \u00b7 ${dur}</div>`;
   }
 
   results.forEach((r, i) => {
+    if ('error' in r) {
+      html += `
+        <div class="file-item failed">
+          <div class="file-item__info">
+            <div class="file-item__name">${esc(r.sourceName)}</div>
+            <div class="file-item__meta">${esc(r.error)}</div>
+          </div>
+          <div class="file-item__actions">
+            <span class="file-item__status error">Failed</span>
+          </div>
+        </div>`;
+      return;
+    }
+
     html += `
       <div class="file-item done">
         <div class="file-item__info">
@@ -212,7 +247,7 @@ function showResults(durationMs) {
       </div>`;
   });
 
-  if (results.length >= 2) {
+  if (successes.length >= 2) {
     html += `<button class="btn btn--primary" id="dl-all-zip" style="margin-top:0.75rem">Download All as ZIP</button>`;
   }
 
@@ -231,7 +266,7 @@ function showResults(durationMs) {
       zipBtn.disabled = true;
       zipBtn.textContent = 'Zipping...';
       try {
-        const entries = await Promise.all(results.map(async r => ({
+        const entries = await Promise.all(results.filter(r => r.blob).map(async r => ({
           name: r.name,
           data: new Uint8Array(await r.blob.arrayBuffer()),
         })));

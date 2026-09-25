@@ -3,7 +3,7 @@ import { peekPendingFiles } from './pending-store.js';
 const ACTIVE_DB = 'irisfiles-active-file';
 const ACTIVE_STORE = 'active';
 const ACTIVE_KEY = 'current';
-const CSS_HREF = '/css/file-focus.css?v=62d7ccf7';
+const CSS_HREF = '/css/file-focus.css?v=0f18182a';
 
 // The live selection lives in memory; it reaches disk only for a tool-to-tool hop.
 let activeSelection = [];
