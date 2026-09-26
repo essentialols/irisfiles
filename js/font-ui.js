@@ -64,25 +64,39 @@ export function init() {
 function addFiles(fileList_) {
   const incoming = Array.from(fileList_);
   const initialCount = files.length;
-  const remaining = MAX_BATCH - files.length;
-  if (remaining <= 0) {
+  if (files.length >= MAX_BATCH) {
     showNotice(`Batch limit reached (${MAX_BATCH} files). Clear some files first.`);
     return;
   }
-  const toAdd = incoming.slice(0, remaining);
-  if (toAdd.length < incoming.length) {
-    showNotice(`Only added ${toAdd.length} of ${incoming.length} files (batch limit: ${MAX_BATCH}).`);
-  }
 
-  let skipped = 0;
-  for (const f of toAdd) {
-    if (f.size > MAX_FILE_SIZE) { skipped++; continue; }
+  let skippedTooLarge = 0;
+  let skippedForLimit = 0;
+  for (const f of incoming) {
+    // Reject unusable files before applying the batch cap. Otherwise an
+    // oversized file at the front of a multi-file drop consumes one of the
+    // remaining slots even though it is never queued, and a valid file later
+    // in the same drop silently disappears.
+    if (f.size > MAX_FILE_SIZE) {
+      skippedTooLarge++;
+      continue;
+    }
+    if (files.length >= MAX_BATCH) {
+      skippedForLimit++;
+      continue;
+    }
     files.push(f);
     renderFileEntry(f);
   }
-  if (skipped > 0) {
-    showNotice(`${skipped} file(s) skipped (max ${formatSize(MAX_FILE_SIZE)} per file).`);
+
+  const noticeParts = [];
+  if (skippedTooLarge > 0) {
+    noticeParts.push(`${skippedTooLarge} file(s) skipped (max ${formatSize(MAX_FILE_SIZE)} per file).`);
   }
+  if (skippedForLimit > 0) {
+    noticeParts.push(`${skippedForLimit} file(s) not added (batch limit: ${MAX_BATCH}).`);
+  }
+  if (noticeParts.length) showNotice(noticeParts.join(' '));
+
   // Results belong to the exact queue that produced them. Adding a source must
   // hide completed results from the old queue and invalidate a run in flight,
   // otherwise the page can offer downloads that omit a file now visibly queued.
