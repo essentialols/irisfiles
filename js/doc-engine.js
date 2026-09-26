@@ -467,7 +467,8 @@ function parseRtf(rtfString) {
         const codePage = parseInt(param, 10);
         // Preserve the existing byte-for-byte fallback for code pages that
         // require handling beyond the common Windows-1252 path.
-        ansiDecoder = codePage === 1252 ? new TextDecoder('windows-1252') : null;
+        ansiDecoder = codePage === 1252 ? new TextDecoder('windows-1252') :
+          codePage === 1251 ? new TextDecoder('windows-1251') : null;
       } else if (word === 'mac' || word === 'pc' || word === 'pca') {
         ansiDecoder = null;
       } else if (word === 'uc') {
