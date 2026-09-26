@@ -465,10 +465,11 @@ function parseRtf(rtfString) {
         ansiDecoder = new TextDecoder('windows-1252');
       } else if (word === 'ansicpg') {
         const codePage = parseInt(param, 10);
-        // Preserve the existing byte-for-byte fallback for code pages that
-        // require handling beyond the common Windows-1252 path.
+        // Preserve the byte-for-byte fallback for code pages that need
+        // handling beyond the single-byte Windows-1250/1251/1252 paths.
         ansiDecoder = codePage === 1252 ? new TextDecoder('windows-1252') :
-          codePage === 1251 ? new TextDecoder('windows-1251') : null;
+          codePage === 1251 ? new TextDecoder('windows-1251') :
+          codePage === 1250 ? new TextDecoder('windows-1250') : null;
       } else if (word === 'mac' || word === 'pc' || word === 'pca') {
         ansiDecoder = null;
       } else if (word === 'uc') {
