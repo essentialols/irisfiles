@@ -183,6 +183,45 @@ test.describe('font conversion output', () => {
     expect((await readFile(outputPath)).length).toBeGreaterThan(1_000);
   });
 
+  test('an oversized font does not consume the final batch slot ahead of a valid font', async ({ page }) => {
+    await page.goto('/ttf-to-woff');
+
+    // Start one short of the cap with tiny stand-ins. This test is about queue
+    // admission, so none of these files need to reach the converter.
+    const firstBatch = Array.from({ length: 49 }, (_, i) => ({
+      name: `queued-${String(i + 1).padStart(2, '0')}.ttf`,
+      mimeType: 'font/ttf',
+      buffer: Buffer.from([0x00, 0x01, 0x00, 0x00]),
+    }));
+    await page.locator('#file-input').setInputFiles(firstBatch);
+    await expect(page.locator('#file-list .file-item')).toHaveCount(49);
+
+    // A real 50 MB allocation would make this small admission regression slow.
+    // File.size is inherited from Blob and can be shadowed on the instance, so
+    // the drop still exercises the production addFiles path with browser File
+    // objects while accurately representing an oversized first item.
+    await page.evaluate(maxFileSize => {
+      const tooLarge = new File([new Uint8Array([0])], 'too-large.ttf', { type: 'font/ttf' });
+      Object.defineProperty(tooLarge, 'size', { value: maxFileSize + 1 });
+
+      const valid = new File(
+        [new Uint8Array([0x00, 0x01, 0x00, 0x00])],
+        'last-valid.ttf',
+        { type: 'font/ttf' },
+      );
+
+      const event = new Event('drop', { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'dataTransfer', { value: { files: [tooLarge, valid] } });
+      document.querySelector('#drop-zone').dispatchEvent(event);
+    }, 50 * 1024 * 1024);
+
+    await expect(page.locator('#file-list .file-item')).toHaveCount(50);
+    await expect(page.locator('#file-list')).toContainText('last-valid.ttf');
+    await expect(page.locator('#file-list')).not.toContainText('too-large.ttf');
+    await expect(page.locator('#cf-notice')).toContainText('1 file(s) skipped');
+    await expect(page.locator('#cf-notice')).not.toContainText('batch limit');
+  });
+
   test('one malformed font does not discard the successful files in a batch', async ({ page }) => {
     await page.goto('/ttf-to-woff');
     // Playwright refuses to mix fixture paths with inline buffers in one call,
