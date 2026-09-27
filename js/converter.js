@@ -165,6 +165,117 @@ async function encodeCanvasAsGif(canvas) {
   return new Blob([gif.bytes()], { type: 'image/gif' });
 }
 
+async function webpIsAnimated(file) {
+  if (file.size < 20) return false;
+  const riff = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  if (readFourCC(riff, 0) !== 'RIFF' || readFourCC(riff, 8) !== 'WEBP') return false;
+
+  let offset = 12;
+  while (offset + 8 <= file.size) {
+    const header = new Uint8Array(await file.slice(offset, offset + 8).arrayBuffer());
+    if (header.length < 8) return false;
+    const chunk = readFourCC(header, 0);
+    if (chunk === 'ANIM' || chunk === 'ANMF') return true;
+
+    const size = new DataView(header.buffer, header.byteOffset, header.byteLength).getUint32(4, true);
+    const next = offset + 8 + size + (size & 1);
+    if (!Number.isSafeInteger(next) || next <= offset || next > file.size) return false;
+    offset = next;
+  }
+  return false;
+}
+
+function gifFrameDelayMs(durationUs) {
+  const milliseconds = Math.round((durationUs ?? 100_000) / 1000);
+  // GIF stores frame delay in an unsigned 16-bit centisecond field.
+  return Math.min(655_350, Math.max(10, milliseconds));
+}
+
+async function encodeAnimatedWebpAsGif(file) {
+  if (typeof ImageDecoder === 'undefined' || typeof ImageDecoder.isTypeSupported !== 'function') {
+    throw new Error('This browser cannot preserve animated WebP frames. Try a browser with WebCodecs ImageDecoder support.');
+  }
+
+  let supported = false;
+  try {
+    supported = await ImageDecoder.isTypeSupported('image/webp');
+  } catch {
+    supported = false;
+  }
+  if (!supported) {
+    throw new Error('This browser cannot preserve animated WebP frames. Try a browser with WebCodecs ImageDecoder support.');
+  }
+
+  const decoder = new ImageDecoder({
+    data: file.stream(),
+    type: 'image/webp',
+    preferAnimation: true,
+  });
+
+  try {
+    await decoder.tracks.ready;
+    await decoder.completed;
+    const track = decoder.tracks.selectedTrack;
+    if (!track?.animated || track.frameCount <= 1) return null;
+
+    const { GIFEncoder, quantize, applyPalette } = await loadGifEncoder();
+    const gif = GIFEncoder();
+    const canvas = document.createElement('canvas');
+    let ctx = null;
+    let width = 0;
+    let height = 0;
+    const repeat = Number.isFinite(track.repetitionCount)
+      ? Math.min(65_535, Math.max(0, Math.round(track.repetitionCount)))
+      : 0;
+
+    for (let frameIndex = 0; frameIndex < track.frameCount; frameIndex++) {
+      const { image } = await decoder.decode({ frameIndex });
+      try {
+        const frameWidth = image.displayWidth || image.codedWidth;
+        const frameHeight = image.displayHeight || image.codedHeight;
+        if (frameIndex === 0) {
+          validateDimensions(frameWidth, frameHeight);
+          width = frameWidth;
+          height = frameHeight;
+          canvas.width = width;
+          canvas.height = height;
+          ctx = canvas.getContext('2d', { willReadFrequently: true });
+          if (!ctx) throw new Error('Could not get canvas context');
+        } else if (frameWidth !== width || frameHeight !== height) {
+          throw new Error('Animated WebP frames use inconsistent dimensions.');
+        }
+
+        ctx.clearRect(0, 0, width, height);
+        ctx.drawImage(image, 0, 0, width, height);
+        const pixels = ctx.getImageData(0, 0, width, height).data;
+        const palette = quantize(pixels, 256, { format: 'rgba4444', oneBitAlpha: true });
+        const index = applyPalette(pixels, palette, 'rgba4444');
+        const transparentIndex = palette.findIndex(color => color[3] === 0);
+        const options = {
+          palette,
+          delay: gifFrameDelayMs(image.duration),
+          dispose: 0,
+          transparent: transparentIndex !== -1,
+          transparentIndex: Math.max(0, transparentIndex),
+        };
+        if (frameIndex === 0) options.repeat = repeat;
+        gif.writeFrame(index, width, height, options);
+      } finally {
+        image.close();
+      }
+
+      if (frameIndex % 5 === 4) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    }
+
+    gif.finish();
+    return new Blob([gif.bytes()], { type: 'image/gif' });
+  } finally {
+    decoder.close();
+  }
+}
+
 // An SVG is resolution-independent, so a viewBox larger than the canvas budget
 // is rendered at the largest safe size instead of failing. A raster image of the
 // same pixel count still throws, because downscaling it would silently discard
@@ -325,6 +436,10 @@ export async function convertWithCanvas(file, targetMime, quality) {
   // create an ImageBitmap from SVG while others cannot, but SVG-as-image resource
   // isolation is the same product constraint and must not depend on that detail.
   const fmt = await detectFormat(file);
+  if (targetMime === 'image/gif' && fmt?.mime === 'image/webp' && await webpIsAnimated(file)) {
+    const animatedGif = await encodeAnimatedWebpAsGif(file);
+    if (animatedGif) return animatedGif;
+  }
   let source;
   let width;
   let height;
