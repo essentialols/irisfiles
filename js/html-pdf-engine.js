@@ -8,11 +8,16 @@ let libsPromise=null;
 function loadScript(src,check){return new Promise((resolve,reject)=>{if(check())return resolve();const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=()=>reject(new Error('Failed to load HTML to PDF renderer. Check your internet connection.'));document.head.appendChild(s);});}
 async function libs(){if(!libsPromise)libsPromise=(async()=>{await loadScript(HTML2CANVAS,()=>!!window.html2canvas);await loadScript(JSPDF,()=>!!window.jspdf?.jsPDF);return {html2canvas:window.html2canvas,jsPDF:window.jspdf.jsPDF};})();return libsPromise;}
 function safeUrl(value){const v=(value||'').trim();return v.startsWith('data:')||v.startsWith('blob:')||v.startsWith('#')||v==='';}
+function sanitizeCssUrls(value){
+  // Keep resources embedded in the uploaded document, but strip every CSS URL
+  // that could cause the private preview to reach the network.
+  return (value||'').replace(/url\(\s*(?!["']?(?:data:|blob:|#))[^)]*\)/gi,'none');
+}
 function sanitizeHtml(source){
   const parser=new DOMParser();const doc=parser.parseFromString(source,'text/html');
   doc.querySelectorAll('script,iframe,frame,object,embed,audio,video,source,track,base,link[rel="stylesheet"],link[rel="preload"],link[rel="modulepreload"],meta[http-equiv="refresh" i]').forEach(el=>el.remove());
-  doc.querySelectorAll('*').forEach(el=>{for(const attr of [...el.attributes]){const name=attr.name.toLowerCase();if(name.startsWith('on'))el.removeAttribute(attr.name);if(['src','href','poster','action','formaction'].includes(name)&&!safeUrl(attr.value))el.removeAttribute(attr.name);if(name==='srcset')el.removeAttribute(attr.name);if(name==='style')el.setAttribute('style',attr.value.replace(/url\([^)]*\)/gi,'none'));}});
-  doc.querySelectorAll('style').forEach(style=>{style.textContent=(style.textContent||'').replace(/@import[^;]+;/gi,'').replace(/url\([^)]*\)/gi,'none');});
+  doc.querySelectorAll('*').forEach(el=>{for(const attr of [...el.attributes]){const name=attr.name.toLowerCase();if(name.startsWith('on'))el.removeAttribute(attr.name);if(['src','href','poster','action','formaction'].includes(name)&&!safeUrl(attr.value))el.removeAttribute(attr.name);if(name==='srcset')el.removeAttribute(attr.name);if(name==='style')el.setAttribute('style',sanitizeCssUrls(attr.value));}});
+  doc.querySelectorAll('style').forEach(style=>{style.textContent=sanitizeCssUrls((style.textContent||'').replace(/@import[^;]+;/gi,''));});
   const csp=doc.createElement('meta');csp.httpEquiv='Content-Security-Policy';csp.content="default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; font-src data:;";doc.head.prepend(csp);
   return '<!DOCTYPE html>'+doc.documentElement.outerHTML;
 }
