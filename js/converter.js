@@ -206,15 +206,21 @@ async function encodeAnimatedWebpAsGif(file) {
     throw new Error('This browser cannot preserve animated WebP frames. Try a browser with WebCodecs ImageDecoder support.');
   }
 
-  const decoder = new ImageDecoder({
-    data: file.stream(),
-    type: 'image/webp',
-    preferAnimation: true,
-  });
-
+  let decoder;
   try {
+    decoder = new ImageDecoder({
+      data: file.stream(),
+      type: 'image/webp',
+      preferAnimation: true,
+    });
     await decoder.tracks.ready;
     await decoder.completed;
+  } catch {
+    decoder?.close();
+    throw new Error('Could not decode animated WebP. The file may be corrupted or unsupported by this browser.');
+  }
+
+  try {
     const track = decoder.tracks.selectedTrack;
     if (!track?.animated || track.frameCount <= 1) return null;
 
@@ -229,7 +235,13 @@ async function encodeAnimatedWebpAsGif(file) {
       : 0;
 
     for (let frameIndex = 0; frameIndex < track.frameCount; frameIndex++) {
-      const { image } = await decoder.decode({ frameIndex });
+      let decoded;
+      try {
+        decoded = await decoder.decode({ frameIndex });
+      } catch {
+        throw new Error('Could not decode animated WebP. The file may be corrupted or unsupported by this browser.');
+      }
+      const { image } = decoded;
       try {
         const frameWidth = image.displayWidth || image.codedWidth;
         const frameHeight = image.displayHeight || image.codedHeight;
