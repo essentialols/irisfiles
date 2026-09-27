@@ -66,4 +66,29 @@ test.describe('Animated WebP to GIF', () => {
     const outputMs = output.durations.reduce((sum, duration) => sum + duration, 0) / 1000;
     expect(Math.abs(outputMs - sourceMs)).toBeLessThanOrEqual(source.frameCount * 10);
   });
+
+  test('reports a corrupted animated WebP instead of producing a download', async ({ page }) => {
+    await page.goto('/webp-to-gif');
+    const supported = await page.evaluate(async () => (
+      typeof ImageDecoder !== 'undefined'
+      && typeof ImageDecoder.isTypeSupported === 'function'
+      && await ImageDecoder.isTypeSupported('image/webp')
+    ));
+    test.skip(!supported, 'WebCodecs ImageDecoder is required for the corrupted animation path');
+
+    const bytes = await readFile(fixture('animated.webp'));
+    const animOffset = bytes.indexOf(Buffer.from('ANIM'));
+    expect(animOffset).toBeGreaterThanOrEqual(0);
+
+    await page.locator('#file-input').setInputFiles({
+      name: 'broken-animation.webp',
+      mimeType: 'image/webp',
+      buffer: bytes.subarray(0, animOffset + 10),
+    });
+
+    const error = page.locator('.file-item__status.error').first();
+    await expect(error).toBeVisible({ timeout: 15_000 });
+    await expect(error).toContainText('Could not decode animated WebP');
+    await expect(page.locator('.btn-download')).toHaveCount(0);
+  });
 });
