@@ -137,7 +137,89 @@ export function validateDimensions(width, height) {
 
 export { MAX_BATCH_SIZE };
 
-export const TIFF_DECODE_ERROR = 'Could not decode TIFF. This browser may not support TIFF, or the file may be corrupted. Try Safari or another TIFF-capable app.';
+export const TIFF_DECODE_ERROR = 'Could not decode TIFF. The file may be corrupted or use a TIFF feature IrisFiles does not support yet.';
+
+let tiffDecoderPromise = null;
+
+async function loadTiffDecoder() {
+  if (globalThis.UTIF) return globalThis.UTIF;
+  if (!tiffDecoderPromise) {
+    tiffDecoderPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = '/js/utif.js';
+      script.onload = () => globalThis.UTIF
+        ? resolve(globalThis.UTIF)
+        : reject(new Error('TIFF decoder did not initialize'));
+      script.onerror = () => reject(new Error('Could not load the local TIFF decoder. Reload the page and try again.'));
+      document.head.appendChild(script);
+    }).catch(error => {
+      tiffDecoderPromise = null;
+      throw error;
+    });
+  }
+  return tiffDecoderPromise;
+}
+
+function orientTiffCanvas(rawCanvas, orientation) {
+  if (!Number.isInteger(orientation) || orientation < 2 || orientation > 8) return rawCanvas;
+  const width = rawCanvas.width;
+  const height = rawCanvas.height;
+  const swapsAxes = orientation >= 5;
+  const canvas = document.createElement('canvas');
+  canvas.width = swapsAxes ? height : width;
+  canvas.height = swapsAxes ? width : height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Could not get canvas context');
+  switch (orientation) {
+    case 2: ctx.setTransform(-1, 0, 0, 1, width, 0); break;
+    case 3: ctx.setTransform(-1, 0, 0, -1, width, height); break;
+    case 4: ctx.setTransform(1, 0, 0, -1, 0, height); break;
+    case 5: ctx.setTransform(0, 1, 1, 0, 0, 0); break;
+    case 6: ctx.setTransform(0, 1, -1, 0, height, 0); break;
+    case 7: ctx.setTransform(0, -1, -1, 0, height, width); break;
+    case 8: ctx.setTransform(0, -1, 1, 0, 0, width); break;
+  }
+  ctx.drawImage(rawCanvas, 0, 0);
+  rawCanvas.width = 1;
+  rawCanvas.height = 1;
+  return canvas;
+}
+
+export async function loadTiffImage(file) {
+  const decoder = await loadTiffDecoder();
+  const buffer = await file.arrayBuffer();
+  let ifd;
+  try {
+    const ifds = decoder.decode(buffer);
+    ifd = ifds.find(candidate => {
+      const width = Number(candidate?.t256?.[0]);
+      const height = Number(candidate?.t257?.[0]);
+      return Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0;
+    });
+  } catch {
+    throw new Error(TIFF_DECODE_ERROR);
+  }
+  if (!ifd) throw new Error(TIFF_DECODE_ERROR);
+  const width = Number(ifd.t256[0]);
+  const height = Number(ifd.t257[0]);
+  validateDimensions(width, height);
+  let rgba;
+  try {
+    decoder.decodeImage(buffer, ifd);
+    rgba = decoder.toRGBA8(ifd);
+  } catch {
+    throw new Error(TIFF_DECODE_ERROR);
+  }
+  if (!rgba || rgba.length !== width * height * 4) throw new Error(TIFF_DECODE_ERROR);
+  const rawCanvas = document.createElement('canvas');
+  rawCanvas.width = width;
+  rawCanvas.height = height;
+  const rawCtx = rawCanvas.getContext('2d');
+  if (!rawCtx) throw new Error('Could not get canvas context');
+  rawCtx.putImageData(new ImageData(new Uint8ClampedArray(rgba), width, height), 0, 0);
+  const canvas = orientTiffCanvas(rawCanvas, Number(ifd.t274?.[0]) || 1);
+  return { image: canvas, width: canvas.width, height: canvas.height, cleanup: () => { canvas.width = 1; canvas.height = 1; } };
+}
 
 let gifEncoderPromise = null;
 
@@ -386,24 +468,6 @@ export async function loadSvgImage(file) {
   }
 }
 
-async function loadNativeImage(file, errorMessage) {
-  const url = URL.createObjectURL(file);
-  const img = new Image();
-  img.src = url;
-  try {
-    await img.decode();
-    return {
-      image: img,
-      width: img.naturalWidth,
-      height: img.naturalHeight,
-      cleanup: () => URL.revokeObjectURL(url),
-    };
-  } catch {
-    URL.revokeObjectURL(url);
-    throw new Error(errorMessage);
-  }
-}
-
 // createImageBitmap rejects a whole ICO when one embedded frame is damaged, even
 // if another frame is fine. Rewrap each frame as a one-image ICO, largest first,
 // and return the first that decodes.
@@ -469,11 +533,10 @@ export async function convertWithCanvas(file, targetMime, quality) {
       height = source.height;
       cleanup = () => source.close();
     } catch {
-      // Chrome, Edge and Firefox cannot createImageBitmap a TIFF while Safari
-      // decodes one through <img>, so this fallback is what makes the TIFF
-      // guidance reachable instead of a generic decode failure.
+      // Safari/WebKit may decode TIFF natively. Chromium/Firefox generally do
+      // not, so fall back to the vendored local decoder without uploading data.
       if (fmt?.mime === 'image/tiff') {
-        const loaded = await loadNativeImage(file, TIFF_DECODE_ERROR);
+        const loaded = await loadTiffImage(file);
         source = loaded.image;
         width = loaded.width;
         height = loaded.height;
