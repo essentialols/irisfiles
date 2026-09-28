@@ -90,6 +90,38 @@ test('MKV to MP4 preserves all audio tracks', async ({ page }) => {
   expect(countTrackHandlers(output, 'soun')).toBe(2);
 });
 
+function countAsciiOccurrences(buf, needle) {
+  let count = 0;
+  let offset = 0;
+  while ((offset = buf.indexOf(needle, offset, 'ascii')) !== -1) {
+    count += 1;
+    offset += needle.length;
+  }
+  return count;
+}
+
+test('Video Metadata strip keeps alternate MKV audio tracks', async ({ page }) => {
+  await page.goto('/video-metadata');
+  await page.locator('#file-input').setInputFiles({
+    name: 'Résumé_日本語_multi-audio.mkv',
+    mimeType: 'video/x-matroska',
+    buffer: await fs.readFile(MULTI_AUDIO_MKV),
+  });
+
+  await expect(page.locator('#strip-all')).toBeVisible({ timeout: 120000 });
+  await page.locator('#strip-all').click();
+  await expect(page.locator('.btn-download')).toBeVisible({ timeout: 120000 });
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('.btn-download').click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('Résumé_日本語_multi-audio-clean.mkv');
+
+  const output = await fs.readFile(await download.path());
+  expect(countAsciiOccurrences(output, 'A_AAC')).toBe(2);
+  expect(output.includes('V_MPEG4/ISO/AVC')).toBe(true);
+});
+
 // The audio map is optional, so an input with no audio at all must still
 // convert rather than fail "Stream map '0:a' matches no streams".
 test('a video-only AVI still converts', async ({ page }) => {

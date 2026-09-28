@@ -159,7 +159,7 @@ async function runMetadataStrip(ffmpeg, file, onStatus, onProgress) {
   if (onProgress) onProgress(30);
 
   if (onStatus) onStatus('Stripping metadata...');
-  await ffmpeg.exec(['-i', inName, '-map_metadata', '-1', '-c', 'copy', '-y', outName]);
+  await ffmpeg.exec(['-i', inName, '-map', '0', '-map_metadata', '-1', '-c', 'copy', '-y', outName]);
   if (onProgress) onProgress(80);
 
   const outData = await ffmpeg.readFile(outName);
