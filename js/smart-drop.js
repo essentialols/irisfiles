@@ -1841,6 +1841,7 @@ export function initSmartDrop() {
     selectionToken++;
     for (const u of prevBlobUrls) URL.revokeObjectURL(u);
     prevBlobUrls = [];
+    delete routePanel.dataset.detectedExt;
     routePanel.innerHTML = '';
     routePanel.style.display = 'none';
     dropZone.classList.remove('compact');
@@ -1893,6 +1894,8 @@ export function initSmartDrop() {
     if (files.length === 0) return;
 
     const token = ++selectionToken;
+
+    delete routePanel.dataset.detectedExt;
 
     // Revoke previous blob URLs
     for (const u of prevBlobUrls) URL.revokeObjectURL(u);
@@ -2016,7 +2019,10 @@ export function initSmartDrop() {
     const conversions = routes.filter(r => r.label.startsWith('Convert to'));
     const tools = routes.filter(r => !r.label.startsWith('Convert to'));
 
-    // Build DOM
+    // Build DOM. Every file in this batch was detected as one format (mixed
+    // batches returned above), so publish it for high-value-landing.js instead
+    // of letting it re-derive the format from file names.
+    routePanel.dataset.detectedExt = dominantInfo.ext;
     routePanel.innerHTML = '';
 
     // Dismiss button
