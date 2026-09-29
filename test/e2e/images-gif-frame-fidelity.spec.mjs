@@ -259,4 +259,31 @@ test.describe('Images to GIF frame fidelity', () => {
     expectColorNear(leftEdge, [0x11, 0x55, 0xaa]);
     expectColorNear(centre, [0xff, 0xcc, 0x00]);
   });
+
+  // Half a pixel of height rounding is aspect/2 pixels of width, so the frame
+  // that defines the canvas used to sit inset behind a 2-5px transparent edge.
+  for (const [width, height] of [[854, 142], [705, 71]]) {
+    test(`fills the canvas edge to edge for a ${width}x${height} panorama`, async ({ page }) => {
+      await page.goto('/images-to-gif');
+      const first = await buildPng(page, { width, height, background: '#1155aa', square: '#ffcc00' });
+      const second = await buildPng(page, { width, height, background: '#1155aa', square: '#cc2200' });
+      await page.locator('#file-input').setInputFiles([
+        { name: 'pano-a.png', mimeType: 'image/png', buffer: first },
+        { name: 'pano-b.png', mimeType: 'image/png', buffer: second },
+      ]);
+      await page.locator('.frame-item').nth(1).waitFor({ timeout: 5000 });
+      await page.locator('#convert-btn').click();
+      await page.locator('#dl-gif').waitFor({ timeout: 30000 });
+
+      const output = await downloadGif(page);
+      const info = gifInfo(output.bytes);
+      expect(info.width).toBe(640);
+      expect(info.graphicControls.some(control => control.transparent)).toBe(false);
+
+      const mid = Math.floor(info.height / 2);
+      const [left, right] = await firstFramePixels(page, output.bytes, [[0, mid], [639, mid]]);
+      expectColorNear(left, [0x11, 0x55, 0xaa]);
+      expectColorNear(right, [0x11, 0x55, 0xaa]);
+    });
+  }
 });
