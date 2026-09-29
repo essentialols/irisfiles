@@ -118,4 +118,49 @@ test.describe('Extract ZIP duplicate paths', () => {
     expect(unpacked['nested/日本語.txt']).toBe('秘密のメモ\n');
     expect(Object.prototype.hasOwnProperty.call(unpacked, 'empty.bin')).toBe(true);
   });
+
+  // The sanitizer's edge cases live in test/archive-name.mjs. The browser only
+  // has to prove the wiring: extract lists sanitized names, and "Download All"
+  // re-zips those names rather than the raw ones.
+  test('sanitizes unsafe member names and re-zips the safe names', async ({ page }) => {
+    const zip = makeStoredZip([
+      { name: '../escape.txt', data: Buffer.from('ESCAPE\n') },
+      { name: 'C:\\dir\\drive.txt', data: Buffer.from('DRIVE\n') },
+      { name: 'escape.txt', data: Buffer.from('SECOND\n') },
+    ]);
+
+    await page.goto('/extract-zip');
+    await page.locator('#file-input').setInputFiles({
+      name: 'unsafe-paths.zip',
+      mimeType: 'application/zip',
+      buffer: zip,
+    });
+    await page.locator('#action-btn').click();
+    await page.locator('#archive-results').waitFor({ timeout: 10000 });
+
+    await expect(page.locator('#archive-results .file-item__name')).toHaveText([
+      'escape.txt',
+      'dir/drive.txt',
+      'escape (2).txt',
+    ]);
+
+    const [batchDownload] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('#dl-all').click(),
+    ]);
+    const batchBytes = await readFile(await batchDownload.path());
+    const unpacked = await page.evaluate(bytes => {
+      const entries = fflate.unzipSync(Uint8Array.from(bytes));
+      return Object.fromEntries(Object.entries(entries).map(([name, data]) => [
+        name,
+        new TextDecoder().decode(data),
+      ]));
+    }, Array.from(batchBytes));
+
+    expect(unpacked).toEqual({
+      'escape.txt': 'ESCAPE\n',
+      'dir/drive.txt': 'DRIVE\n',
+      'escape (2).txt': 'SECOND\n',
+    });
+  });
 });
