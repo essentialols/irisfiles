@@ -107,7 +107,7 @@
       <div class="faq-item">
         <button class="faq-question">How does image compression work?</button>
         <div class="faq-answer">
-          <p>IrisFiles re-encodes your image at a lower quality setting using your browser's Canvas API. For JPG and WebP, this means more aggressive lossy compression. Lower quality means smaller files but more visible artifacts.</p>
+          <p>IrisFiles re-encodes your image at a lower quality setting using your browser's Canvas API. For JPG and WebP, this means more aggressive lossy compression. Lower quality means smaller files but more visible artifacts. Animated GIF, WebP and APNG files are refused because Canvas re-encoding would keep only the first frame.</p>
         </div>
       </div>
       <div class="faq-item">

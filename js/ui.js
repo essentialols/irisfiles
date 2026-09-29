@@ -8,6 +8,7 @@ import {
   outputFilename, downloadBlob, downloadAsZip, formatSize,
   validateFile, MAX_BATCH_SIZE, snapTo
 } from './converter.js';
+import { animatedImageKind } from './animation.js';
 import { loadPendingFiles } from './smart-drop.js';
 import { checkWorkload } from './device-tier.js';
 import { showPersistentNotice } from './notice-ui.js';
@@ -252,6 +253,15 @@ async function processFile(entry) {
   // For compress mode, keep the same format
   const targetMime = PAGE_CONFIG.mode === 'compress' ? fmt.mime : PAGE_CONFIG.targetMime;
   const targetExt = PAGE_CONFIG.mode === 'compress' ? fmt.ext : PAGE_CONFIG.targetExt;
+
+  // Canvas keeps only the first frame, so re-encoding an animated source would come
+  // out as a still with no warning. Same refusal as Resize Image.
+  if (PAGE_CONFIG.mode === 'compress') {
+    const animated = await animatedImageKind(entry.file);
+    if (animated) {
+      throw new Error(`Animated ${animated} cannot be compressed without discarding frames. Use a single-frame image instead.`);
+    }
+  }
 
   // Validate source format (skip in compress mode)
   if (PAGE_CONFIG.mode !== 'compress' && PAGE_CONFIG.sourceFormats.length > 0) {
