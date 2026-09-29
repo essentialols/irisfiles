@@ -66,6 +66,29 @@ function addPrivateGifMetadata(buffer) {
   };
 }
 
+function webpChunkTypes(buffer) {
+  const types = [];
+  for (let pos = 12; pos + 8 <= buffer.length;) {
+    const size = buffer.readUInt32LE(pos + 4);
+    types.push(buffer.toString('latin1', pos, pos + 4));
+    pos += 8 + size + (size & 1);
+  }
+  return types;
+}
+
+function addPrivateWebpChunks(buffer) {
+  const payload = Buffer.from('private-webp-secret');
+  const chunk = (type, data) => {
+    const header = Buffer.alloc(8);
+    header.write(type, 0, 'latin1');
+    header.writeUInt32LE(data.length, 4);
+    return Buffer.concat([header, data, Buffer.alloc(data.length & 1)]);
+  };
+  const out = Buffer.concat([buffer, chunk('PRIV', payload), chunk('EXIF', payload)]);
+  out.writeUInt32LE(out.length - 8, 4);
+  return { payload, buffer: out };
+}
+
 test.describe('Strip EXIF privacy regressions', () => {
   test('removes GIF application metadata and bytes after the trailer without changing animation', async ({ page }) => {
     const source = await readFile(fixture('animated.gif'));
@@ -93,5 +116,37 @@ test.describe('Strip EXIF privacy regressions', () => {
     expect(output.includes(tagged.trailing)).toBe(false);
     expect(output.includes(Buffer.from('NETSCAPE2.0'))).toBe(true);
     expect(gifFrameCount(output)).toBe(gifFrameCount(tagged.buffer));
+  });
+
+  test('removes unknown WebP chunks and keeps the animation decodable', async ({ page }) => {
+    const source = await readFile(fixture('animated.webp'));
+    const tagged = addPrivateWebpChunks(source);
+    expect(tagged.buffer.includes(tagged.payload)).toBe(true);
+
+    await page.goto('/strip-exif');
+    await page.locator('#file-input').setInputFiles({
+      name: 'private.webp',
+      mimeType: 'image/webp',
+      buffer: tagged.buffer,
+    });
+    await page.locator('.file-item.done').waitFor({ timeout: 10000 });
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('.btn-download').click(),
+    ]);
+    const output = await readFile(await download.path());
+
+    expect(output.includes(tagged.payload)).toBe(false);
+    const kept = webpChunkTypes(output);
+    expect(kept).not.toContain('PRIV');
+    expect(kept).not.toContain('EXIF');
+    expect(kept.filter((t) => t === 'ANMF')).toHaveLength(webpChunkTypes(source).filter((t) => t === 'ANMF').length);
+    expect(output.readUInt32LE(4)).toBe(output.length - 8);
+    const size = await page.evaluate(async (bytes) => {
+      const bmp = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: 'image/webp' }));
+      return [bmp.width, bmp.height];
+    }, [...output]);
+    expect(size[0]).toBeGreaterThan(0);
   });
 });

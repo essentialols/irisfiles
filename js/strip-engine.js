@@ -176,7 +176,11 @@ function stripWebpMetadata(data) {
     const paddedEnd = dataEnd + (size & 1);
     if (paddedEnd > data.length) throw invalidImage();
 
-    if (type !== 'EXIF' && type !== 'XMP ' && type !== 'ICCP') {
+    // Unknown WebP chunks may contain arbitrary metadata. Preserve only
+    // chunks required to render the image or animation.
+    const keep = type === 'VP8X' || type === 'VP8 ' || type === 'VP8L' ||
+      type === 'ALPH' || type === 'ANIM' || type === 'ANMF';
+    if (keep) {
       const chunk = data.slice(start, paddedEnd);
       if (type === 'VP8X' && size >= 1) {
         const copy = chunk.slice();
