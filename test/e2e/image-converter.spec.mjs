@@ -181,6 +181,19 @@ test.describe('JPG to PNG', () => {
   });
 });
 
+test.describe('Lossless PNG output controls', () => {
+  test('does not expose a no-op quality slider on PNG targets', async ({ page }) => {
+    for (const path of ['/jpg-to-png', '/webp-to-png', '/heic-to-png', '/pdf-to-png']) {
+      await page.goto(path);
+      await expect(page.locator('#quality-slider')).toHaveCount(0);
+    }
+
+    // Lossy output still exposes the control where the encoder can honor it.
+    await page.goto('/png-to-jpg');
+    await expect(page.locator('#quality-slider')).toBeVisible();
+  });
+});
+
 test.describe('AVIF to PNG action accessibility', () => {
   test('batch actions name the file they affect', async ({ page }) => {
     const avif = await readFile(fixture('sample.avif'));
