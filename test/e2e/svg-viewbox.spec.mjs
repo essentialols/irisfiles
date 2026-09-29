@@ -189,6 +189,15 @@ test.describe('SVG raster dimensions', () => {
       .toEqual({ width: 160, height: 90 });
     expect(await convertSvgToPng(page, utf16be, 'utf16-be.svg'))
       .toEqual({ width: 160, height: 90 });
+
+    // Without a BOM, XML's own autodetection rule (Appendix F) needs the
+    // leading `<?xml` declaration; that is the only BOM-less form accepted.
+    const bomlessLe = Buffer.from(svg, 'utf16le');
+    const bomlessBe = Buffer.from(bomlessLe).swap16();
+    expect(await convertSvgToPng(page, bomlessLe, 'utf16-le-nobom.svg'))
+      .toEqual({ width: 160, height: 90 });
+    expect(await convertSvgToPng(page, bomlessBe, 'utf16-be-nobom.svg'))
+      .toEqual({ width: 160, height: 90 });
   });
 
   test('UTF-16 SVGs still reject linked external resources', async ({ page }) => {
@@ -196,18 +205,19 @@ test.describe('SVG raster dimensions', () => {
       <svg xmlns="http://www.w3.org/2000/svg" width="120" height="80">
         <image href="https://example.invalid/photo.png" width="120" height="80"/>
       </svg>`;
-    const utf16le = Buffer.from(`\uFEFF${svg}`, 'utf16le');
+    const variants = {
+      'linked-utf16.svg': Buffer.from(`\uFEFF${svg}`, 'utf16le'),
+      'linked-utf16-nobom.svg': Buffer.from(svg, 'utf16le'),
+    };
 
-    await page.goto('/svg-to-png');
-    await page.locator('#file-input').setInputFiles({
-      name: 'linked-utf16.svg',
-      mimeType: 'image/svg+xml',
-      buffer: utf16le,
-    });
+    for (const [name, buffer] of Object.entries(variants)) {
+      await page.goto('/svg-to-png');
+      await page.locator('#file-input').setInputFiles({ name, mimeType: 'image/svg+xml', buffer });
 
-    const item = page.locator('.file-item').first();
-    await expect(item.locator('.file-item__status.error')).toContainText(/references external files/i);
-    await expect(item.locator('.btn-download')).toHaveCount(0);
+      const item = page.locator('.file-item').first();
+      await expect(item.locator('.file-item__status.error')).toContainText(/references external files/i);
+      await expect(item.locator('.btn-download')).toHaveCount(0);
+    }
   });
 
 });
