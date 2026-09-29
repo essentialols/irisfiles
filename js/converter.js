@@ -23,6 +23,14 @@ const FORMAT_SIGNATURES = [
   { mime: 'image/avif',  ext: 'avif', offsets: [[4,[0x66,0x74,0x79,0x70,0x61,0x76,0x69,0x66]],[4,[0x66,0x74,0x79,0x70,0x61,0x76,0x69,0x73]]] },
 ];
 
+// No BOM: XML (Appendix F) autodetects UTF-16 from a leading `<?` only.
+// Requiring those four bytes keeps binary formats out of the SVG path.
+function bomlessUtf16(bytes) {
+  return bytes.length >= 4 && (
+    (bytes[0] === 0x3C && bytes[1] === 0x00 && bytes[2] === 0x3F && bytes[3] === 0x00) ||
+    (bytes[0] === 0x00 && bytes[1] === 0x3C && bytes[2] === 0x00 && bytes[3] === 0x3F));
+}
+
 function decodeSvgText(bytes) {
   if (bytes.length >= 2) {
     if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
@@ -31,6 +39,9 @@ function decodeSvgText(bytes) {
     if (bytes[0] === 0xFE && bytes[1] === 0xFF) {
       return new TextDecoder('utf-16be').decode(bytes);
     }
+  }
+  if (bomlessUtf16(bytes)) {
+    return new TextDecoder(bytes[0] === 0x3C ? 'utf-16le' : 'utf-16be').decode(bytes);
   }
   return new TextDecoder('utf-8', { fatal: false })
     .decode(bytes)
@@ -268,11 +279,14 @@ function svgViewBoxDimensions(svgText) {
 
 export async function loadSvgImage(file) {
   const bytes = await file.arrayBuffer();
-  const svgText = decodeSvgText(new Uint8Array(bytes));
+  const raw = new Uint8Array(bytes);
+  const svgText = decodeSvgText(raw);
   if (svgHasExternalResources(svgText)) {
     throw new Error('This SVG references external files. Browsers do not load them during image conversion. Embed linked images or fonts in the SVG (for example as data URLs) and try again.');
   }
-  const svgBlob = new Blob([bytes], { type: 'image/svg+xml' });
+  // Browsers only sniff UTF-16 SVG from a BOM, so give BOM-less input one.
+  const bom = bomlessUtf16(raw) ? new Uint8Array(raw[0] === 0x3C ? [0xFF, 0xFE] : [0xFE, 0xFF]) : null;
+  const svgBlob = new Blob(bom ? [bom, bytes] : [bytes], { type: 'image/svg+xml' });
   const url = URL.createObjectURL(svgBlob);
   const img = new Image();
   img.src = url;
