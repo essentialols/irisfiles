@@ -69,14 +69,15 @@ function addFiles(fileList_) {
     showNotice(`Batch limit reached (${MAX_BATCH} files). Clear some files first.`);
     return;
   }
-  const toAdd = incoming.slice(0, remaining);
-  if (toAdd.length < incoming.length) {
-    showNotice(`Only added ${toAdd.length} of ${incoming.length} files (batch limit: ${MAX_BATCH}).`);
+  // Drop oversized files before applying the cap: they are never queued, so
+  // they must not use up a slot a valid file later in the same drop could take.
+  const usable = incoming.filter(f => f.size <= MAX_FILE_SIZE);
+  const skipped = incoming.length - usable.length;
+  const toAdd = usable.slice(0, remaining);
+  if (toAdd.length < usable.length) {
+    showNotice(`Only added ${toAdd.length} of ${usable.length} files (batch limit: ${MAX_BATCH}).`);
   }
-
-  let skipped = 0;
   for (const f of toAdd) {
-    if (f.size > MAX_FILE_SIZE) { skipped++; continue; }
     files.push(f);
     renderFileEntry(f);
   }
