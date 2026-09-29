@@ -129,6 +129,7 @@ irisfiles/
     media-audio-engine.js # Video-to-MP3/WAV fast path + FFmpeg fallback
     image-ocr-engine.js   # Image-to-text OCR preprocessing + Tesseract
     ico-engine.js         # Multi-resolution ICO writer
+    animation.js          # Animated GIF/WebP/APNG detection
     pdf-tools-engine.js   # PDF page edits/text/compression
     html-pdf-engine.js    # Sanitized local HTML-to-PDF rendering
     device-tier.js, meta-panel.js, notice-ui.js, ux-page.js, cities-geo.js

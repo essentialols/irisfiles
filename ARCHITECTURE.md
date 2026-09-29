@@ -21,7 +21,8 @@ conversion logic with no DOM access; heavy libraries are lazy-loaded from jsDeli
 |---|---|---|
 | `converter.js` | Magic-byte format detection, Canvas encode, download, ZIP | — (fflate for ZIP) |
 | `heic-worker.js` | Lazy HEIC decode | heic-to (WASM, libheif 1.21.2), committed to `wasm/heic/` |
-| `resize-engine.js` | Resize via Canvas, target dimensions or percentage | — |
+| `resize-engine.js` | Resize via Canvas, target dimensions or percentage; refuses animated GIF/WebP/APNG | — |
+| `animation.js` | Animated GIF/WebP/APNG detection by magic bytes, shared by Resize and PNG to ICO so Canvas never silently flattens frames | — |
 | `strip-engine.js` | Drop metadata by re-encoding through Canvas | — |
 | `exif-engine.js` | Metadata read/write | ExifReader (read all), piexifjs (lossless JPEG write) |
 | `pdf-engine.js` | Image↔PDF, merge, split | pdf-lib, jsPDF, PDF.js |
