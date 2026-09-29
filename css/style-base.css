@@ -1186,6 +1186,10 @@ body {
 @media (max-width: 640px) {
   /* Keep primary, secondary, destructive, and result actions comfortable to tap. */
   .btn { min-height: 44px; justify-content: center; }
+  /* Smart Drop's close/remove control is not a .btn. Grow its hit area to 44px
+     with a transparent pseudo-element and keep the 28px circle, since a 44px
+     circle would cover the batch heading's last letters at 320px. */
+  .route-dismiss::after { content: ''; position: absolute; inset: -8px; }
   .hero h1 { font-size: 1.6rem; }
   .hero p { font-size: 1rem; }
   .drop-zone { padding: 2rem 1rem; }
