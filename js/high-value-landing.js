@@ -52,6 +52,8 @@ const IMAGE_TOOLS = [
   ['Extract Text (OCR)', '/image-to-text'],
 ];
 
+const JPG_ROUTE = { tools: IMAGE_TOOLS };
+
 const SMART_ROUTES = {
   mp4: { conversions: [['MP3', '/mp4-to-mp3'], ['WAV', '/mp4-to-wav']] },
   mov: { conversions: [['MP3', '/mov-to-mp3'], ['WAV', '/mov-to-wav']] },
@@ -62,8 +64,8 @@ const SMART_ROUTES = {
     conversions: [['ICO', '/png-to-ico']],
     tools: IMAGE_TOOLS,
   },
-  jpg: { tools: IMAGE_TOOLS },
-  jpeg: { tools: IMAGE_TOOLS },
+  jpg: JPG_ROUTE,
+  jpeg: JPG_ROUTE,
   webp: { tools: IMAGE_TOOLS },
   bmp: { tools: IMAGE_TOOLS },
   pdf: {
@@ -185,7 +187,7 @@ function enhanceSmartDrop() {
   const apply = () => {
     if (!lastFiles.length || routePanel.style.display === 'none') return;
     const route = SMART_ROUTES[extensionOf(lastFiles[0])];
-    if (!route) return;
+    if (!route || lastFiles.some(f => SMART_ROUTES[extensionOf(f)] !== route)) return;
     addRouteButtons(routePanel, lastFiles, 'Convert to', route.conversions);
     addRouteButtons(routePanel, lastFiles, 'Tools', route.tools);
   };
