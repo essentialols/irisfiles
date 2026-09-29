@@ -1,5 +1,46 @@
+import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
-import { fixture } from './helpers.mjs';
+import { fixture, expectDownloadOnClick } from './helpers.mjs';
+
+// Resize a file to 50% and return what the download actually contains.
+async function resizeHalfAndDownload(page, file) {
+  await page.goto('/resize-image');
+  await page.locator('#file-input').setInputFiles(file);
+  await page.locator('.file-item').waitFor();
+  await page.locator('#resize-mode').selectOption('percent');
+  await page.locator('#resize-percent').fill('50');
+  await page.locator('#resize-btn').click();
+  const download = await expectDownloadOnClick(page, '.btn-download');
+  const bytes = await readFile(await download.path());
+  return { name: download.suggestedFilename(), magic: bytes.toString('latin1', 0, 4), riffType: bytes.toString('latin1', 8, 12) };
+}
+
+test.describe('Resize keeps a transparency-capable output format', () => {
+  test('WebP resizes to WebP, not JPEG', async ({ page }) => {
+    const out = await resizeHalfAndDownload(page, fixture('sample.webp'));
+    expect(out).toMatchObject({ name: 'sample-50pct.webp', magic: 'RIFF', riffType: 'WEBP' });
+  });
+
+  test('a still GIF resizes to PNG, not JPEG', async ({ page }) => {
+    const out = await resizeHalfAndDownload(page, fixture('sample.gif'));
+    expect(out.name).toBe('sample-50pct.png');
+    expect(out.magic).toBe('\x89PNG');
+  });
+
+  // Safari cannot encode WebP: toBlob hands back PNG for the request. Simulate
+  // that so the file is named for its real contents, not for what was asked.
+  test('a browser that cannot encode WebP gets a PNG named .png', async ({ page }) => {
+    await page.addInitScript(() => {
+      const toBlob = HTMLCanvasElement.prototype.toBlob;
+      HTMLCanvasElement.prototype.toBlob = function (cb, type, q) {
+        return toBlob.call(this, cb, type === 'image/webp' ? 'image/png' : type, q);
+      };
+    });
+    const out = await resizeHalfAndDownload(page, fixture('sample.webp'));
+    expect(out.name).toBe('sample-50pct.png');
+    expect(out.magic).toBe('\x89PNG');
+  });
+});
 
 test.describe('Resize settings validation', () => {
   test('0% scale is rejected instead of silently becoming 100%', async ({ page }) => {
