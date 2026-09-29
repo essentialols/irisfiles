@@ -159,7 +159,11 @@ async function runMetadataStrip(ffmpeg, file, onStatus, onProgress) {
   if (onProgress) onProgress(30);
 
   if (onStatus) onStatus('Stripping metadata...');
-  await ffmpeg.exec(['-i', inName, '-map_metadata', '-1', '-c', 'copy', '-y', outName]);
+  // Default stream selection keeps one audio stream and drops the rest, so map
+  // everything (alternate audio, subtitles, attachments). -dn keeps unmuxable
+  // data tracks (e.g. iPhone mebx) from failing the copy, as default selection
+  // never carried them either.
+  await ffmpeg.exec(['-i', inName, '-map', '0', '-dn', '-map_metadata', '-1', '-c', 'copy', '-y', outName]);
   if (onProgress) onProgress(80);
 
   const outData = await ffmpeg.readFile(outName);
