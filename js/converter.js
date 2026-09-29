@@ -165,62 +165,30 @@ async function encodeCanvasAsGif(canvas) {
   return new Blob([gif.bytes()], { type: 'image/gif' });
 }
 
+// VP8X flags byte (offset 20), bit 1: the file carries an animation.
 async function webpIsAnimated(file) {
-  if (file.size < 20) return false;
-  const riff = new Uint8Array(await file.slice(0, 12).arrayBuffer());
-  if (readFourCC(riff, 0) !== 'RIFF' || readFourCC(riff, 8) !== 'WEBP') return false;
-
-  let offset = 12;
-  while (offset + 8 <= file.size) {
-    const header = new Uint8Array(await file.slice(offset, offset + 8).arrayBuffer());
-    if (header.length < 8) return false;
-    const chunk = readFourCC(header, 0);
-    if (chunk === 'ANIM' || chunk === 'ANMF') return true;
-
-    const size = new DataView(header.buffer, header.byteOffset, header.byteLength).getUint32(4, true);
-    const next = offset + 8 + size + (size & 1);
-    if (!Number.isSafeInteger(next) || next <= offset || next > file.size) return false;
-    offset = next;
-  }
-  return false;
+  const head = new Uint8Array(await file.slice(0, 21).arrayBuffer());
+  return head.length === 21 && readFourCC(head, 0) === 'RIFF' && readFourCC(head, 8) === 'WEBP'
+    && readFourCC(head, 12) === 'VP8X' && (head[20] & 0x02) !== 0;
 }
 
-function gifFrameDelayMs(durationUs) {
-  const milliseconds = Math.round((durationUs ?? 100_000) / 1000);
-  // GIF stores frame delay in an unsigned 16-bit centisecond field.
-  return Math.min(655_350, Math.max(10, milliseconds));
-}
+const ANIMATED_WEBP_DECODE_ERROR = 'Could not decode animated WebP. The file may be corrupted or unsupported by this browser.';
 
+// A canvas draws only the first frame of an animated WebP, so an animated source
+// is decoded frame by frame with WebCodecs. Returns null when it has one frame.
 async function encodeAnimatedWebpAsGif(file) {
-  if (typeof ImageDecoder === 'undefined' || typeof ImageDecoder.isTypeSupported !== 'function') {
+  if (typeof ImageDecoder === 'undefined' || !(await ImageDecoder.isTypeSupported('image/webp'))) {
     throw new Error('This browser cannot preserve animated WebP frames. Try a browser with WebCodecs ImageDecoder support.');
   }
 
-  let supported = false;
+  const decoder = new ImageDecoder({ data: file.stream(), type: 'image/webp', preferAnimation: true });
   try {
-    supported = await ImageDecoder.isTypeSupported('image/webp');
-  } catch {
-    supported = false;
-  }
-  if (!supported) {
-    throw new Error('This browser cannot preserve animated WebP frames. Try a browser with WebCodecs ImageDecoder support.');
-  }
-
-  let decoder;
-  try {
-    decoder = new ImageDecoder({
-      data: file.stream(),
-      type: 'image/webp',
-      preferAnimation: true,
-    });
-    await decoder.tracks.ready;
-    await decoder.completed;
-  } catch {
-    decoder?.close();
-    throw new Error('Could not decode animated WebP. The file may be corrupted or unsupported by this browser.');
-  }
-
-  try {
+    try {
+      await decoder.tracks.ready;
+      await decoder.completed;
+    } catch {
+      throw new Error(ANIMATED_WEBP_DECODE_ERROR);
+    }
     const track = decoder.tracks.selectedTrack;
     if (!track?.animated || track.frameCount <= 1) return null;
 
@@ -228,56 +196,42 @@ async function encodeAnimatedWebpAsGif(file) {
     const gif = GIFEncoder();
     const canvas = document.createElement('canvas');
     let ctx = null;
-    let width = 0;
-    let height = 0;
-    const repeat = Number.isFinite(track.repetitionCount)
-      ? Math.min(65_535, Math.max(0, Math.round(track.repetitionCount)))
-      : 0;
+    // WebCodecs: Infinity loops forever, 0 plays once. GIF: 0 loops forever, -1 (no
+    // NETSCAPE extension) plays once, N repeats N times.
+    const repeat = track.repetitionCount === Infinity ? 0 : track.repetitionCount === 0 ? -1 : track.repetitionCount;
 
     for (let frameIndex = 0; frameIndex < track.frameCount; frameIndex++) {
-      let decoded;
+      let image;
       try {
-        decoded = await decoder.decode({ frameIndex });
+        ({ image } = await decoder.decode({ frameIndex }));
       } catch {
-        throw new Error('Could not decode animated WebP. The file may be corrupted or unsupported by this browser.');
+        throw new Error(ANIMATED_WEBP_DECODE_ERROR);
       }
-      const { image } = decoded;
       try {
-        const frameWidth = image.displayWidth || image.codedWidth;
-        const frameHeight = image.displayHeight || image.codedHeight;
-        if (frameIndex === 0) {
-          validateDimensions(frameWidth, frameHeight);
-          width = frameWidth;
-          height = frameHeight;
+        const width = image.displayWidth;
+        const height = image.displayHeight;
+        if (!ctx) {
+          validateDimensions(width, height);
           canvas.width = width;
           canvas.height = height;
           ctx = canvas.getContext('2d', { willReadFrequently: true });
           if (!ctx) throw new Error('Could not get canvas context');
-        } else if (frameWidth !== width || frameHeight !== height) {
-          throw new Error('Animated WebP frames use inconsistent dimensions.');
         }
-
+        // Frames arrive fully composited, so each one replaces the last.
         ctx.clearRect(0, 0, width, height);
-        ctx.drawImage(image, 0, 0, width, height);
+        ctx.drawImage(image, 0, 0);
         const pixels = ctx.getImageData(0, 0, width, height).data;
         const palette = quantize(pixels, 256, { format: 'rgba4444', oneBitAlpha: true });
-        const index = applyPalette(pixels, palette, 'rgba4444');
         const transparentIndex = palette.findIndex(color => color[3] === 0);
-        const options = {
+        gif.writeFrame(applyPalette(pixels, palette, 'rgba4444'), width, height, {
           palette,
-          delay: gifFrameDelayMs(image.duration),
-          dispose: 0,
+          delay: Math.min(655_350, Math.max(10, Math.round((image.duration ?? 100_000) / 1000))),
           transparent: transparentIndex !== -1,
           transparentIndex: Math.max(0, transparentIndex),
-        };
-        if (frameIndex === 0) options.repeat = repeat;
-        gif.writeFrame(index, width, height, options);
+          repeat,
+        });
       } finally {
         image.close();
-      }
-
-      if (frameIndex % 5 === 4) {
-        await new Promise(resolve => setTimeout(resolve, 0));
       }
     }
 
