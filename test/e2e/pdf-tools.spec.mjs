@@ -171,6 +171,51 @@ test.describe('Split PDF', () => {
     // against a number and could never pass.
     await expect(page.locator('.dl-btn').first()).toBeVisible();
   });
+
+  test('reselecting replaces the source, clears results and drops an in-flight split', async ({ page }) => {
+    await page.addInitScript(() => {
+      const original = File.prototype.arrayBuffer;
+      let reads = 0;
+      window.__releaseSplit = null;
+      File.prototype.arrayBuffer = function (...args) {
+        const read = () => original.apply(this, args);
+        if (this.name === 'multi-page.pdf' && ++reads === 2) {
+          return new Promise((resolve, reject) => {
+            window.__releaseSplit = () => read().then(resolve, reject);
+          });
+        }
+        return read();
+      };
+    });
+
+    await page.goto('/split-pdf');
+    const input = page.locator('#file-input');
+    const names = page.locator('#file-list .file-item__name');
+
+    await input.setInputFiles(fixture('multi-page.pdf'));
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#pdf-results .dl-btn')).toHaveCount(3);
+
+    await input.setInputFiles(fixture('sample.pdf'));
+    await expect(names).toHaveText(['sample.pdf']);
+    await expect(page.locator('#pdf-results')).toHaveCount(0);
+
+    await input.setInputFiles(fixture('multi-page.pdf'));
+    await page.locator('#action-btn').click();
+    await page.waitForFunction(() => typeof window.__releaseSplit === 'function');
+
+    await input.setInputFiles(fixture('sample2.pdf'));
+    await expect(names).toHaveText(['sample2.pdf']);
+
+    await page.evaluate(() => window.__releaseSplit());
+    await expect(page.locator('#action-btn')).toBeEnabled();
+    await expect(page.locator('#pdf-results')).toHaveCount(0);
+    await expect(names).toHaveText(['sample2.pdf']);
+
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#pdf-results .dl-btn')).toHaveCount(1);
+    await expect(page.locator('#pdf-results .file-item__name')).toHaveText(['sample2-page1.pdf']);
+  });
 });
 
 test.describe('Clear all', () => {
