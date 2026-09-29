@@ -147,6 +147,30 @@ test.describe('High-value tool expansion', () => {
     await expect(page.locator('#pdf-tool-result .btn--success')).toBeVisible({ timeout: 20_000 });
   });
 
+  test('replacing a PDF during compression cancels the stale run before enabling the new one', async ({ page }) => {
+    const source = await readFile(fixture('sample.pdf'));
+    await page.addInitScript(() => {
+      const original = File.prototype.arrayBuffer;
+      File.prototype.arrayBuffer = function (...args) {
+        if (this.name !== 'first.pdf') return original.apply(this, args);
+        return new Promise((resolve, reject) => {
+          setTimeout(() => original.apply(this, args).then(resolve, reject), 500);
+        });
+      };
+    });
+    await page.goto('/compress-pdf');
+    await page.locator('#file-input').setInputFiles({ name: 'first.pdf', mimeType: 'application/pdf', buffer: source });
+    const action = page.locator('#action-btn');
+    await action.click();
+    await expect(action).toBeDisabled();
+
+    await page.locator('#file-input').setInputFiles({ name: 'second.pdf', mimeType: 'application/pdf', buffer: source });
+    await expect(page.locator('.file-item__name')).toHaveText('second.pdf');
+    await expect(action).toBeDisabled();
+    await expect(action).toBeEnabled({ timeout: 5000 });
+    await expect(page.locator('#pdf-tool-result')).not.toBeVisible();
+  });
+
   test('HTML to PDF converts sanitized self-contained HTML', async ({ page }) => {
     await page.goto('/html-to-pdf');
     await page.locator('#file-input').setInputFiles({
