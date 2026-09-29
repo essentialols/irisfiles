@@ -176,6 +176,83 @@ async function encodeCanvasAsGif(canvas) {
   return new Blob([gif.bytes()], { type: 'image/gif' });
 }
 
+// VP8X flags byte (offset 20), bit 1: the file carries an animation.
+async function webpIsAnimated(file) {
+  const head = new Uint8Array(await file.slice(0, 21).arrayBuffer());
+  return head.length === 21 && readFourCC(head, 0) === 'RIFF' && readFourCC(head, 8) === 'WEBP'
+    && readFourCC(head, 12) === 'VP8X' && (head[20] & 0x02) !== 0;
+}
+
+const ANIMATED_WEBP_DECODE_ERROR = 'Could not decode animated WebP. The file may be corrupted or unsupported by this browser.';
+
+// A canvas draws only the first frame of an animated WebP, so an animated source
+// is decoded frame by frame with WebCodecs. Returns null when it has one frame.
+async function encodeAnimatedWebpAsGif(file) {
+  if (typeof ImageDecoder === 'undefined' || !(await ImageDecoder.isTypeSupported('image/webp'))) {
+    throw new Error('This browser cannot preserve animated WebP frames. Try a browser with WebCodecs ImageDecoder support.');
+  }
+
+  const decoder = new ImageDecoder({ data: file.stream(), type: 'image/webp', preferAnimation: true });
+  try {
+    try {
+      await decoder.tracks.ready;
+      await decoder.completed;
+    } catch {
+      throw new Error(ANIMATED_WEBP_DECODE_ERROR);
+    }
+    const track = decoder.tracks.selectedTrack;
+    if (!track?.animated || track.frameCount <= 1) return null;
+
+    const { GIFEncoder, quantize, applyPalette } = await loadGifEncoder();
+    const gif = GIFEncoder();
+    const canvas = document.createElement('canvas');
+    let ctx = null;
+    // WebCodecs: Infinity loops forever, 0 plays once. GIF: 0 loops forever, -1 (no
+    // NETSCAPE extension) plays once, N repeats N times.
+    const repeat = track.repetitionCount === Infinity ? 0 : track.repetitionCount === 0 ? -1 : track.repetitionCount;
+
+    for (let frameIndex = 0; frameIndex < track.frameCount; frameIndex++) {
+      let image;
+      try {
+        ({ image } = await decoder.decode({ frameIndex }));
+      } catch {
+        throw new Error(ANIMATED_WEBP_DECODE_ERROR);
+      }
+      try {
+        const width = image.displayWidth;
+        const height = image.displayHeight;
+        if (!ctx) {
+          validateDimensions(width, height);
+          canvas.width = width;
+          canvas.height = height;
+          ctx = canvas.getContext('2d', { willReadFrequently: true });
+          if (!ctx) throw new Error('Could not get canvas context');
+        }
+        // Frames arrive fully composited, so each one replaces the last.
+        ctx.clearRect(0, 0, width, height);
+        ctx.drawImage(image, 0, 0);
+        const pixels = ctx.getImageData(0, 0, width, height).data;
+        const palette = quantize(pixels, 256, { format: 'rgba4444', oneBitAlpha: true });
+        const transparentIndex = palette.findIndex(color => color[3] === 0);
+        gif.writeFrame(applyPalette(pixels, palette, 'rgba4444'), width, height, {
+          palette,
+          delay: Math.min(655_350, Math.max(10, Math.round((image.duration ?? 100_000) / 1000))),
+          transparent: transparentIndex !== -1,
+          transparentIndex: Math.max(0, transparentIndex),
+          repeat,
+        });
+      } finally {
+        image.close();
+      }
+    }
+
+    gif.finish();
+    return new Blob([gif.bytes()], { type: 'image/gif' });
+  } finally {
+    decoder.close();
+  }
+}
+
 // An SVG is resolution-independent, so a viewBox larger than the canvas budget
 // is rendered at the largest safe size instead of failing. A raster image of the
 // same pixel count still throws, because downscaling it would silently discard
@@ -339,6 +416,10 @@ export async function convertWithCanvas(file, targetMime, quality) {
   // create an ImageBitmap from SVG while others cannot, but SVG-as-image resource
   // isolation is the same product constraint and must not depend on that detail.
   const fmt = await detectFormat(file);
+  if (targetMime === 'image/gif' && fmt?.mime === 'image/webp' && await webpIsAnimated(file)) {
+    const animatedGif = await encodeAnimatedWebpAsGif(file);
+    if (animatedGif) return animatedGif;
+  }
   let source;
   let width;
   let height;
