@@ -82,6 +82,9 @@ export function init() {
 
 function addFiles(fileList_) {
   const maxFiles = mode === 'split' ? 1 : 50;
+
+  if (mode === 'split' && fileList_.length > 0) clearAll();
+
   for (const f of fileList_) {
     if (files.length >= maxFiles) break;
     files.push(f);
