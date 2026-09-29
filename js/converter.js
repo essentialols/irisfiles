@@ -313,6 +313,37 @@ async function loadNativeImage(file, errorMessage) {
   }
 }
 
+// createImageBitmap rejects a whole ICO when one embedded frame is damaged, even
+// if another frame is fine. Rewrap each frame as a one-image ICO, largest first,
+// and return the first that decodes.
+async function loadIcoFrame(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const count = bytes.length >= 6 ? view.getUint16(4, true) : 0;
+  const frames = [];
+  for (let i = 0; i < count && 6 + (i + 1) * 16 <= bytes.length; i++) {
+    const entry = 6 + i * 16;
+    const length = view.getUint32(entry + 8, true);
+    const offset = view.getUint32(entry + 12, true);
+    if (length < 1 || offset > bytes.length || length > bytes.length - offset) continue;
+    frames.push({ entry, length, offset, area: (bytes[entry] || 256) * (bytes[entry + 1] || 256) });
+  }
+  frames.sort((a, b) => b.area - a.area);
+
+  for (const { entry, length, offset } of frames) {
+    const single = new Uint8Array(22 + length);
+    single.set([0, 0, 1, 0, 1, 0], 0);
+    single.set(bytes.subarray(entry, entry + 16), 6);
+    new DataView(single.buffer).setUint32(18, 22, true);
+    single.set(bytes.subarray(offset, offset + length), 22);
+    try {
+      const image = await createImageBitmap(new Blob([single], { type: 'image/x-icon' }), { imageOrientation: 'from-image' });
+      return { image, width: image.width, height: image.height, cleanup: () => image.close() };
+    } catch { /* try the next-largest frame */ }
+  }
+  throw new Error('Could not decode ICO. None of the embedded icon images could be decoded.');
+}
+
 /**
  * Convert an image using the Canvas API (for natively-supported formats).
  * @param {File|Blob} file - Source image
@@ -348,6 +379,12 @@ export async function convertWithCanvas(file, targetMime, quality) {
       // guidance reachable instead of a generic decode failure.
       if (fmt?.mime === 'image/tiff') {
         const loaded = await loadNativeImage(file, TIFF_DECODE_ERROR);
+        source = loaded.image;
+        width = loaded.width;
+        height = loaded.height;
+        cleanup = loaded.cleanup;
+      } else if (fmt?.mime === 'image/x-icon') {
+        const loaded = await loadIcoFrame(file);
         source = loaded.image;
         width = loaded.width;
         height = loaded.height;
