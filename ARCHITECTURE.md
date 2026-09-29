@@ -29,6 +29,7 @@ conversion logic with no DOM access; heavy libraries are lazy-loaded from jsDeli
 | `doc-engine.js` | EPUB/RTF/DOCX/MOBI → TXT and PDF | jsPDF |
 | `font-engine.js` | TTF/OTF/WOFF cross-convert | opentype.js |
 | `archive-engine.js` | ZIP extract and create | fflate (committed) |
+| `archive-name.js` | ZIP member-name sanitizer (traversal, absolute, drive, reserved names) and collision-free allocator, used by `archive-engine.js` extract and create | — |
 | `gif-engine.js` | Video → GIF, streaming one frame at a time | gifenc (committed) |
 | `images-gif-engine.js` | Images → animated GIF, global palette | gifenc (committed) |
 | `remux-engine.js` | MOV → MP4 by rewriting the ISOBMFF `ftyp` brand | — (no transcode) |
