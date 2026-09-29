@@ -1,7 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import { crc32 } from 'node:zlib';
 import { test, expect } from '@playwright/test';
-import { fixture, cacheCdnAssets } from './helpers.mjs';
+import { fixture, cacheCdnAssets, buildApng } from './helpers.mjs';
 
 // Each test gets a fresh context, so each one refetched the ~25MB FFmpeg core.
 test.beforeEach(async ({ page }) => { await cacheCdnAssets(page); });
@@ -54,31 +53,10 @@ test.describe('High-value tool expansion', () => {
 
   test('PNG to ICO refuses animated PNG before flattening it', async ({ page }) => {
     await page.goto('/png-to-ico');
-    const chunk = (type, data) => {
-      const c = Buffer.alloc(12 + data.length);
-      c.writeUInt32BE(data.length, 0);
-      c.write(type, 4, 'latin1');
-      data.copy(c, 8);
-      c.writeUInt32BE(crc32(c.subarray(4, 8 + data.length)), 8 + data.length);
-      return c;
-    };
-    const u32 = (...v) => { const b = Buffer.alloc(v.length * 4); v.forEach((x, i) => b.writeUInt32BE(x, i * 4)); return b; };
-    const fcTL = seq => Buffer.concat([u32(seq, 100, 100, 0, 0), Buffer.from([0, 1, 0, 10, 0, 0])]);
-    const still = await readFile(fixture('sample.png'));
-    const idat = [];
-    for (let o = 33; o < still.length; o += 12 + still.readUInt32BE(o)) {
-      if (still.toString('latin1', o + 4, o + 8) === 'IDAT') idat.push(still.subarray(o + 8, o + 8 + still.readUInt32BE(o)));
-    }
-    const apng = Buffer.concat([
-      still.subarray(0, 33), chunk('acTL', u32(2, 0)), chunk('fcTL', fcTL(0)),
-      ...idat.map(d => chunk('IDAT', d)),
-      chunk('fcTL', fcTL(1)), ...idat.map((d, i) => chunk('fdAT', Buffer.concat([u32(2 + i), d]))),
-      chunk('IEND', Buffer.alloc(0)),
-    ]);
     await page.locator('#file-input').setInputFiles({
       name: 'animated.png',
       mimeType: 'image/png',
-      buffer: apng,
+      buffer: await buildApng(),
     });
 
     const item = page.locator('.file-item').first();

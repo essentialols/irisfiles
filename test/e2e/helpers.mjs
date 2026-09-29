@@ -1,11 +1,38 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { crc32 } from 'node:zlib';
 
 export const FIXTURES = resolve(import.meta.dirname, '..', 'fixtures');
 
 export function fixture(name) {
   return resolve(FIXTURES, name);
+}
+
+// A valid two-frame APNG built from sample.png. A stub without IDAT would fail to
+// decode instead of being flattened, which would not show the bug.
+export async function buildApng() {
+  const chunk = (type, data) => {
+    const c = Buffer.alloc(12 + data.length);
+    c.writeUInt32BE(data.length, 0);
+    c.write(type, 4, 'latin1');
+    data.copy(c, 8);
+    c.writeUInt32BE(crc32(c.subarray(4, 8 + data.length)), 8 + data.length);
+    return c;
+  };
+  const u32 = (...v) => { const b = Buffer.alloc(v.length * 4); v.forEach((x, i) => b.writeUInt32BE(x, i * 4)); return b; };
+  const fcTL = seq => Buffer.concat([u32(seq, 100, 100, 0, 0), Buffer.from([0, 1, 0, 10, 0, 0])]);
+  const still = await readFile(fixture('sample.png'));
+  const idat = [];
+  for (let o = 33; o < still.length; o += 12 + still.readUInt32BE(o)) {
+    if (still.toString('latin1', o + 4, o + 8) === 'IDAT') idat.push(still.subarray(o + 8, o + 8 + still.readUInt32BE(o)));
+  }
+  return Buffer.concat([
+    still.subarray(0, 33), chunk('acTL', u32(2, 0)), chunk('fcTL', fcTL(0)),
+    ...idat.map(d => chunk('IDAT', d)),
+    chunk('fcTL', fcTL(1)), ...idat.map((d, i) => chunk('fdAT', Buffer.concat([u32(2 + i), d]))),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
 }
 
 export async function dropFile(page, selector, filePath) {

@@ -4,6 +4,7 @@
  */
 
 import { validateDimensions } from './converter.js';
+import { animatedImageKind } from './animation.js';
 
 /**
  * Resize an image file.
@@ -14,6 +15,13 @@ import { validateDimensions } from './converter.js';
  */
 export async function resizeImage(file, opts, onProgress) {
   if (onProgress) onProgress(10);
+
+  // Canvas keeps only the first frame, so an animated source would come out as a
+  // still with no warning.
+  const animated = await animatedImageKind(file);
+  if (animated) {
+    throw new Error(`Animated ${animated} cannot be resized without discarding frames. Use a single-frame image instead.`);
+  }
 
   let bmp;
   try {
