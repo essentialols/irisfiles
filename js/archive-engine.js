@@ -2,13 +2,13 @@
  * IrisFiles - Archive engine
  * ZIP extraction and creation using fflate (window.fflate from js/fflate.min.js).
  */
-import { safeArchiveName, isUnsafeArchiveName, createArchiveNames, uniqueArchiveName } from './archive-name.js';
+import { safeArchiveName, uniqueArchiveName } from './archive-name.js';
 
 /**
  * Extract all files from a ZIP archive.
  * @param {File} file - ZIP file
  * @param {function} onProgress - Progress callback (0-100)
- * @returns {Promise<Array<{name: string, blob: Blob, size: number, pathSanitized: boolean}>>}
+ * @returns {Promise<Array<{name: string, blob: Blob, size: number}>>}
  */
 export async function extractZip(file, onProgress) {
   if (onProgress) onProgress(10);
@@ -20,18 +20,14 @@ export async function extractZip(file, onProgress) {
   if (onProgress) onProgress(80);
 
   const entries = [];
-  const names = createArchiveNames();
+  const usedNames = new Set();
   for (const { name: rawName, data } of extracted) {
     // Skip directory entries (they end with / and have zero length)
     if (rawName.endsWith('/') && data.length === 0) continue;
-    const safeName = safeArchiveName(rawName) || 'unnamed';
     entries.push({
-      name: uniqueArchiveName(safeName, names),
+      name: uniqueArchiveName(safeArchiveName(rawName), usedNames),
       blob: new Blob([data]),
       size: data.length,
-      // Only genuinely dangerous rewrites, so the notice count is not inflated
-      // by a cosmetic one such as "nested/./keep.txt".
-      pathSanitized: isUnsafeArchiveName(rawName),
     });
   }
 
@@ -151,12 +147,11 @@ function unzipEntriesPreservingDuplicates(raw) {
  */
 export async function createZip(files, onProgress) {
   const zipInput = Object.create(null);
-  const names = createArchiveNames();
+  const usedNames = new Set();
 
   for (let i = 0; i < files.length; i++) {
     const buffer = await files[i].blob.arrayBuffer();
-    const safeName = safeArchiveName(files[i].name) || 'unnamed';
-    const name = uniqueArchiveName(safeName, names);
+    const name = uniqueArchiveName(safeArchiveName(files[i].name), usedNames);
     zipInput[name] = new Uint8Array(buffer);
     if (onProgress) onProgress(Math.round(((i + 1) / files.length) * 60));
   }
@@ -169,4 +164,3 @@ export async function createZip(files, onProgress) {
   if (onProgress) onProgress(100);
   return blob;
 }
-
