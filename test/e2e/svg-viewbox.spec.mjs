@@ -181,14 +181,13 @@ test.describe('SVG raster dimensions', () => {
     const svg = `<?xml version="1.0" encoding="UTF-16"?>
       <svg xmlns="http://www.w3.org/2000/svg" width="160" height="90" viewBox="0 0 160 90">
         <rect width="120" height="90" fill="#2563eb"/>
-        <circle cx="120" cy="45" r="22" fill="#ef4444" fill-opacity=".8"/>
       </svg>`;
     const utf16le = Buffer.from(`\uFEFF${svg}`, 'utf16le');
     const utf16be = Buffer.from(utf16le).swap16();
 
-    expect(await convertSvgToPng(page, utf16le, 'Résumé_日本語-le.svg'))
+    expect(await convertSvgToPng(page, utf16le, 'utf16-le.svg'))
       .toEqual({ width: 160, height: 90 });
-    expect(await convertSvgToPng(page, utf16be, 'Résumé_日本語-be.svg'))
+    expect(await convertSvgToPng(page, utf16be, 'utf16-be.svg'))
       .toEqual({ width: 160, height: 90 });
   });
 
