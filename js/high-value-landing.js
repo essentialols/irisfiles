@@ -186,8 +186,14 @@ function enhanceSmartDrop() {
 
   const apply = () => {
     if (!lastFiles.length || routePanel.style.display === 'none') return;
-    const route = SMART_ROUTES[extensionOf(lastFiles[0])];
-    if (!route || lastFiles.some(f => SMART_ROUTES[extensionOf(f)] !== route)) return;
+    // Smart Drop publishes the magic-byte format when the whole batch shares one,
+    // so an extensionless or misnamed file still routes as what it is. Formats it
+    // cannot sniff (HTML) fall back to requiring one shared file extension.
+    const detectedExt = routePanel.dataset.detectedExt;
+    const route = detectedExt
+      ? SMART_ROUTES[detectedExt]
+      : SMART_ROUTES[extensionOf(lastFiles[0])];
+    if (!route || (!detectedExt && lastFiles.some(f => SMART_ROUTES[extensionOf(f)] !== route))) return;
     addRouteButtons(routePanel, lastFiles, 'Convert to', route.conversions);
     addRouteButtons(routePanel, lastFiles, 'Tools', route.tools);
   };

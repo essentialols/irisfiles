@@ -206,6 +206,22 @@ test.describe('Smart Drop on landing page', () => {
     await expect(routePanel).not.toContainText('2 PNG files');
   });
 
+  test('an extensionless PNG still gets the PNG tools when the batch is all PNG', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#smart-drop')).toHaveAttribute('role', 'button');
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    await page.locator('#smart-file-input').setInputFiles([
+      { name: 'a.png', mimeType: 'image/png', buffer: png },
+      { name: 'no-extension', mimeType: 'application/octet-stream', buffer: png },
+    ]);
+
+    const routePanel = page.locator('#route-panel');
+    await expect(routePanel).toContainText('2 PNG files');
+    for (const href of ['/png-to-ico', '/background-remover', '/image-to-text']) {
+      await expect(routePanel.locator(`[data-href="${href}"]`)).toHaveCount(1);
+    }
+  });
+
   test('a batch of unidentified files is not reported as mixed formats', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#smart-drop')).toHaveAttribute('role', 'button');
