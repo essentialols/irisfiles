@@ -83,16 +83,7 @@ export function init() {
 function addFiles(fileList_) {
   const maxFiles = mode === 'split' ? 1 : 50;
 
-  // Split PDF is a single-input tool. Picking or dropping another PDF should
-  // replace the current source instead of silently ignoring the user's action.
-  // Bump the token so a split already in flight cannot publish results for the
-  // file that is no longer shown in the queue.
-  if (mode === 'split' && fileList_.length > 0 && files.length > 0) {
-    operationToken++;
-    files.length = 0;
-    fileList.innerHTML = '';
-    removeResults();
-  }
+  if (mode === 'split' && fileList_.length > 0) clearAll();
 
   for (const f of fileList_) {
     if (files.length >= maxFiles) break;
