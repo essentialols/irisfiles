@@ -134,6 +134,57 @@ test.describe('Merge PDF', () => {
     const readOrder = await page.evaluate(() => window.__irisfilesPdfReadOrder);
     expect(readOrder).toEqual(['beta.pdf', 'gamma.pdf', 'alpha.pdf']);
   });
+
+  test('move buttons reorder from the keyboard, keep focus, and set the merge order', async ({ page }) => {
+    await page.addInitScript(() => {
+      const original = File.prototype.arrayBuffer;
+      window.__irisfilesPdfReadOrder = [];
+      File.prototype.arrayBuffer = function (...args) {
+        window.__irisfilesPdfReadOrder.push(this.name);
+        return original.apply(this, args);
+      };
+    });
+    await page.goto('/merge-pdf');
+
+    const pdf = await readFile(fixture('sample.pdf'));
+    await page.locator('#file-input').setInputFiles([
+      { name: 'alpha.pdf', mimeType: 'application/pdf', buffer: pdf },
+      { name: 'beta.pdf', mimeType: 'application/pdf', buffer: pdf },
+      { name: 'gamma.pdf', mimeType: 'application/pdf', buffer: pdf },
+    ]);
+    const names = page.locator('.file-item__name');
+
+    await expect(page.getByRole('button', { name: 'Move alpha.pdf up' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Move gamma.pdf down' })).toBeDisabled();
+
+    const alphaDown = page.getByRole('button', { name: 'Move alpha.pdf down' });
+    await alphaDown.focus();
+    await page.keyboard.press('Enter');
+    await expect(names).toHaveText(['beta.pdf', 'alpha.pdf', 'gamma.pdf']);
+    await expect(alphaDown).toBeFocused();
+
+    // Reaching the end disables the pressed button; focus must move, not drop to <body>.
+    await page.keyboard.press('Enter');
+    await expect(names).toHaveText(['beta.pdf', 'gamma.pdf', 'alpha.pdf']);
+    await expect(page.getByRole('button', { name: 'Move alpha.pdf up' })).toBeFocused();
+
+    await page.locator('#action-btn').click();
+    await page.locator('#pdf-results').waitFor({ timeout: 15000 });
+    expect(await page.evaluate(() => window.__irisfilesPdfReadOrder)).toEqual(['beta.pdf', 'gamma.pdf', 'alpha.pdf']);
+  });
+
+  test('move buttons are touch sized and fit a phone viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await page.goto('/merge-pdf');
+    await page.locator('#file-input').setInputFiles([fixture('sample.pdf'), fixture('sample2.pdf')]);
+
+    const down = page.getByRole('button', { name: 'Move sample.pdf down' });
+    await expect(down).toBeVisible();
+    const box = await down.boundingBox();
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+  });
 });
 
 test.describe('Merge PDF size limit', () => {
