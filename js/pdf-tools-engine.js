@@ -17,7 +17,9 @@ async function pdfLib(){
   if(!pdfLibPromise) pdfLibPromise=(async()=>{if(!window.PDFLib) await loadScript(PDFLIB_CDN);if(!window.PDFLib) throw new Error('PDF library failed to initialize.');return window.PDFLib;})();
   return pdfLibPromise;
 }
-async function pdfjsDocument(file){const lib=await pdfjs();return lib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;}
+function throwIfCancelled(shouldContinue){if(shouldContinue&&!shouldContinue()){const err=new Error('PDF operation cancelled.');err.name='AbortError';throw err}}
+async function destroyPdf(doc){try{await doc?.destroy?.()}catch{}}
+async function pdfjsDocument(file,shouldContinue=()=>true){throwIfCancelled(shouldContinue);const lib=await pdfjs();throwIfCancelled(shouldContinue);const data=new Uint8Array(await file.arrayBuffer());throwIfCancelled(shouldContinue);const doc=await lib.getDocument({data}).promise;if(!shouldContinue()){await destroyPdf(doc);throwIfCancelled(shouldContinue)}return doc;}
 
 export async function renderPdfThumbnails(file,onProgress=()=>{}){
   const doc=await pdfjsDocument(file);const pages=[];
@@ -39,25 +41,32 @@ export async function rebuildPdf(file,pageSpecs,onProgress=()=>{}){
   const bytes=await out.save({useObjectStreams:true});return new Blob([bytes],{type:'application/pdf'});
 }
 
-export async function extractPdfText(file,onProgress=()=>{}){
-  const doc=await pdfjsDocument(file);const pages=[];
-  for(let n=1;n<=doc.numPages;n++){
-    const page=await doc.getPage(n);const content=await page.getTextContent();let text='';for(const item of content.items){if(!item?.str) continue;text+=item.str;if(item.hasEOL) text+='\n';else text+=' ';}
-    pages.push(text.trim());onProgress(Math.round(n/doc.numPages*100));
-  }
-  return {pages,fullText:pages.map((text,i)=>`Page ${i+1}\n${text}`).join('\n\n')};
+export async function extractPdfText(file,onProgress=()=>{},shouldContinue=()=>true){
+  const doc=await pdfjsDocument(file,shouldContinue);const pages=[];
+  try{
+    for(let n=1;n<=doc.numPages;n++){
+      throwIfCancelled(shouldContinue);const page=await doc.getPage(n);const content=await page.getTextContent();throwIfCancelled(shouldContinue);let text='';for(const item of content.items){if(!item?.str) continue;text+=item.str;if(item.hasEOL) text+='\n';else text+=' ';}
+      pages.push(text.trim());onProgress(Math.round(n/doc.numPages*100));
+    }
+    return {pages,fullText:pages.map((text,i)=>`Page ${i+1}\n${text}`).join('\n\n')};
+  }finally{await destroyPdf(doc)}
 }
 
 function canvasJpeg(canvas,quality){return new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Could not encode compressed PDF page.')),'image/jpeg',quality));}
-export async function compressPdf(file,opts={},onProgress=()=>{}){
+export async function compressPdf(file,opts={},onProgress=()=>{},shouldContinue=()=>true){
   const quality=Math.min(.9,Math.max(.35,opts.quality??.7));const requestedScale=Math.min(2,Math.max(.75,opts.scale??1.35));
-  const doc=await pdfjsDocument(file);const PDFLib=await pdfLib();const out=await PDFLib.PDFDocument.create();
-  for(let n=1;n<=doc.numPages;n++){
-    const page=await doc.getPage(n);const base=page.getViewport({scale:1});const maxPixels=12_000_000;const pixelBase=Math.max(1,base.width*base.height);const safeScale=Math.min(requestedScale,Math.sqrt(maxPixels/pixelBase));const vp=page.getViewport({scale:safeScale});
-    const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(vp.width));canvas.height=Math.max(1,Math.round(vp.height));const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);await page.render({canvasContext:ctx,viewport:vp}).promise;
-    const jpeg=await canvasJpeg(canvas,quality);const image=await out.embedJpg(new Uint8Array(await jpeg.arrayBuffer()));const outPage=out.addPage([base.width,base.height]);outPage.drawImage(image,{x:0,y:0,width:base.width,height:base.height});canvas.width=canvas.height=1;onProgress(Math.round(n/doc.numPages*100));
-  }
-  const bytes=await out.save({useObjectStreams:true});const compressed=new Blob([bytes],{type:'application/pdf'});
-  if(compressed.size>=file.size) return {blob:file,reduced:false,flattened:false};
-  return {blob:compressed,reduced:true,flattened:true};
+  const doc=await pdfjsDocument(file,shouldContinue);
+  try{
+    throwIfCancelled(shouldContinue);const PDFLib=await pdfLib();throwIfCancelled(shouldContinue);const out=await PDFLib.PDFDocument.create();
+    for(let n=1;n<=doc.numPages;n++){
+      throwIfCancelled(shouldContinue);const page=await doc.getPage(n);const base=page.getViewport({scale:1});const maxPixels=12_000_000;const pixelBase=Math.max(1,base.width*base.height);const safeScale=Math.min(requestedScale,Math.sqrt(maxPixels/pixelBase));const vp=page.getViewport({scale:safeScale});
+      const canvas=document.createElement('canvas');
+      try{canvas.width=Math.max(1,Math.round(vp.width));canvas.height=Math.max(1,Math.round(vp.height));const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);await page.render({canvasContext:ctx,viewport:vp}).promise;throwIfCancelled(shouldContinue);
+        const jpeg=await canvasJpeg(canvas,quality);throwIfCancelled(shouldContinue);const image=await out.embedJpg(new Uint8Array(await jpeg.arrayBuffer()));const outPage=out.addPage([base.width,base.height]);outPage.drawImage(image,{x:0,y:0,width:base.width,height:base.height});onProgress(Math.round(n/doc.numPages*100));
+      }finally{canvas.width=canvas.height=1;page.cleanup?.()}
+    }
+    throwIfCancelled(shouldContinue);const bytes=await out.save({useObjectStreams:true});const compressed=new Blob([bytes],{type:'application/pdf'});
+    if(compressed.size>=file.size) return {blob:file,reduced:false,flattened:false};
+    return {blob:compressed,reduced:true,flattened:true};
+  }finally{await destroyPdf(doc)}
 }
