@@ -23,10 +23,22 @@ const FORMAT_SIGNATURES = [
   { mime: 'image/avif',  ext: 'avif', offsets: [[4,[0x66,0x74,0x79,0x70,0x61,0x76,0x69,0x66]],[4,[0x66,0x74,0x79,0x70,0x61,0x76,0x69,0x73]]] },
 ];
 
-function looksLikeSvg(bytes) {
-  const text = new TextDecoder('utf-8', { fatal: false })
+function decodeSvgText(bytes) {
+  if (bytes.length >= 2) {
+    if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
+      return new TextDecoder('utf-16le').decode(bytes);
+    }
+    if (bytes[0] === 0xFE && bytes[1] === 0xFF) {
+      return new TextDecoder('utf-16be').decode(bytes);
+    }
+  }
+  return new TextDecoder('utf-8', { fatal: false })
     .decode(bytes)
     .replace(/^\uFEFF/, '');
+}
+
+function looksLikeSvg(bytes) {
+  const text = decodeSvgText(bytes);
   const normalized = text
     .replace(/^\s*<\?xml[\s\S]*?\?>/i, '')
     .replace(/^\s*(?:<!--[\s\S]*?-->\s*)*/i, '')
@@ -256,7 +268,7 @@ function svgViewBoxDimensions(svgText) {
 
 export async function loadSvgImage(file) {
   const bytes = await file.arrayBuffer();
-  const svgText = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+  const svgText = decodeSvgText(new Uint8Array(bytes));
   if (svgHasExternalResources(svgText)) {
     throw new Error('This SVG references external files. Browsers do not load them during image conversion. Embed linked images or fonts in the SVG (for example as data URLs) and try again.');
   }
