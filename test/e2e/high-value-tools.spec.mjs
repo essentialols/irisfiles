@@ -51,6 +51,26 @@ test.describe('High-value tool expansion', () => {
     await expect(page.locator('.file-item__meta')).toContainText('→');
   });
 
+  test('PNG to ICO refuses animated PNG before flattening it', async ({ page }) => {
+    await page.goto('/png-to-ico');
+    const apngHeader = Buffer.from([
+      137,80,78,71,13,10,26,10,
+      0,0,0,13,73,72,68,82,0,0,0,2,0,0,0,2,8,6,0,0,0,114,182,13,36,
+      0,0,0,8,97,99,84,76,0,0,0,2,0,0,0,0,243,141,147,112,
+    ]);
+    await page.locator('#file-input').setInputFiles({
+      name: 'animated.png',
+      mimeType: 'image/png',
+      buffer: apngHeader,
+    });
+
+    const item = page.locator('.file-item').first();
+    await expect(item).toHaveClass(/failed/);
+    await expect(item.locator('.file-item__meta')).toContainText('Animated PNG (APNG)');
+    await expect(item.locator('.btn--success')).toHaveCount(0);
+    await expect(item.locator('.rm')).toBeVisible();
+  });
+
   test('PNG to ICO tells the user when the 50-file batch limit drops inputs', async ({ page }) => {
     await page.goto('/png-to-ico');
     const source = await readFile(fixture('sample.png'));
