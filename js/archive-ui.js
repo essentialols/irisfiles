@@ -7,6 +7,7 @@
 import { extractZip, createZip } from './archive-engine.js';
 import { formatSize, downloadBlob } from './converter.js';
 import { loadPendingFiles } from './smart-drop.js';
+import { showPersistentNotice } from './notice-ui.js';
 
 let mode = '';  // 'extract' or 'create'
 let dropZone, fileInput, fileList, actionBtn, clearBtn;
@@ -65,6 +66,12 @@ function addFiles(fileList_) {
   }
 
   const toAdd = incoming.slice(0, Math.max(0, maxFiles - files.length));
+  if (toAdd.length < incoming.length) {
+    showPersistentNotice(dropZone, toAdd.length === 0
+      ? `Batch limit reached (${maxFiles} ${maxFiles === 1 ? 'file' : 'files'}). Clear some files first.`
+      : `Only added ${toAdd.length} of ${incoming.length} files (batch limit: ${maxFiles}).`,
+      { id: 'archive-notice', kind: 'warning' });
+  }
   if (toAdd.length > 0) {
     inputRevision++;
     removeResults();
