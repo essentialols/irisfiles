@@ -1906,6 +1906,79 @@ export function initSmartDrop() {
     if (token !== selectionToken) return;
     const known = detected.filter(Boolean);
 
+    // A batch route is only safe when every selected file resolves to the same
+    // source format. Otherwise the old dominant-format fallback mislabeled the
+    // whole selection (for example, 2 PNGs + 1 PDF became "3 PNG files") and
+    // could carry the PDF into a PNG-only converter.
+    const knownMimes = new Set(known.map(d => d.mime));
+    if (files.length > 1 && (known.length !== files.length || knownMimes.size > 1)) {
+      routePanel.innerHTML = '';
+
+      const dismissBtn = document.createElement('button');
+      dismissBtn.className = 'route-dismiss';
+      dismissBtn.setAttribute('aria-label', 'Remove all files');
+      dismissBtn.innerHTML = '&#215;';
+      dismissBtn.addEventListener('click', clearDroppedFiles);
+      routePanel.appendChild(dismissBtn);
+
+      const heading = document.createElement('div');
+      heading.className = 'route-file-name';
+      heading.textContent = 'Mixed file types';
+      routePanel.appendChild(heading);
+
+      const list = document.createElement('div');
+      list.className = 'file-list';
+      const visibleCount = Math.min(files.length, 6);
+      for (let i = 0; i < visibleCount; i++) {
+        const row = document.createElement('div');
+        row.className = 'file-item';
+
+        const info = document.createElement('div');
+        info.className = 'file-item__info';
+
+        const name = document.createElement('div');
+        name.className = 'file-item__name';
+        name.textContent = files[i].name;
+        info.appendChild(name);
+
+        const meta = document.createElement('div');
+        meta.className = 'file-item__meta';
+        meta.textContent = formatSize(files[i].size) + ' · ' +
+          (detected[i]?.label || 'Unknown type');
+        info.appendChild(meta);
+
+        row.appendChild(info);
+        list.appendChild(row);
+      }
+
+      if (files.length > visibleCount) {
+        const more = document.createElement('div');
+        more.className = 'file-item';
+        const moreInfo = document.createElement('div');
+        moreInfo.className = 'file-item__info';
+        moreInfo.textContent = '+' + (files.length - visibleCount) + ' more files';
+        more.appendChild(moreInfo);
+        list.appendChild(more);
+      }
+      routePanel.appendChild(list);
+
+      const notice = document.createElement('p');
+      notice.className = 'route-panel__error';
+      notice.textContent = 'These files are different formats. Drop one format at a time so every file goes to the right converter.';
+      routePanel.appendChild(notice);
+
+      const clearWrap = document.createElement('div');
+      clearWrap.className = 'route-clear-wrap';
+      const clearBtn = document.createElement('button');
+      clearBtn.type = 'button';
+      clearBtn.className = 'btn btn--secondary route-clear-btn';
+      clearBtn.textContent = 'Remove all files';
+      clearBtn.addEventListener('click', clearDroppedFiles);
+      clearWrap.appendChild(clearBtn);
+      routePanel.appendChild(clearWrap);
+      return;
+    }
+
     if (known.length === 0) {
       const typeInfo = await identifyFileType(files[0]);
       if (token !== selectionToken) return;

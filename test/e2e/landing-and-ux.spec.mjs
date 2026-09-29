@@ -185,6 +185,22 @@ test.describe('Smart Drop on landing page', () => {
     const count = await options.count();
     expect(count).toBeGreaterThan(0);
   });
+
+  test('mixed file types are shown honestly instead of routed as the dominant format', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    const fileInput = page.locator('#smart-file-input');
+    await fileInput.setInputFiles([fixture('sample.png'), fixture('sample.pdf')]);
+
+    const routePanel = page.locator('#route-panel');
+    await expect(routePanel).toContainText('Mixed file types');
+    await expect(routePanel).toContainText('sample.png');
+    await expect(routePanel).toContainText('PNG');
+    await expect(routePanel).toContainText('sample.pdf');
+    await expect(routePanel).toContainText('PDF');
+    await expect(routePanel.locator('.route-option')).toHaveCount(0);
+    await expect(routePanel).not.toContainText('2 PNG files');
+  });
 });
 
 test.describe('404 handling', () => {
