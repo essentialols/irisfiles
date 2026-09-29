@@ -139,27 +139,6 @@ export { MAX_BATCH_SIZE };
 
 export const TIFF_DECODE_ERROR = 'Could not decode TIFF. The file may be corrupted or use a TIFF feature IrisFiles does not support yet.';
 
-let tiffDecoderPromise = null;
-
-async function loadTiffDecoder() {
-  if (globalThis.UTIF) return globalThis.UTIF;
-  if (!tiffDecoderPromise) {
-    tiffDecoderPromise = new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = '/js/utif.js';
-      script.onload = () => globalThis.UTIF
-        ? resolve(globalThis.UTIF)
-        : reject(new Error('TIFF decoder did not initialize'));
-      script.onerror = () => reject(new Error('Could not load the local TIFF decoder. Reload the page and try again.'));
-      document.head.appendChild(script);
-    }).catch(error => {
-      tiffDecoderPromise = null;
-      throw error;
-    });
-  }
-  return tiffDecoderPromise;
-}
-
 function orientTiffCanvas(rawCanvas, orientation) {
   if (!Number.isInteger(orientation) || orientation < 2 || orientation > 8) return rawCanvas;
   const width = rawCanvas.width;
@@ -186,38 +165,22 @@ function orientTiffCanvas(rawCanvas, orientation) {
 }
 
 export async function loadTiffImage(file) {
-  const decoder = await loadTiffDecoder();
-  const buffer = await file.arrayBuffer();
-  let ifd;
+  // Imported on demand: only Chromium/Firefox reach this, Safari decodes natively.
+  const { decodeTiffToRgba } = await import('./tiff-decoder.js');
+  let decoded;
   try {
-    const ifds = decoder.decode(buffer);
-    ifd = ifds.find(candidate => {
-      const width = Number(candidate?.t256?.[0]);
-      const height = Number(candidate?.t257?.[0]);
-      return Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0;
-    });
-  } catch {
-    throw new Error(TIFF_DECODE_ERROR);
+    decoded = await decodeTiffToRgba(await file.arrayBuffer(), { maxPixels: MAX_PIXELS });
+  } catch (error) {
+    throw new Error(`${TIFF_DECODE_ERROR} (${error.message})`);
   }
-  if (!ifd) throw new Error(TIFF_DECODE_ERROR);
-  const width = Number(ifd.t256[0]);
-  const height = Number(ifd.t257[0]);
-  validateDimensions(width, height);
-  let rgba;
-  try {
-    decoder.decodeImage(buffer, ifd);
-    rgba = decoder.toRGBA8(ifd);
-  } catch {
-    throw new Error(TIFF_DECODE_ERROR);
-  }
-  if (!rgba || rgba.length !== width * height * 4) throw new Error(TIFF_DECODE_ERROR);
+  const { width, height, rgba, orientation } = decoded;
   const rawCanvas = document.createElement('canvas');
   rawCanvas.width = width;
   rawCanvas.height = height;
   const rawCtx = rawCanvas.getContext('2d');
   if (!rawCtx) throw new Error('Could not get canvas context');
-  rawCtx.putImageData(new ImageData(new Uint8ClampedArray(rgba), width, height), 0, 0);
-  const canvas = orientTiffCanvas(rawCanvas, Number(ifd.t274?.[0]) || 1);
+  rawCtx.putImageData(new ImageData(rgba, width, height), 0, 0);
+  const canvas = orientTiffCanvas(rawCanvas, orientation);
   return { image: canvas, width: canvas.width, height: canvas.height, cleanup: () => { canvas.width = 1; canvas.height = 1; } };
 }
 
@@ -534,7 +497,7 @@ export async function convertWithCanvas(file, targetMime, quality) {
       cleanup = () => source.close();
     } catch {
       // Safari/WebKit may decode TIFF natively. Chromium/Firefox generally do
-      // not, so fall back to the vendored local decoder without uploading data.
+      // not, so fall back to the local decoder (js/tiff-decoder.js); no upload.
       if (fmt?.mime === 'image/tiff') {
         const loaded = await loadTiffImage(file);
         source = loaded.image;

@@ -33,7 +33,7 @@ Privacy-first client-side file converter. See [README.md](README.md) for project
 - **Default is 4 workers** (`IRIS_TEST_WORKERS` overrides). Serial was both slower and flakier.
 - `npx playwright install webkit` - one-time, enables the Safari capability check.
   `test/e2e/tiff-webkit-capability.spec.mjs` launches WebKit directly to verify the
-  claim that Safari decodes TIFF; it skips if WebKit is absent. Any page copy that
+  that Safari decodes TIFF natively; it skips if WebKit is absent. Any page copy that
   promises a specific browser can/cannot do something needs a check like this, because
   the default matrix is Chromium only.
 - **There is no CI.** A PR's only checks are `Vercel` and `Vercel Preview Comments`, both
@@ -43,6 +43,9 @@ Privacy-first client-side file converter. See [README.md](README.md) for project
 ## Conventions
 - One HTML page per tool, unique SEO meta, shared JS via ES module imports
 - Format detection uses magic bytes, not file extensions
+- TIFF: Chromium/Firefox cannot decode it natively, so `loadTiffImage` (`converter.js`, used by
+  `convertWithCanvas` and `imagesToPdf`) falls back to our own `js/tiff-decoder.js`: first IFD,
+  strips, uncompressed/LZW/Deflate/PackBits. Tiled, planar, BigTIFF and JPEG-in-TIFF fail with a clear error.
 - Heavy libraries lazy-loaded from jsDelivr CDN (ExifReader, piexifjs, FFmpeg.wasm, pdf-lib, etc.)
 - Engine/UI/Boot pattern: `*-engine.js` (pure functions), `*-ui.js` (DOM controller), `*-boot.js` (2-line bootstrapper)
 - **Stale async results need a generation token.** Any tool whose source the user can

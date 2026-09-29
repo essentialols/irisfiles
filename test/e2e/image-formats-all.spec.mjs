@@ -93,7 +93,18 @@ test.describe('TIFF pages', () => {
     expect([...data.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
     expect(data.readUInt32BE(16)).toBe(512);
     expect(data.readUInt32BE(20)).toBe(384);
-    expect(requests.some(url => /\/js\/utif\.js(?:$|\?)/.test(url))).toBe(true);
+    expect(requests.some(url => /\/js\/tiff-decoder\.js(?:$|\?)/.test(url))).toBe(true);
+  });
+
+  test('honors the TIFF orientation tag', async ({ page }) => {
+    await page.goto('/tiff-to-png');
+    await page.locator('#file-input').setInputFiles(fixture('sample-orientation6.tiff'));
+    await page.locator('.file-item.done').first().waitFor({ timeout: 30_000 });
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('.btn-download').first().click()]);
+    const data = await readFile(await download.path());
+    // Stored 8x4 with orientation 6 (rotate 90 CW) displays as 4x8.
+    expect(data.readUInt32BE(16)).toBe(4);
+    expect(data.readUInt32BE(20)).toBe(8);
   });
 
   test('tiff-to-pdf converts the same TIFF instead of showing a capability error', async ({ page }) => {
