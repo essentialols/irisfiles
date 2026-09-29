@@ -48,14 +48,16 @@ export async function imagesToGif(files, opts = {}) {
   // stretching or cropping. Differing aspect ratios use transparent padding.
   // The canvas rounds width and height independently, so the frame that defined
   // the canvas can fit a pixel short and end up inset behind a transparent seam.
-  // Close any sub-pixel gap instead of padding it.
+  // Close any sub-pixel gap instead of padding it. Half a pixel of rounding in
+  // one dimension costs aspect/2 pixels in the other, so the tolerance scales
+  // with the aspect ratio instead of staying at 1px for panoramas.
   function drawFrame(img) {
     ctx.clearRect(0, 0, w, h);
     const fit = Math.min(w / img.width, h / img.height);
     const fitW = img.width * fit;
     const fitH = img.height * fit;
-    const drawW = w - fitW <= 1 ? w : Math.max(1, Math.round(fitW));
-    const drawH = h - fitH <= 1 ? h : Math.max(1, Math.round(fitH));
+    const drawW = w - fitW <= Math.max(1, img.width / img.height / 2) ? w : Math.max(1, Math.round(fitW));
+    const drawH = h - fitH <= Math.max(1, img.height / img.width / 2) ? h : Math.max(1, Math.round(fitH));
     const x = Math.round((w - drawW) / 2);
     const y = Math.round((h - drawH) / 2);
     ctx.drawImage(img, x, y, drawW, drawH);
