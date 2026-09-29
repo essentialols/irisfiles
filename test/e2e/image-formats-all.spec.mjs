@@ -48,16 +48,34 @@ test.describe('AVIF pages', () => {
 
 });
 
-test.describe('ICO pages (no fixture)', () => {
+test.describe('ICO pages', () => {
 
+  // sample.ico's first directory entry is a valid 16x16 frame. Append a second
+  // entry that claims 256x256 but points at garbage: the largest frame is corrupt.
+  test('ico-to-png falls back to the next-largest frame when the largest is corrupt', async ({ page }) => {
+    const src = await readFile(fixture('sample.ico'));
+    const length = src.readUInt32LE(6 + 8);
+    const offset = src.readUInt32LE(6 + 12);
+    const header = Buffer.alloc(6 + 32);
+    header.writeUInt16LE(1, 2);
+    header.writeUInt16LE(2, 4);
+    const garbage = Buffer.from('not-a-decodable-icon-frame');
+    header.writeUInt32LE(garbage.length, 6 + 8);         // entry 0: 256x256 (width/height 0), corrupt
+    header.writeUInt32LE(header.length, 6 + 12);
+    src.copy(header, 22, 6, 22);                         // entry 1: the valid 16x16 entry...
+    header.writeUInt32LE(header.length + garbage.length, 22 + 12);  // ...repointed at the copied payload
+    const ico = Buffer.concat([header, garbage, src.subarray(offset, offset + length)]);
 
-
-
-
-
-
-
-
+    await page.goto('/ico-to-png');
+    await page.locator('#file-input').setInputFiles({ name: 'damaged.ico', mimeType: 'image/x-icon', buffer: ico });
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('.btn-download').first().click({ timeout: 5000 }),
+    ]);
+    const png = await readFile(await download.path());
+    expect(png.subarray(1, 4).toString()).toBe('PNG');
+    expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([16, 16]);
+  });
 
 });
 
