@@ -1,5 +1,6 @@
 /** IrisFiles - Pure browser PNG to ICO writer. */
 import { detectFormat, validateDimensions } from './converter.js';
+import { pngAnimationFrameCount } from './animation.js';
 
 const SIZES = [16, 32, 48, 64, 128, 256];
 
@@ -8,27 +9,6 @@ function canvasPng(canvas) {
 }
 function writeU16(view, offset, value) { view.setUint16(offset, value, true); }
 function writeU32(view, offset, value) { view.setUint32(offset, value, true); }
-
-async function pngAnimationFrameCount(file) {
-  // APNG puts acTL before the first IDAT. Read chunk headers only so large
-  // still PNGs are not copied into memory merely to prove they are static.
-  let offset = 8;
-  while (offset + 12 <= file.size) {
-    const header = new Uint8Array(await file.slice(offset, offset + 8).arrayBuffer());
-    if (header.length < 8) break;
-    const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
-    const length = view.getUint32(0, false);
-    const type = String.fromCharCode(header[4], header[5], header[6], header[7]);
-    if (length > file.size - offset - 12) break;
-    if (type === 'acTL' && length >= 8) {
-      const data = new DataView(await file.slice(offset + 8, offset + 12).arrayBuffer());
-      return data.getUint32(0, false);
-    }
-    if (type === 'IDAT' || type === 'IEND') break;
-    offset += length + 12;
-  }
-  return 1;
-}
 
 export async function pngToIco(file, onProgress = () => {}) {
   const format = await detectFormat(file);

@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
-import { fixture, expectDownloadOnClick } from './helpers.mjs';
+import { fixture, expectDownloadOnClick, buildApng } from './helpers.mjs';
 
 // Resize a file to 50% and return what the download actually contains.
 async function resizeHalfAndDownload(page, file) {
@@ -39,6 +39,29 @@ test.describe('Resize keeps a transparency-capable output format', () => {
     const out = await resizeHalfAndDownload(page, fixture('sample.webp'));
     expect(out.name).toBe('sample-50pct.png');
     expect(out.magic).toBe('\x89PNG');
+  });
+});
+
+test.describe('Resize refuses animated images', () => {
+  // Canvas keeps only the first frame, so on main each of these "succeeds" and
+  // downloads a still.
+  test('animated GIF, WebP and APNG are refused instead of flattened', async ({ page }) => {
+    await page.goto('/resize-image');
+    await page.locator('#file-input').setInputFiles([
+      { name: 'animated.gif', mimeType: 'image/gif', buffer: await readFile(fixture('animated.gif')) },
+      { name: 'animated.webp', mimeType: 'image/webp', buffer: await readFile(fixture('animated.webp')) },
+      { name: 'animated.png', mimeType: 'image/png', buffer: await buildApng() },
+    ]);
+    await expect(page.locator('.file-item')).toHaveCount(3);
+    await page.locator('#resize-mode').selectOption('percent');
+    await page.locator('#resize-percent').fill('50');
+    await page.locator('#resize-btn').click();
+
+    const status = page.locator('.file-item__status');
+    await expect(status.nth(0)).toContainText('Animated GIF cannot be resized');
+    await expect(status.nth(1)).toContainText('Animated WebP cannot be resized');
+    await expect(status.nth(2)).toContainText('Animated PNG (APNG) cannot be resized');
+    await expect(page.locator('.btn-download')).toHaveCount(0);
   });
 });
 
