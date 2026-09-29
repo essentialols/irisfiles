@@ -53,17 +53,28 @@ test.describe('Landing active-file workspace', () => {
     await expect(page.locator('#active-file-focus')).toHaveCount(0);
   });
 
-  test('active-file dismiss target stays finger-sized on phones', async ({ page }) => {
+  test('Smart Drop dismiss control has a finger-sized hit area on phones', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
-    await page.locator('#smart-file-input').setInputFiles(fixture('sample.avif'));
-
+    const input = page.locator('#smart-file-input');
     const dismiss = page.locator('#route-panel .route-dismiss');
+    // The 44px area is a pseudo-element, which boundingBox() ignores, so probe
+    // where a finger would land: the four corners of a 44px square on the button.
+    const cornersHit = () => dismiss.evaluate(el => {
+      const r = el.getBoundingClientRect();
+      const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+      return [[-21, -21], [21, -21], [-21, 21], [21, 21]]
+        .map(([dx, dy]) => document.elementFromPoint(cx + dx, cy + dy)?.closest('.route-dismiss') === el);
+    });
+
+    await input.setInputFiles(fixture('sample.avif'));
     await expect(dismiss).toBeVisible();
-    const box = await dismiss.boundingBox();
-    expect(box).not.toBeNull();
-    expect(box.width).toBeGreaterThanOrEqual(44);
-    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(await cornersHit()).toEqual([true, true, true, true]);
+
+    // The mixed-types panel is a separate render path with its own dismiss button.
+    await input.setInputFiles([fixture('sample.png'), fixture('sample.pdf')]);
+    await expect(page.locator('#route-panel')).toContainText('Mixed file types');
+    expect(await cornersHit()).toEqual([true, true, true, true]);
   });
 
   test('dismissing the file while the handoff write is in flight cancels the navigation', async ({ page }) => {
