@@ -99,12 +99,13 @@ function renderFileEntry(file) {
   const canReorder = mode === 'merge';
   if (canReorder) div.draggable = true;
   div.innerHTML = `
-    ${canReorder ? '<span class="drag-handle" title="Drag to reorder">&#x2630;</span>' : ''}
+    ${canReorder ? '<span class="drag-handle" title="Drag to reorder" aria-hidden="true">&#x2630;</span>' : ''}
     <div class="file-item__info">
       <div class="file-item__name">${esc(file.name)}</div>
       <div class="file-item__meta">${formatSize(file.size)}</div>
     </div>
     <div class="file-item__actions">
+      ${canReorder ? '<button type="button" class="btn btn--secondary btn-move" data-dir="-1">&uarr;</button><button type="button" class="btn btn--secondary btn-move" data-dir="1">&darr;</button>' : ''}
       <button class="btn btn--danger btn-remove">Remove</button>
     </div>
   `;
@@ -114,8 +115,29 @@ function renderFileEntry(file) {
     div.remove();
     updateControls();
   });
-  if (canReorder) setupDragReorder(div);
+  if (canReorder) {
+    setupDragReorder(div);
+    for (const btn of div.querySelectorAll('.btn-move')) {
+      const label = `Move ${file.name} ${btn.dataset.dir < 0 ? 'up' : 'down'}`;
+      btn.setAttribute('aria-label', label);
+      btn.title = label;
+      btn.addEventListener('click', () => moveFile(file, div, +btn.dataset.dir));
+    }
+  }
   fileList.appendChild(div);
+}
+
+// Keyboard/touch alternative to dragging: swap with the neighbour, then keep
+// focus on the moved row (its button may have just become disabled at an end).
+function moveFile(file, el, dir) {
+  const from = files.indexOf(file);
+  const to = from + dir;
+  if (to < 0 || to >= files.length) return;
+  const neighbour = fileList.children[to];
+  if (dir < 0) neighbour.before(el); else neighbour.after(el);
+  files.splice(to, 0, ...files.splice(from, 1));
+  updateControls();
+  (el.querySelector(`.btn-move[data-dir="${dir}"]:not(:disabled)`) || el.querySelector('.btn-move:not(:disabled)'))?.focus();
 }
 
 let dragSrc = null;
@@ -149,6 +171,7 @@ function setupDragReorder(el) {
     // Sync the files array to match new DOM order
     const [moved] = files.splice(fromIdx, 1);
     files.splice(toIdx, 0, moved);
+    updateControls();
   });
 }
 
@@ -159,6 +182,13 @@ function updateControls() {
     actionBtn.style.display = files.length > 0 ? '' : 'none';
   }
   if (clearBtn) clearBtn.style.display = files.length > 0 ? '' : 'none';
+  if (mode === 'merge') {
+    [...fileList.children].forEach((item, i, rows) => {
+      const [up, down] = item.querySelectorAll('.btn-move');
+      up.disabled = i === 0;
+      down.disabled = i === rows.length - 1;
+    });
+  }
 }
 
 function clearAll() {
