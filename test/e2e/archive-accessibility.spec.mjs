@@ -30,4 +30,21 @@ test.describe('Archive action names', () => {
     await page.locator('#archive-results').waitFor({ timeout: 10000 });
     await expect(page.getByRole('button', { name: 'Download archive.zip', exact: true })).toBeVisible();
   });
+
+  test('Create ZIP explains when files exceed the 50-file batch limit', async ({ page }) => {
+    await page.goto('/create-zip');
+
+    const tiny = (name) => ({ name, mimeType: 'text/plain', buffer: Buffer.from('x') });
+    await page.locator('#file-input').setInputFiles(
+      Array.from({ length: 51 }, (_, i) => tiny(`f${i}.txt`)));
+
+    await expect(page.locator('.file-item')).toHaveCount(50);
+    await expect(page.locator('#archive-notice .notice__text'))
+      .toHaveText('Only added 50 of 51 files (batch limit: 50).');
+
+    await page.locator('#file-input').setInputFiles(tiny('extra.txt'));
+    await expect(page.locator('.file-item')).toHaveCount(50);
+    await expect(page.locator('#archive-notice .notice__text'))
+      .toHaveText('Batch limit reached (50 files). Clear some files first.');
+  });
 });
