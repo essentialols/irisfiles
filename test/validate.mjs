@@ -252,19 +252,13 @@ function validateConverterShell(label, html) {
         `${label}: accept "${accept[1]}" does not mention source "${src}"`);
     }
   }
-  // Only one direction is a site-wide rule: a lossy target always exposes the
-  // encoder quality. The converse is not true and should not be asserted as if
-  // it were, because slider presence on lossless targets is inconsistent
-  // (avif-to-png ships none, jpg-to-png does; most *-to-pdf have one, the
-  // document sources do not). NO_SLIDER carries only the pages an e2e test
-  // already pinned.
-  const NO_SLIDER = new Set(['avif-to-png']);
-  if (LOSSY.has(dst)) {
-    ok(html.includes('id="quality-slider"'), `${label}: lossy target has no #quality-slider`);
-  }
-  if (NO_SLIDER.has(label)) {
-    ok(!html.includes('id="quality-slider"'), `${label}: expected no #quality-slider`);
-  }
+  // Two site-wide rules. A lossy target always exposes the encoder quality. A
+  // PNG target never does: the encoder is lossless and ignores it, so the slider
+  // would be a control that does nothing. Other lossless targets (*-to-pdf) are
+  // not covered: several use the slider for embedded-image quality.
+  const hasSlider = html.includes('id="quality-slider"');
+  if (LOSSY.has(dst)) ok(hasSlider, `${label}: lossy target has no #quality-slider`);
+  if (dst === 'png') ok(!hasSlider, `${label}: PNG target must not carry a no-op #quality-slider`);
 }
 
 async function globalChecks() {
