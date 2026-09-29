@@ -63,6 +63,39 @@ function readFlacSampleRate(arrayBuffer) {
   return sampleRate || null;
 }
 
+/**
+ * Read the source PCM precision from the mandatory FLAC STREAMINFO block.
+ * Web Audio exposes decoded samples as float32, which is precise enough to
+ * carry 24-bit integer PCM. Keeping this metadata lets FLAC -> WAV avoid an
+ * unnecessary 24 -> 16-bit reduction.
+ *
+ * @param {ArrayBuffer} arrayBuffer
+ * @returns {number|null}
+ */
+function readFlacBitsPerSample(arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+  if (
+    bytes.length < 42 ||
+    bytes[0] !== 0x66 ||
+    bytes[1] !== 0x4c ||
+    bytes[2] !== 0x61 ||
+    bytes[3] !== 0x43 ||
+    (bytes[4] & 0x7f) !== 0
+  ) {
+    return null;
+  }
+
+  const streamInfoLength =
+    (bytes[5] << 16) | (bytes[6] << 8) | bytes[7];
+  if (streamInfoLength < 34 || bytes.length < 8 + streamInfoLength) {
+    return null;
+  }
+
+  // STREAMINFO packs sample rate (20 bits), channels-1 (3 bits), then
+  // bits-per-sample-1 (5 bits) across bytes 20-21 of the file.
+  return (((bytes[20] & 0x01) << 4) | (bytes[21] >> 4)) + 1;
+}
+
 const ADTS_SAMPLE_RATES = [
   96000,
   88200,
@@ -394,6 +427,7 @@ export async function convertAudio(
     readMp4AudioSampleRate(arrayBuffer) ||
     readOggSampleRate(arrayBuffer) ||
     readMp3SampleRate(arrayBuffer);
+  const detectedSourceBitDepth = readFlacBitsPerSample(arrayBuffer);
   // Preserving a source rate MP3 cannot pair with the requested bitrate would
   // silently downgrade it: LAME clamps to the table for that rate, so a 24 kHz
   // source asked for 320 kbps yields 160 while the UI still promises 320. Fall
@@ -426,7 +460,11 @@ export async function convertAudio(
   onProgress(30);
 
   if (targetFormat === "wav") {
-    const blob = encodeWav(audioBuffer, onProgress);
+    // Browser decoding uses float32 samples. That has enough precision to
+    // carry 24-bit PCM exactly, so keep high-resolution FLAC from being
+    // needlessly quantized to 16-bit on the way back to WAV.
+    const outputBitDepth = detectedSourceBitDepth > 16 ? 24 : 16;
+    const blob = encodeWav(audioBuffer, onProgress, outputBitDepth);
     onProgress(100);
     return blob;
   }
@@ -555,16 +593,17 @@ async function runAudioConversion(
 }
 
 /**
- * Encode AudioBuffer to WAV (PCM 16-bit).
+ * Encode AudioBuffer to WAV (PCM, 16- or 24-bit).
  * @param {AudioBuffer} audioBuffer
  * @param {function} onProgress
+ * @param {16|24} [bitDepth=16]
  * @returns {Blob}
  */
-function encodeWav(audioBuffer, onProgress) {
+function encodeWav(audioBuffer, onProgress, bitDepth = 16) {
   const numChannels = audioBuffer.numberOfChannels;
   const sampleRate = audioBuffer.sampleRate;
   const numSamples = audioBuffer.length;
-  const bytesPerSample = 2; // 16-bit
+  const bytesPerSample = bitDepth === 24 ? 3 : 2;
   const dataSize = numSamples * numChannels * bytesPerSample;
   const buffer = new ArrayBuffer(44 + dataSize);
   const view = new DataView(buffer);
@@ -580,7 +619,7 @@ function encodeWav(audioBuffer, onProgress) {
   view.setUint32(24, sampleRate, true);
   view.setUint32(28, sampleRate * numChannels * bytesPerSample, true); // byte rate
   view.setUint16(32, numChannels * bytesPerSample, true); // block align
-  view.setUint16(34, 16, true); // bits per sample
+  view.setUint16(34, bitDepth, true); // bits per sample
 
   writeString(view, 36, "data");
   view.setUint32(40, dataSize, true);
@@ -595,12 +634,22 @@ function encodeWav(audioBuffer, onProgress) {
   for (let i = 0; i < numSamples; i++) {
     for (let ch = 0; ch < numChannels; ch++) {
       const sample = Math.max(-1, Math.min(1, channels[ch][i]));
-      view.setInt16(
-        offset,
-        sample < 0 ? sample * 0x8000 : sample * 0x7fff,
-        true,
-      );
-      offset += 2;
+      if (bitDepth === 24) {
+        const value = Math.round(
+          sample < 0 ? sample * 0x800000 : sample * 0x7fffff,
+        );
+        view.setUint8(offset, value & 0xff);
+        view.setUint8(offset + 1, (value >> 8) & 0xff);
+        view.setUint8(offset + 2, (value >> 16) & 0xff);
+        offset += 3;
+      } else {
+        view.setInt16(
+          offset,
+          sample < 0 ? sample * 0x8000 : sample * 0x7fff,
+          true,
+        );
+        offset += 2;
+      }
     }
     // Report progress from 30% to 100%
     if (i % 100000 === 0) {
