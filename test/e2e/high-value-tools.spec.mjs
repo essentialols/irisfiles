@@ -184,6 +184,87 @@ test.describe('High-value tool expansion', () => {
     await expect(page.locator('#pdf-tool-result .btn--success')).toBeVisible({ timeout: 20_000 });
   });
 
+  // File.arrayBuffer is the first async step of every run, so parking it lets a test replace the file
+  // at an exact point instead of racing timers. Set window.__holdSpec[name] = n to park that file's nth
+  // call; window.__held(name) says whether it is parked and window.__release(name) lets it continue.
+  const holdArrayBuffer = () => {
+    const original = File.prototype.arrayBuffer;
+    const calls = {}; const parked = {}; const resolvers = {};
+    window.__holdSpec = {};
+    window.__held = (name) => !!parked[name];
+    window.__release = (name) => { parked[name] = false; resolvers[name]?.(); };
+    File.prototype.arrayBuffer = function (...args) {
+      const n = calls[this.name] = (calls[this.name] || 0) + 1;
+      if (window.__holdSpec[this.name] !== n) return original.apply(this, args);
+      parked[this.name] = true;
+      return new Promise((resolve, reject) => {
+        resolvers[this.name] = () => original.apply(this, args).then(resolve, reject);
+      });
+    };
+  };
+
+  test('replacing a PDF during compression stops the stale run early and keeps the button disabled', async ({ page }) => {
+    const source = await readFile(fixture('sample.pdf'));
+    await page.addInitScript(holdArrayBuffer);
+    // Every compressed page goes through canvas.toBlob, so a count of zero proves the cancelled run never rendered one.
+    await page.addInitScript(() => {
+      window.__jpegEncodes = 0;
+      const original = HTMLCanvasElement.prototype.toBlob;
+      HTMLCanvasElement.prototype.toBlob = function (cb, type, ...rest) {
+        if (type === 'image/jpeg') window.__jpegEncodes++;
+        return original.call(this, cb, type, ...rest);
+      };
+    });
+    await page.goto('/compress-pdf');
+    await page.evaluate(() => { window.__holdSpec['first.pdf'] = 1; });
+    await page.locator('#file-input').setInputFiles({ name: 'first.pdf', mimeType: 'application/pdf', buffer: source });
+    const action = page.locator('#action-btn');
+    await action.click();
+    await page.waitForFunction(() => window.__held('first.pdf'));
+
+    await page.locator('#file-input').setInputFiles({ name: 'second.pdf', mimeType: 'application/pdf', buffer: source });
+    await expect(page.locator('.file-item__name')).toHaveText('second.pdf');
+    await expect(action).toBeDisabled();
+
+    await page.evaluate(() => window.__release('first.pdf'));
+    await expect(action).toBeEnabled();
+    expect(await page.evaluate(() => window.__jpegEncodes)).toBe(0);
+    await expect(page.locator('#pdf-tool-result')).not.toBeVisible();
+  });
+
+  test('a replaced PDF run finishing mid page-load does not enable the button early', async ({ page }) => {
+    const source = await readFile(fixture('sample.pdf'));
+    await page.addInitScript(holdArrayBuffer);
+    // The old run's last step is building its result Blob; noting it tells us the run is over without a timer.
+    await page.addInitScript(() => {
+      window.__pdfBlobs = 0;
+      const Original = window.Blob;
+      window.Blob = class extends Original {
+        constructor(parts, opts) { super(parts, opts); if (opts?.type === 'application/pdf') window.__pdfBlobs++; }
+      };
+    });
+    await page.goto('/reorder-pdf-pages');
+    // first.pdf: call 1 loads thumbnails, call 2 is the run. second.pdf: call 1 is its page load.
+    await page.evaluate(() => { window.__holdSpec['first.pdf'] = 2; window.__holdSpec['second.pdf'] = 1; });
+    await page.locator('#file-input').setInputFiles({ name: 'first.pdf', mimeType: 'application/pdf', buffer: source });
+    const action = page.locator('#action-btn');
+    await expect(action).toBeEnabled();
+    await action.click();
+    await page.waitForFunction(() => window.__held('first.pdf'));
+    await page.locator('#file-input').setInputFiles({ name: 'second.pdf', mimeType: 'application/pdf', buffer: source });
+    await expect(action).toContainText('Loading pages');
+    await page.waitForFunction(() => window.__held('second.pdf'));
+
+    await page.evaluate(() => window.__release('first.pdf'));
+    await page.waitForFunction(() => window.__pdfBlobs > 0);
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 0))); // let the old run's finally block run
+    await expect(action).toBeDisabled();
+    await expect(action).toContainText('Loading pages');
+
+    await page.evaluate(() => window.__release('second.pdf'));
+    await expect(action).toBeEnabled();
+  });
+
   test('HTML to PDF converts sanitized self-contained HTML', async ({ page }) => {
     await page.goto('/html-to-pdf');
     await page.locator('#file-input').setInputFiles({
