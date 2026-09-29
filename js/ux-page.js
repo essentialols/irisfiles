@@ -108,24 +108,8 @@ export function injectPreflightBadge(options = {}) {
   }
 }
 
-function inferFormatPreflight(options) {
-  if (options.preflight) return options;
-  const fileInputSelector = options.fileInputSelector || '#file-input';
-  const fileInput = document.querySelector(fileInputSelector);
-  const accept = fileInput?.getAttribute('accept') || '';
-  if (!/(?:image\/tiff|\.tiff|\.tif)(?:,|$)/i.test(accept)) return options;
-
-  return {
-    ...options,
-    preflight: {
-      id: 'tiff-support-badge',
-      text: 'TIFF decoding depends on browser support. Safari supports TIFF natively; Chrome, Edge, and Firefox do not support TIFF natively.',
-    },
-  };
-}
-
 export function applyPageUX(options = {}) {
-  const resolvedOptions = inferFormatPreflight(options);
+  const resolvedOptions = options;
   // Every page that renders a source thumbnail gets the fallback from here, so
   // a new boot module cannot ship a broken <img> by forgetting to opt in. It
   // lived in boot.js alone, which left /resize-image showing one for HEIC.
