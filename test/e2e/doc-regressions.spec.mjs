@@ -222,6 +222,87 @@ test('EPUB preserves ordered and bulleted list markers in downloaded text', asyn
   ].join('\n'));
 });
 
+// One-chapter EPUB around a body fragment; the chapter is the only thing these tests vary.
+function tableEpub(body) {
+  return storedZip({
+    'META-INF/container.xml': `<?xml version="1.0"?>
+<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles><rootfile full-path="OEBPS/content.opf"/></rootfiles>
+</container>`,
+    'OEBPS/content.opf': `<?xml version="1.0"?>
+<package xmlns="http://www.idpf.org/2007/opf">
+  <manifest><item id="c" href="c.xhtml" media-type="application/xhtml+xml"/></manifest>
+  <spine><itemref idref="c"/></spine>
+</package>`,
+    'OEBPS/c.xhtml': `<?xml version="1.0" encoding="utf-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml"><body>${body}</body></html>`,
+  });
+}
+
+const EPUB_TABLE = `<p>Before</p>
+  <table><tbody>
+    <tr><th>Name</th><th>Phone</th><th>Notes</th></tr>
+    <tr><td>Zoe</td><td></td><td><p>Two</p><p>lines</p></td></tr>
+  </tbody></table>
+  <p>After</p>`;
+
+test('EPUB keeps table cells on separated rows in downloaded text', async ({ page }) => {
+  await page.goto('/epub-to-txt');
+  await page.locator('#file-input').setInputFiles({
+    name: 'table.epub',
+    mimeType: 'application/epub+zip',
+    buffer: tableEpub(EPUB_TABLE + `<table><tr><td>Outer<table><tr><td>Inner</td></tr></table></td><td>Beside</td></tr></table>`),
+  });
+  await page.locator('#action-btn').click();
+  await expect(page.locator('#dl-doc')).toBeVisible({ timeout: 30000 });
+
+  const text = await downloadText(page);
+  // Empty cell keeps its column; a multi-paragraph cell stays on its row.
+  expect(text).toContain('Before\nName\tPhone\tNotes\nZoe\t\tTwo lines\nAfter');
+  // A row holding a nested table is not flattened into columns, and loses no text.
+  for (const word of ['Outer', 'Inner', 'Beside']) expect(text).toContain(word);
+  expect(text).not.toContain('Outer\t');
+});
+
+test('EPUB to PDF separates table columns with spaces, never a tab', async ({ page }) => {
+  await page.goto('/epub-to-pdf');
+  await page.locator('#file-input').setInputFiles({
+    name: 'table.epub',
+    mimeType: 'application/epub+zip',
+    buffer: tableEpub(EPUB_TABLE),
+  });
+  await page.locator('#action-btn').click();
+  await expect(page.locator('#dl-doc')).toBeVisible({ timeout: 30000 });
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#dl-doc').click();
+  const pdf = await readFile(await (await downloadPromise).path());
+
+  // jsPDF writes a tab through unexpanded and helvetica has no glyph for it, so
+  // measure the drawn gap rather than trust the text layer.
+  const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const doc = await getDocument({ data: new Uint8Array(pdf), useSystemFonts: false }).promise;
+  const items = [];
+  for (let n = 1; n <= doc.numPages; n++) {
+    const content = await (await doc.getPage(n)).getTextContent();
+    for (const item of content.items) {
+      if (item.str) items.push({ str: item.str, x: item.transform[4], width: item.width });
+    }
+  }
+  await doc.destroy();
+
+  const gapBefore = label => {
+    const index = items.findIndex(item => item.str === label);
+    expect(index, `no drawn text "${label}" in the PDF`).toBeGreaterThan(0);
+    let previous = index - 1;
+    while (previous >= 0 && !items[previous].str.trim()) previous--;
+    return items[index].x - (items[previous].x + items[previous].width);
+  };
+  expect(gapBefore('Phone')).toBeGreaterThan(8);
+  expect(gapBefore('Notes')).toBeGreaterThan(8);
+  expect(pdf.includes(0x09)).toBe(false);
+});
+
 test('RTF honors group-scoped uc values and escaped fallback characters', async ({ page }) => {
   const rtf = '{\\rtf1\\ansi\\uc0 Unicode: \\u945X {\\uc2\\u946\\\'62?Y} \\u947Z; accent: {\\uc1\\u233\\\'e9}.}';
 
