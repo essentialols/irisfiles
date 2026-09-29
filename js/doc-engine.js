@@ -465,9 +465,12 @@ function parseRtf(rtfString) {
         ansiDecoder = new TextDecoder('windows-1252');
       } else if (word === 'ansicpg') {
         const codePage = parseInt(param, 10);
-        // Preserve the existing byte-for-byte fallback for code pages that
-        // require handling beyond the common Windows-1252 path.
-        ansiDecoder = codePage === 1252 ? new TextDecoder('windows-1252') : null;
+        // Windows-1250..1258 are the single-byte ANSI code pages TextDecoder
+        // knows by label. Anything else (multi-byte CJK pages, 437, 850)
+        // keeps the byte-for-byte fallback.
+        ansiDecoder = codePage >= 1250 && codePage <= 1258
+          ? new TextDecoder('windows-' + codePage)
+          : null;
       } else if (word === 'mac' || word === 'pc' || word === 'pca') {
         ansiDecoder = null;
       } else if (word === 'uc') {
