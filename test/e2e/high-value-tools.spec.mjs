@@ -171,6 +171,31 @@ test.describe('High-value tool expansion', () => {
     await expect(page.locator('#pdf-tool-result')).not.toBeVisible();
   });
 
+  test('a replaced PDF run finishing mid page-load does not enable the button early', async ({ page }) => {
+    const source = await readFile(fixture('sample.pdf'));
+    await page.addInitScript(() => {
+      const original = File.prototype.arrayBuffer;
+      let firstCalls = 0;
+      File.prototype.arrayBuffer = function (...args) {
+        const delay = this.name === 'second.pdf' ? 2000 : this.name === 'first.pdf' && ++firstCalls > 1 ? 800 : 0;
+        if (!delay) return original.apply(this, args);
+        return new Promise((resolve, reject) => {
+          setTimeout(() => original.apply(this, args).then(resolve, reject), delay);
+        });
+      };
+    });
+    await page.goto('/reorder-pdf-pages');
+    await page.locator('#file-input').setInputFiles({ name: 'first.pdf', mimeType: 'application/pdf', buffer: source });
+    const action = page.locator('#action-btn');
+    await expect(action).toBeEnabled();
+    await action.click();
+    await page.locator('#file-input').setInputFiles({ name: 'second.pdf', mimeType: 'application/pdf', buffer: source });
+    await expect(action).toContainText('Loading pages');
+    await page.waitForTimeout(1200);
+    await expect(action).toBeDisabled();
+    await expect(action).toBeEnabled({ timeout: 5000 });
+  });
+
   test('HTML to PDF converts sanitized self-contained HTML', async ({ page }) => {
     await page.goto('/html-to-pdf');
     await page.locator('#file-input').setInputFiles({
