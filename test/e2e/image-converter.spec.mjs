@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
-import { fixture, cacheCdnAssets } from './helpers.mjs';
+import { fixture, cacheCdnAssets, buildApng } from './helpers.mjs';
 
 // Each test gets a fresh context, so each one refetched the ~25MB FFmpeg core.
 test.beforeEach(async ({ page }) => { await cacheCdnAssets(page); });
@@ -505,6 +505,26 @@ test.describe('Compress mode format flexibility', () => {
     await page.locator('#file-input').setInputFiles(fixture('sample.gif'));
     await page.locator('.file-item.done').first().waitFor({ timeout: 15000 });
     await expect(page.locator('.btn-download').first()).toBeVisible();
+  });
+});
+
+test.describe('Compress refuses animated images', () => {
+  // Canvas keeps only the first frame, so on main each of these "succeeds" and
+  // downloads a still. A still WebP alongside proves ordinary compression still runs.
+  test('animated GIF, WebP and APNG are refused instead of flattened', async ({ page }) => {
+    await page.goto('/compress');
+    await page.locator('#file-input').setInputFiles([
+      { name: 'animated.gif', mimeType: 'image/gif', buffer: await readFile(fixture('animated.gif')) },
+      { name: 'animated.webp', mimeType: 'image/webp', buffer: await readFile(fixture('animated.webp')) },
+      { name: 'animated.png', mimeType: 'image/png', buffer: await buildApng() },
+      { name: 'still.png', mimeType: 'image/png', buffer: await readFile(fixture('sample.png')) },
+    ]);
+    const status = page.locator('.file-item__status');
+    await expect(status.nth(0)).toContainText('Animated GIF cannot be compressed');
+    await expect(status.nth(1)).toContainText('Animated WebP cannot be compressed');
+    await expect(status.nth(2)).toContainText('Animated PNG (APNG) cannot be compressed');
+    await expect(page.locator('.file-item.done')).toHaveCount(1);
+    await expect(page.locator('.file-item.done .file-item__name')).toHaveText('still.png');
   });
 });
 
