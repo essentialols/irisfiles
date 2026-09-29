@@ -66,7 +66,8 @@ const EPUB_BLOCK_ELEMENTS = new Set([
 ]);
 
 /** Convert an EPUB XHTML body to readable plain text while preserving block boundaries. */
-function htmlBodyToPlainText(root) {
+function htmlBodyToPlainText(root, options = {}) {
+  const cellSeparator = options.cellSeparator;
   let text = '';
   let preDepth = 0;
   let atListItemStart = false;
@@ -154,6 +155,25 @@ function htmlBodyToPlainText(root) {
       return;
     }
 
+    // EPUB tables otherwise collapse adjacent cells into one run of text.
+    // Preserve ordinary rows when the caller supplies a column separator.
+    if (tag === 'tr' && cellSeparator != null) {
+      const cells = [...node.children]
+        .filter(child => ['td', 'th'].includes((child.localName || '').toLowerCase()));
+      const hasNestedTable = cells.some(cell =>
+        cell.getElementsByTagNameNS('*', 'table').length > 0
+      );
+      if (cells.length > 0 && !hasNestedTable) {
+        appendBreak();
+        text += cells.map(cell =>
+          htmlBodyToPlainText(cell, options).replace(/\n+/g, ' ').trim()
+        ).join(cellSeparator);
+        atListItemStart = false;
+        appendBreak(true);
+        return;
+      }
+    }
+
     if (tag === 'ol' || tag === 'ul') {
       // A nested list that is the first child of an li still needs to start on
       // its own line instead of running directly after the parent's marker.
@@ -218,7 +238,8 @@ function resolveEpubPath(opfPath, href) {
 }
 
 /** Parse EPUB (ZIP) and extract chapter text in spine order. */
-async function extractEpubText(file, onProgress) {
+async function extractEpubText(file, onProgress, options = {}) {
+  const extraction = { cellSeparator: options.cellSeparator ?? '\t' };
   if (onProgress) onProgress(10);
   const buf = new Uint8Array(await file.arrayBuffer());
   if (typeof fflate === 'undefined') throw new Error('ZIP library not loaded. Please reload the page.');
@@ -316,7 +337,7 @@ async function extractEpubText(file, onProgress) {
       continue;
     }
     const body = doc.body || doc.documentElement;
-    const text = htmlBodyToPlainText(body);
+    const text = htmlBodyToPlainText(body, extraction);
     if (text) chapters.push(text);
 
     if (onProgress) onProgress(30 + Math.round((i / orderedFiles.length) * 40));
@@ -336,7 +357,7 @@ export async function epubToText(file, onProgress) {
 }
 
 export async function epubToPdf(file, onProgress) {
-  const text = await extractEpubText(file, onProgress);
+  const text = await extractEpubText(file, onProgress, { cellSeparator: '    ' });
   if (onProgress) onProgress(50);
   const blob = await textToPdfBlob(text, onProgress);
   if (onProgress) onProgress(100);
