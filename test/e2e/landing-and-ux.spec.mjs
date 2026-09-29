@@ -198,8 +198,22 @@ test.describe('Smart Drop on landing page', () => {
     await expect(routePanel).toContainText('PNG');
     await expect(routePanel).toContainText('sample.pdf');
     await expect(routePanel).toContainText('PDF');
-    await expect(routePanel.locator('.route-option')).toHaveCount(0);
+    await expect(routePanel.locator('[data-href="/create-zip"]')).toHaveCount(1);
+    for (const href of ['/png-to-ico', '/background-remover', '/image-to-text', '/compress-pdf']) {
+      await expect(routePanel.locator(`[data-href="${href}"]`)).toHaveCount(0);
+    }
     await expect(routePanel).not.toContainText('2 PNG files');
+  });
+
+  test('a batch of unidentified files is not reported as mixed formats', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    const txt = name => ({ name, mimeType: 'text/plain', buffer: Buffer.from('hello world') });
+    await page.locator('#smart-file-input').setInputFiles([txt('a.txt'), txt('b.txt')]);
+
+    const routePanel = page.locator('#route-panel');
+    await expect(routePanel).toContainText(/Could not identify|not currently supported/);
+    await expect(routePanel).not.toContainText('Mixed file types');
   });
 });
 

@@ -1911,7 +1911,7 @@ export function initSmartDrop() {
     // whole selection (for example, 2 PNGs + 1 PDF became "3 PNG files") and
     // could carry the PDF into a PNG-only converter.
     const knownMimes = new Set(known.map(d => d.mime));
-    if (files.length > 1 && (known.length !== files.length || knownMimes.size > 1)) {
+    if (known.length > 0 && files.length > 1 && (known.length !== files.length || knownMimes.size > 1)) {
       routePanel.innerHTML = '';
 
       const dismissBtn = document.createElement('button');
