@@ -181,12 +181,20 @@ function hideResizeSettingsNotice() {
   notice.setAttribute('aria-hidden', 'true');
 }
 
+// Formats that can carry transparency keep it: JPEG would flatten them onto white.
+// Canvas cannot encode GIF, so a still GIF comes out as PNG.
+const RESIZE_OUTPUT_MIME = {
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+  'image/gif': 'image/png',
+};
+
 // Build resize opts from current UI state.
 // With the aspect lock enabled, derive the second dimension from the current
 // file rather than the first file in the batch. This keeps mixed-ratio batches
 // from being stretched or squashed.
 function getResizeOpts(inputMime, dimensions = null) {
-  const outputMime = inputMime === 'image/png' ? 'image/png' : 'image/jpeg';
+  const outputMime = RESIZE_OUTPUT_MIME[inputMime] || 'image/jpeg';
   const opts = { outputMime };
   if (currentMode() === 'percent') {
     const percent = parseFloat(percentInput && percentInput.value);
@@ -223,6 +231,7 @@ function getResizeOpts(inputMime, dimensions = null) {
 // Derive output extension from output mime
 function outputExtFromMime(mime) {
   if (mime === 'image/png') return 'png';
+  if (mime === 'image/webp') return 'webp';
   return 'jpg';
 }
 
@@ -320,11 +329,14 @@ async function processQueue() {
                           (opts.percent && opts.percent > 100);
         if (isUpscale) showNotice('Upscaling beyond original dimensions. Quality may be reduced.');
       }
-      next.outputName = resizeOutputFilename(next.file.name, opts);
       next.outputBlob = await resizeImage(next.file, opts, pct => {
         next.progress = pct;
         updateFileItem(next);
       });
+      // Name the file for what the browser actually produced: Safari cannot
+      // encode WebP and hands back PNG for that request.
+      next.outputName = resizeOutputFilename(next.file.name,
+        { ...opts, outputMime: next.outputBlob.type || opts.outputMime });
       next.durationMs = Math.round(performance.now() - t0);
       next.status   = 'done';
       next.progress = 100;
