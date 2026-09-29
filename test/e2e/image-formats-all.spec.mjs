@@ -80,46 +80,40 @@ test.describe('ICO pages', () => {
 });
 
 test.describe('TIFF pages', () => {
-
-
-
-
-
-  test('warns about native TIFF browser support before upload', async ({ page }) => {
+  test('converts a native TIFF to PNG in Chromium with the local fallback', async ({ page }) => {
+    const requests = [];
+    page.on('request', request => requests.push(request.url()));
     await page.goto('/tiff-to-png');
-    const badge = page.locator('#tiff-support-badge');
-    await expect(badge).toBeVisible();
-    await expect(badge).toContainText('Safari supports TIFF natively');
-    await expect(badge).toContainText('Chrome, Edge, and Firefox do not support TIFF natively');
-  });
-
-
-  test('recognizes a native TIFF and explains Chromium decode failure', async ({ page }) => {
-    await page.goto('/tiff-to-png');
+    await expect(page.locator('#tiff-support-badge')).toHaveCount(0);
     await page.locator('#file-input').setInputFiles(fixture('sample.tiff'));
-    const status = page.locator('.file-item__status.error').first();
-    await expect(status).toBeVisible({ timeout: 15000 });
-    await expect(status).toContainText('Could not decode TIFF');
-    await expect(status).not.toContainText('Unrecognized image format');
+    await page.locator('.file-item.done').first().waitFor({ timeout: 30_000 });
+    await expect(page.locator('.file-item__status.error')).toHaveCount(0);
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('.btn-download').first().click()]);
+    const data = await readFile(await download.path());
+    expect([...data.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+    expect(data.readUInt32BE(16)).toBe(512);
+    expect(data.readUInt32BE(20)).toBe(384);
+    expect(requests.some(url => /\/js\/tiff-decoder\.js(?:$|\?)/.test(url))).toBe(true);
   });
 
-
-
-
-  test('tiff-to-pdf page loads correctly', async ({ page }) => {
-    await page.goto('/tiff-to-pdf');
-    await expect(page.locator('#drop-zone')).toBeVisible();
-    await expect(page.locator('#tiff-support-badge')).toBeVisible();
+  test('honors the TIFF orientation tag', async ({ page }) => {
+    await page.goto('/tiff-to-png');
+    await page.locator('#file-input').setInputFiles(fixture('sample-orientation6.tiff'));
+    await page.locator('.file-item.done').first().waitFor({ timeout: 30_000 });
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('.btn-download').first().click()]);
+    const data = await readFile(await download.path());
+    // Stored 8x4 with orientation 6 (rotate 90 CW) displays as 4x8.
+    expect(data.readUInt32BE(16)).toBe(4);
+    expect(data.readUInt32BE(20)).toBe(8);
   });
 
-
-  test('tiff-to-pdf reports the same TIFF capability error', async ({ page }) => {
+  test('tiff-to-pdf converts the same TIFF instead of showing a capability error', async ({ page }) => {
     await page.goto('/tiff-to-pdf');
+    await expect(page.locator('#tiff-support-badge')).toHaveCount(0);
     await page.locator('#file-input').setInputFiles(fixture('sample.tiff'));
     await page.locator('#action-btn').click();
-    const notice = page.locator('#pdf-results .notice');
-    await expect(notice).toBeVisible({ timeout: 15000 });
-    await expect(notice).toContainText('Could not decode TIFF');
+    await expect(page.locator('#pdf-results #dl-single')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('#pdf-results .notice')).toHaveCount(0);
   });
 });
 
