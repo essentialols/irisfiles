@@ -264,6 +264,17 @@ function validateConverterShell(label, html) {
 async function globalChecks() {
   console.log('\n=== GLOBAL CHECKS ===');
 
+  // Batch-cap UIs reject files beyond 50; page copy must not promise unlimited batches.
+  const unlimitedBatchClaims = [];
+  for (const file of htmlFiles()) {
+    const src = readFileSync(join(ROOT, file), 'utf8');
+    if (/Drop as many(?: [A-Z0-9]+)? files as (?:you want|you need|you like)/i.test(src)) {
+      unlimitedBatchClaims.push(file);
+    }
+  }
+  ok(unlimitedBatchClaims.length === 0,
+    `${unlimitedBatchClaims.length} page(s) promise unlimited batches despite the 50-file UI cap, e.g. ${unlimitedBatchClaims[0]}`);
+
   const { status: smStatus, body: sitemap } = await fetch(`${BASE}/sitemap.xml`);
   ok(smStatus === 200, 'sitemap.xml: not found');
   const locRe = /<loc>([^<]+)<\/loc>/g;
