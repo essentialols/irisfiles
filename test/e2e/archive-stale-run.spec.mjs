@@ -46,6 +46,35 @@ test.describe('archive run state', () => {
     await expect(page.locator('#action-btn')).toHaveText('Extract Files');
   });
 
+  test('replacing a ZIP mid-extract restores idle controls and stale work cannot clobber them', async ({ page }) => {
+    await page.goto('/extract-zip');
+
+    // Make the first archive deterministicly slow before fflate sees it. The
+    // second archive uses the native File.arrayBuffer() path and supersedes it.
+    await page.evaluate(() => {
+      const nativeArrayBuffer = File.prototype.arrayBuffer;
+      File.prototype.arrayBuffer = function () {
+        if (this.name !== 'multi.zip') return nativeArrayBuffer.call(this);
+        return new Promise((resolve, reject) => {
+          setTimeout(() => nativeArrayBuffer.call(this).then(resolve, reject), 500);
+        });
+      };
+    });
+
+    await page.locator('#file-input').setInputFiles(fixture('multi.zip'));
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#action-btn')).toContainText(/Processing|Extracting/);
+
+    await page.locator('#file-input').setInputFiles(fixture('sample.zip'));
+    await expect(page.locator('#action-btn')).toHaveText('Extract Files');
+    await expect(page.locator('#action-btn')).toBeEnabled();
+
+    await page.locator('#action-btn').click();
+    await expect(page.locator('#archive-results')).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('#action-btn')).toHaveText('Extract Files');
+    await expect(page.locator('#action-btn')).toBeEnabled();
+  });
+
   test('clearing after a create leaves the button usable', async ({ page }) => {
     await page.goto('/create-zip');
     await page.locator('#file-input').setInputFiles([fixture('sample.png'), fixture('sample2.png')]);
