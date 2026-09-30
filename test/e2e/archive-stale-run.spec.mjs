@@ -73,6 +73,13 @@ test.describe('archive run state', () => {
     await expect(page.locator('#archive-results')).toBeVisible({ timeout: 30000 });
     await expect(page.locator('#action-btn')).toHaveText('Extract Files');
     await expect(page.locator('#action-btn')).toBeEnabled();
+
+    // The superseded multi.zip run wakes after 500 ms. Give it time to finish
+    // and prove its late completion cannot overwrite the newer run's controls.
+    await page.waitForTimeout(1000);
+    await expect(page.locator('#archive-results')).toBeVisible();
+    await expect(page.locator('#action-btn')).toHaveText('Extract Files');
+    await expect(page.locator('#action-btn')).toBeEnabled();
   });
 
   test('clearing after a create leaves the button usable', async ({ page }) => {
