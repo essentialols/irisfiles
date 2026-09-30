@@ -11,6 +11,7 @@ import { showPersistentNotice } from './notice-ui.js';
 
 let mode = '';  // 'extract' or 'create'
 let dropZone, fileInput, fileList, actionBtn, clearBtn;
+let actionIdleText = '';
 const files = [];
 let inputRevision = 0;
 
@@ -24,6 +25,7 @@ export function init() {
   fileList = document.getElementById('file-list');
   actionBtn = document.getElementById('action-btn');
   clearBtn = document.getElementById('clear-all');
+  actionIdleText = actionBtn ? actionBtn.textContent : '';
 
   if (!dropZone || !fileInput) return;
 
@@ -112,6 +114,7 @@ function renderFileEntry(file) {
 
 function updateControls() {
   if (actionBtn) {
+    actionBtn.textContent = actionIdleText;
     actionBtn.disabled = files.length < 1;
     actionBtn.style.display = files.length > 0 ? '' : 'none';
   }
@@ -133,7 +136,6 @@ function removeResults() {
 
 async function runAction() {
   actionBtn.disabled = true;
-  const origText = actionBtn.textContent;
   actionBtn.textContent = 'Processing...';
   removeResults();
   const t0 = performance.now();
@@ -163,8 +165,9 @@ async function runAction() {
     if (current()) showError(err.message);
   }
 
-  actionBtn.textContent = origText;
-  actionBtn.disabled = false;
+  // A replaced/removed input may already have started a newer run. Only the
+  // run that still owns the current input revision may restore shared controls.
+  if (current()) updateControls();
 }
 
 function showExtractResults(entries, durationMs) {
