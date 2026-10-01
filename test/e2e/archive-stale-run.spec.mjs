@@ -49,37 +49,47 @@ test.describe('archive run state', () => {
   test('replacing a ZIP mid-extract restores idle controls and stale work cannot clobber them', async ({ page }) => {
     await page.goto('/extract-zip');
 
-    // Make the first archive deterministicly slow before fflate sees it. The
-    // second archive uses the native File.arrayBuffer() path and supersedes it.
+    // Make both archives deterministically slow before fflate sees them: the
+    // first (superseded) run wakes at 500 ms, the replacement run at 1500 ms,
+    // so the stale run always finishes while the newer run is still in flight.
     await page.evaluate(() => {
       const nativeArrayBuffer = File.prototype.arrayBuffer;
+      const delays = { 'multi.zip': 500, 'sample.zip': 1500 };
       File.prototype.arrayBuffer = function () {
-        if (this.name !== 'multi.zip') return nativeArrayBuffer.call(this);
+        const delay = delays[this.name];
+        if (!delay) return nativeArrayBuffer.call(this);
         return new Promise((resolve, reject) => {
-          setTimeout(() => nativeArrayBuffer.call(this).then(resolve, reject), 500);
+          setTimeout(() => nativeArrayBuffer.call(this).then(resolve, reject), delay);
         });
       };
     });
 
+    const btn = page.locator('#action-btn');
     await page.locator('#file-input').setInputFiles(fixture('multi.zip'));
-    await page.locator('#action-btn').click();
-    await expect(page.locator('#action-btn')).toContainText(/Processing|Extracting/);
+    await btn.click();
+    await expect(btn).toContainText(/Processing|Extracting/);
 
+    // Replacing the input must reset the controls at once, not when the
+    // superseded run eventually finishes (500 ms), hence the short timeout.
     await page.locator('#file-input').setInputFiles(fixture('sample.zip'));
-    await expect(page.locator('#action-btn')).toHaveText('Extract Files');
-    await expect(page.locator('#action-btn')).toBeEnabled();
+    await expect(btn).toHaveText('Extract Files', { timeout: 250 });
+    await expect(btn).toBeEnabled({ timeout: 250 });
 
-    await page.locator('#action-btn').click();
+    await btn.click();
+    await expect(btn).toBeDisabled();
+    await expect(btn).toContainText(/Processing|Extracting/);
+
+    // The superseded multi.zip run has now finished (500 ms) while the newer
+    // run is still waiting (1500 ms). It must not re-enable the button or
+    // restore its idle text under the newer run.
+    await page.waitForTimeout(900);
+    await expect(btn).toBeDisabled();
+    await expect(btn).toContainText(/Processing|Extracting/);
+    await expect(page.locator('#archive-results')).toHaveCount(0);
+
     await expect(page.locator('#archive-results')).toBeVisible({ timeout: 30000 });
-    await expect(page.locator('#action-btn')).toHaveText('Extract Files');
-    await expect(page.locator('#action-btn')).toBeEnabled();
-
-    // The superseded multi.zip run wakes after 500 ms. Give it time to finish
-    // and prove its late completion cannot overwrite the newer run's controls.
-    await page.waitForTimeout(1000);
-    await expect(page.locator('#archive-results')).toBeVisible();
-    await expect(page.locator('#action-btn')).toHaveText('Extract Files');
-    await expect(page.locator('#action-btn')).toBeEnabled();
+    await expect(btn).toHaveText('Extract Files');
+    await expect(btn).toBeEnabled();
   });
 
   test('clearing after a create leaves the button usable', async ({ page }) => {
