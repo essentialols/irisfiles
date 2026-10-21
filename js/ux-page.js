@@ -1,9 +1,7 @@
 import { initPersistentFileFocus } from './file-focus.js';
 import { installFileThumbFallback } from './file-thumb-fallback.js';
 
-// "Drop HEIC files here, or click to browse" is the drop zone's own wording for
-// what it accepts, so the picker's accessible name is derived from it rather
-// than hardcoded per page. Every converter phrases that paragraph the same way.
+// Name the picker from the drop zone's own "Drop X here" hint.
 function pickerLabel(dropZone) {
   const hint = Array.from(dropZone.querySelectorAll('p'))
     .map(node => (node.textContent || '').trim())
@@ -12,23 +10,7 @@ function pickerLabel(dropZone) {
   return subject ? `Choose ${subject}` : 'Choose files';
 }
 
-/**
- * Expose the page's single upload control to assistive tech and automation.
- *
- * The file input was `display: none`, which takes it out of the accessibility
- * tree entirely, so the only upload-looking thing left was this wrapper with
- * `role="button"` -- and the wrapper holds the <h1>, the tagline, the icon, the
- * instruction and the disclaimer. That gave a control whose subtree contains a
- * heading (invalid, and a confusing accessible name) while the real input had no
- * node to target at all: an agent driving /heic-to-jpg from an accessibility
- * snapshot got a ref for the wrapper, whose role-and-name matched several
- * elements, and could never upload anything.
- *
- * The input itself is now the control: visually hidden by CSS but present,
- * focusable and named, so there is exactly one upload target per page and the
- * hero heading sits outside it. The wrapper goes back to being a plain
- * container, keeping its mouse click-to-browse and drag-and-drop behaviour.
- */
+// The input is the single exposed upload control; the wrapper is a plain container.
 export function exposeFilePicker(dropZoneSelector = '#drop-zone', fileInputSelector = '#file-input') {
   const dropZone = typeof dropZoneSelector === 'string'
     ? document.querySelector(dropZoneSelector)
@@ -46,10 +28,7 @@ export function exposeFilePicker(dropZoneSelector = '#drop-zone', fileInputSelec
 
   if (dropZone.dataset.filePickerReady === '1') return;
   dropZone.dataset.filePickerReady = '1';
-  // Activating the input (Enter or Space, now that it is focusable) fires a
-  // click that bubbles to the wrapper, whose handler would call .click() on the
-  // input again and open a second picker. The wrapper only has to react to
-  // clicks on the surrounding area.
+  // Stop input clicks bubbling to the wrapper, which would open a second picker.
   fileInput.addEventListener('click', event => event.stopPropagation());
 }
 

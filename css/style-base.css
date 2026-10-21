@@ -156,10 +156,7 @@ body {
   color: var(--text-muted);
   margin-top: 1.25rem;
 }
-/* The upload control must stay in the accessibility tree. `display: none` kept
-   it out of it, so a screen reader or a browser-automation agent had no file
-   input to target and only saw the wrapper. Clipping it instead keeps the
-   control present, named and focusable while rendering nothing. */
+/* Visually hidden, not display:none, so the input stays in the accessibility tree. */
 .drop-zone input[type="file"] {
   position: absolute;
   width: 1px;
@@ -172,8 +169,7 @@ body {
   clip-path: inset(50%);
   white-space: nowrap;
 }
-/* The wrapper is no longer focusable, so keyboard focus lands on the clipped
-   input. Ring the wrapper so that focus is still visible. */
+/* Focus lands on the clipped input, so ring the wrapper. */
 .drop-zone:has(input[type="file"]:focus-visible) {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
