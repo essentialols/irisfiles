@@ -2,11 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 import { fixture } from './helpers.mjs';
 
-// Every HEIC conversion failed on the live site while passing locally: the old
-// decoder build evaluated its Emscripten glue with `new Function` inside a blob
-// worker, and production's CSP has no 'unsafe-eval'. Only the deployed headers
-// showed it, so test/server.mjs now serves vercel.json's headers and these tests
-// fail on any CSP violation.
+// Production's CSP has no 'unsafe-eval'; fail on any CSP violation during HEIC conversion.
 const SIGNATURES = {
   '/heic-to-jpg': [0xff, 0xd8, 0xff],
   '/heic-to-png': [0x89, 0x50, 0x4e, 0x47],
@@ -14,8 +10,7 @@ const SIGNATURES = {
   '/heic-to-pdf': [0x25, 0x50, 0x44, 0x46],
 };
 
-// A violation inside the decoder's worker reaches the test as a console error,
-// one in the document also fires securitypolicyviolation.
+// Worker violations surface only as console errors, document ones also as events.
 async function watchCsp(page) {
   const seen = [];
   page.on('console', (msg) => {
