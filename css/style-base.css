@@ -156,7 +156,24 @@ body {
   color: var(--text-muted);
   margin-top: 1.25rem;
 }
-.drop-zone input { display: none; }
+/* Visually hidden, not display:none, so the input stays in the accessibility tree. */
+.drop-zone input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* Focus lands on the clipped input, so ring the wrapper. */
+.drop-zone:has(input[type="file"]:focus-visible) {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
 
 .preflight-badge {
   margin: -0.5rem 0 1rem;

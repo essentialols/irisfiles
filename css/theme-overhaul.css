@@ -434,6 +434,12 @@ main.container { padding-top: clamp(1rem, 3vw, 2rem) !important; }
   outline-offset: 3px;
 }
 
+/* Focus lands on the clipped file input, so the ring has to show on its box. */
+.drop-zone:has(input[type="file"]:focus-visible) {
+  outline: 3px solid rgba(8,122,91,.38);
+  outline-offset: 3px;
+}
+
 @media (max-width: 760px) {
   .header { position: relative; }
   .header .container { gap: .7rem; }
