@@ -84,8 +84,7 @@ const CDN_CACHE = resolve(import.meta.dirname, '..', '..', '.patrol', 'cdn-cache
 export async function cacheCdnAssets(page) {
   await mkdir(CDN_CACHE, { recursive: true });
   await page.route('**://cdn.jsdelivr.net/**', async (route) => {
-    // A cold cache entry can still be fetching when the test ends, and a route
-    // callback that throws after the context closes fails the whole test.
+    // Don't throw if the context closed while a cold fetch was in flight.
     try {
       await serveFromCache(route);
     } catch {
