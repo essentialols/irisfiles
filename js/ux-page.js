@@ -1,7 +1,17 @@
 import { initPersistentFileFocus } from './file-focus.js';
 import { installFileThumbFallback } from './file-thumb-fallback.js';
 
-export function enableKeyboardDropZone(dropZoneSelector = '#drop-zone', fileInputSelector = '#file-input') {
+// Name the picker from the drop zone's own "Drop X here" hint.
+function pickerLabel(dropZone) {
+  const hint = Array.from(dropZone.querySelectorAll('p'))
+    .map(node => (node.textContent || '').trim())
+    .find(text => /click to browse/i.test(text));
+  const subject = hint ? (hint.match(/^Drop\s+(.+?)\s+here\b/i) || [])[1] : '';
+  return subject ? `Choose ${subject}` : 'Choose files';
+}
+
+// The input is the single exposed upload control; the wrapper is a plain container.
+export function exposeFilePicker(dropZoneSelector = '#drop-zone', fileInputSelector = '#file-input') {
   const dropZone = typeof dropZoneSelector === 'string'
     ? document.querySelector(dropZoneSelector)
     : dropZoneSelector;
@@ -10,18 +20,16 @@ export function enableKeyboardDropZone(dropZoneSelector = '#drop-zone', fileInpu
     : fileInputSelector;
   if (!dropZone || !fileInput) return;
 
-  if (!dropZone.hasAttribute('role')) dropZone.setAttribute('role', 'button');
-  if (!dropZone.hasAttribute('tabindex')) dropZone.tabIndex = 0;
-  if (fileInput.id) dropZone.setAttribute('aria-controls', fileInput.id);
-  if (!dropZone.hasAttribute('aria-label')) dropZone.setAttribute('aria-label', 'Choose files');
+  dropZone.removeAttribute('role');
+  dropZone.removeAttribute('aria-label');
+  dropZone.removeAttribute('aria-controls');
+  dropZone.removeAttribute('tabindex');
+  if (!fileInput.hasAttribute('aria-label')) fileInput.setAttribute('aria-label', pickerLabel(dropZone));
 
-  if (dropZone.dataset.kbdDropReady === '1') return;
-  dropZone.dataset.kbdDropReady = '1';
-  dropZone.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    fileInput.click();
-  });
+  if (dropZone.dataset.filePickerReady === '1') return;
+  dropZone.dataset.filePickerReady = '1';
+  // Stop input clicks bubbling to the wrapper, which would open a second picker.
+  fileInput.addEventListener('click', event => event.stopPropagation());
 }
 
 function syncFaqItem(item, index) {
@@ -114,7 +122,7 @@ export function applyPageUX(options = {}) {
   // a new boot module cannot ship a broken <img> by forgetting to opt in. It
   // lived in boot.js alone, which left /resize-image showing one for HEIC.
   installFileThumbFallback();
-  enableKeyboardDropZone(resolvedOptions.dropZoneSelector, resolvedOptions.fileInputSelector);
+  exposeFilePicker(resolvedOptions.dropZoneSelector, resolvedOptions.fileInputSelector);
   enhanceFaqSemantics(document);
   normalizeActionLabels(document);
   injectPreflightBadge(resolvedOptions);

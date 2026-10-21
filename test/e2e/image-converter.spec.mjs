@@ -161,10 +161,12 @@ test.describe('PNG to JPG', () => {
     await expect(item).not.toHaveClass(/open/);
   });
 
-  test('drop zone has ARIA attributes', async ({ page }) => {
+  test('the file input is the exposed upload control', async ({ page }) => {
+    await expect(page.locator('#file-input')).toHaveAttribute('aria-label', 'Choose PNG files');
+    // The wrapper holds the <h1>, so it must not be a control itself.
     const dz = page.locator('#drop-zone');
-    await expect(dz).toHaveAttribute('role', 'button');
-    await expect(dz).toHaveAttribute('tabindex', '0');
+    await expect(dz).not.toHaveAttribute('role', /.+/);
+    await expect(dz).not.toHaveAttribute('tabindex', /.+/);
   });
 });
 
