@@ -1,7 +1,35 @@
 import { initPersistentFileFocus } from './file-focus.js';
 import { installFileThumbFallback } from './file-thumb-fallback.js';
 
-export function enableKeyboardDropZone(dropZoneSelector = '#drop-zone', fileInputSelector = '#file-input') {
+// "Drop HEIC files here, or click to browse" is the drop zone's own wording for
+// what it accepts, so the picker's accessible name is derived from it rather
+// than hardcoded per page. Every converter phrases that paragraph the same way.
+function pickerLabel(dropZone) {
+  const hint = Array.from(dropZone.querySelectorAll('p'))
+    .map(node => (node.textContent || '').trim())
+    .find(text => /click to browse/i.test(text));
+  const subject = hint ? (hint.match(/^Drop\s+(.+?)\s+here\b/i) || [])[1] : '';
+  return subject ? `Choose ${subject}` : 'Choose files';
+}
+
+/**
+ * Expose the page's single upload control to assistive tech and automation.
+ *
+ * The file input was `display: none`, which takes it out of the accessibility
+ * tree entirely, so the only upload-looking thing left was this wrapper with
+ * `role="button"` -- and the wrapper holds the <h1>, the tagline, the icon, the
+ * instruction and the disclaimer. That gave a control whose subtree contains a
+ * heading (invalid, and a confusing accessible name) while the real input had no
+ * node to target at all: an agent driving /heic-to-jpg from an accessibility
+ * snapshot got a ref for the wrapper, whose role-and-name matched several
+ * elements, and could never upload anything.
+ *
+ * The input itself is now the control: visually hidden by CSS but present,
+ * focusable and named, so there is exactly one upload target per page and the
+ * hero heading sits outside it. The wrapper goes back to being a plain
+ * container, keeping its mouse click-to-browse and drag-and-drop behaviour.
+ */
+export function exposeFilePicker(dropZoneSelector = '#drop-zone', fileInputSelector = '#file-input') {
   const dropZone = typeof dropZoneSelector === 'string'
     ? document.querySelector(dropZoneSelector)
     : dropZoneSelector;
@@ -10,18 +38,19 @@ export function enableKeyboardDropZone(dropZoneSelector = '#drop-zone', fileInpu
     : fileInputSelector;
   if (!dropZone || !fileInput) return;
 
-  if (!dropZone.hasAttribute('role')) dropZone.setAttribute('role', 'button');
-  if (!dropZone.hasAttribute('tabindex')) dropZone.tabIndex = 0;
-  if (fileInput.id) dropZone.setAttribute('aria-controls', fileInput.id);
-  if (!dropZone.hasAttribute('aria-label')) dropZone.setAttribute('aria-label', 'Choose files');
+  dropZone.removeAttribute('role');
+  dropZone.removeAttribute('aria-label');
+  dropZone.removeAttribute('aria-controls');
+  dropZone.removeAttribute('tabindex');
+  if (!fileInput.hasAttribute('aria-label')) fileInput.setAttribute('aria-label', pickerLabel(dropZone));
 
-  if (dropZone.dataset.kbdDropReady === '1') return;
-  dropZone.dataset.kbdDropReady = '1';
-  dropZone.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    fileInput.click();
-  });
+  if (dropZone.dataset.filePickerReady === '1') return;
+  dropZone.dataset.filePickerReady = '1';
+  // Activating the input (Enter or Space, now that it is focusable) fires a
+  // click that bubbles to the wrapper, whose handler would call .click() on the
+  // input again and open a second picker. The wrapper only has to react to
+  // clicks on the surrounding area.
+  fileInput.addEventListener('click', event => event.stopPropagation());
 }
 
 function syncFaqItem(item, index) {
@@ -114,7 +143,7 @@ export function applyPageUX(options = {}) {
   // a new boot module cannot ship a broken <img> by forgetting to opt in. It
   // lived in boot.js alone, which left /resize-image showing one for HEIC.
   installFileThumbFallback();
-  enableKeyboardDropZone(resolvedOptions.dropZoneSelector, resolvedOptions.fileInputSelector);
+  exposeFilePicker(resolvedOptions.dropZoneSelector, resolvedOptions.fileInputSelector);
   enhanceFaqSemantics(document);
   normalizeActionLabels(document);
   injectPreflightBadge(resolvedOptions);
