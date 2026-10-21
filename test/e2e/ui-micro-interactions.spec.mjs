@@ -13,12 +13,10 @@ test.describe('UI Micro-Interactions', () => {
     });
 
     test('drop zone is wired to the file input', async ({ page }) => {
-      const dropZone = page.locator('#drop-zone').first();
-      // Clicking opens the OS picker, which moves no focus in headless, so
-      // assert the wiring ux-page.js establishes instead.
-      await expect(dropZone).toHaveAttribute('role', 'button');
-      await expect(dropZone).toHaveAttribute('aria-controls', 'file-input');
-      await expect(dropZone).toHaveAttribute('tabindex', '0');
+      // Clicking opens the OS picker, so assert that the click reaches it.
+      const chooser = page.waitForEvent('filechooser');
+      await page.locator('#drop-zone').first().click({ position: { x: 10, y: 10 } });
+      expect((await chooser).element()).toBeTruthy();
     });
 
     test('dragover adds dragover class', async ({ page }) => {
@@ -59,12 +57,15 @@ test.describe('UI Micro-Interactions', () => {
       await expect(dropZone).not.toHaveClass(/dragover/);
     });
 
-    test('drop zone accessible via keyboard', async ({ page }) => {
-      const dropZone = page.locator('#drop-zone').first();
-      const role = await dropZone.getAttribute('role');
-      const tabindex = await dropZone.getAttribute('tabindex');
-      expect(role).toBeTruthy();
-      expect(tabindex).toBe('0');
+    test('the upload control is reachable by keyboard', async ({ page }) => {
+      // The input is the control now, so it is natively focusable and Enter or
+      // Space opens the picker without a synthetic key handler.
+      const fileInput = page.locator('#file-input');
+      await fileInput.focus();
+      await expect(fileInput).toBeFocused();
+      const chooser = page.waitForEvent('filechooser');
+      await page.keyboard.press('Enter');
+      expect((await chooser).element()).toBeTruthy();
     });
   });
 
@@ -73,9 +74,15 @@ test.describe('UI Micro-Interactions', () => {
       await page.goto('/png-to-jpg');
     });
 
-    test('file input is hidden', async ({ page }) => {
+    test('file input renders nothing but stays in the accessibility tree', async ({ page }) => {
       const fileInput = page.locator('#file-input');
-      await expect(fileInput).toBeHidden();
+      // display:none took it out of the accessibility tree, which left no
+      // upload control for a screen reader or an automation agent to target.
+      expect(await fileInput.evaluate(node => getComputedStyle(node).display)).not.toBe('none');
+      const box = await fileInput.boundingBox();
+      expect(box.width).toBeLessThanOrEqual(1);
+      expect(box.height).toBeLessThanOrEqual(1);
+      await expect(page.getByLabel('Choose PNG files')).toHaveCount(1);
     });
 
     test('file input has multiple attribute', async ({ page }) => {

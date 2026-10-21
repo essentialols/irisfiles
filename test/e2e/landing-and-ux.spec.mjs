@@ -37,12 +37,17 @@ test.describe('Privacy page', () => {
 });
 
 test.describe('Accessibility', () => {
-  test('drop zone has proper ARIA attributes after JS boot', async ({ page }) => {
+  test('the file input is the drop zone\'s only exposed control after JS boot', async ({ page }) => {
     await page.goto('/png-to-jpg');
     await page.waitForLoadState('networkidle');
+    const input = page.locator('#file-input');
+    await expect(input).toHaveAttribute('aria-label', 'Choose PNG files', { timeout: 10000 });
+
+    // The wrapper used to carry role="button" with the <h1> inside it, which
+    // left the real input out of the accessibility tree entirely.
     const dz = page.locator('#drop-zone');
-    await expect(dz).toHaveAttribute('role', 'button', { timeout: 10000 });
-    await expect(dz).toHaveAttribute('tabindex', '0');
+    await expect(dz).not.toHaveAttribute('role', /.+/);
+    await expect(dz).not.toHaveAttribute('tabindex', /.+/);
   });
 });
 
@@ -188,9 +193,10 @@ test.describe('Smart Drop on landing page', () => {
 
   test('mixed file types are shown honestly instead of routed as the dominant format', async ({ page }) => {
     await page.goto('/');
-    // applyPageUX is the last step of landing boot, so its role attribute means the
-    // change handlers are attached; networkidle would add a fixed 500ms of quiet.
-    await expect(page.locator('#smart-drop')).toHaveAttribute('role', 'button');
+    // applyPageUX is the last step of landing boot, so the picker's accessible
+    // name means the change handlers are attached; networkidle would add a
+    // fixed 500ms of quiet.
+    await expect(page.locator('#smart-file-input')).toHaveAttribute('aria-label', 'Choose any file');
     await page.locator('#smart-file-input').setInputFiles([fixture('sample.png'), fixture('sample.pdf')]);
 
     const routePanel = page.locator('#route-panel');
@@ -208,7 +214,7 @@ test.describe('Smart Drop on landing page', () => {
 
   test('an extensionless PNG still gets the PNG tools when the batch is all PNG', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('#smart-drop')).toHaveAttribute('role', 'button');
+    await expect(page.locator('#smart-file-input')).toHaveAttribute('aria-label', 'Choose any file');
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
     await page.locator('#smart-file-input').setInputFiles([
       { name: 'a.png', mimeType: 'image/png', buffer: png },
@@ -224,7 +230,7 @@ test.describe('Smart Drop on landing page', () => {
 
   test('a batch of unidentified files is not reported as mixed formats', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('#smart-drop')).toHaveAttribute('role', 'button');
+    await expect(page.locator('#smart-file-input')).toHaveAttribute('aria-label', 'Choose any file');
     const txt = name => ({ name, mimeType: 'text/plain', buffer: Buffer.from('hello world') });
     await page.locator('#smart-file-input').setInputFiles([txt('a.txt'), txt('b.txt')]);
 
