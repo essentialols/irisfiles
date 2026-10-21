@@ -58,7 +58,7 @@ File → detectFormat(magic bytes) → route:
 
 - **Separate HTML per conversion**: SEO (Google indexes individual pages), unique meta/FAQ, fastest FCP
 - **WASM committed to repo**: Eliminates build step on deploy, changes rarely
-- **No Web Workers**: heic-to needs DOM (Canvas) for encoding; Canvas conversions are <50ms so Worker overhead not worth it. HEIC WASM loaded lazily via script tag on first HEIC drop.
+- **No Web Workers**: heic-to needs DOM (Canvas) for encoding; Canvas conversions are <50ms so Worker overhead not worth it. HEIC WASM loaded lazily via dynamic import on first HEIC drop.
 - **No framework**: Pure HTML + CSS + vanilla JS modules
 - **Format detection via magic bytes**: More reliable than file extensions
 
@@ -66,7 +66,7 @@ File → detectFormat(magic bytes) → route:
 
 - `converter.js` (ES module): Pure functions for format detection, Canvas conversion, HEIC worker management, download, ZIP. No DOM access.
 - `ui.js` (ES module): All DOM interaction. Imported by each page's inline `<script type="module">`. Each page calls `configure()` with its source/target formats, then `init()`.
-- `heic-worker.js` (ES module): Lazy-loads the HEIC IIFE build via `<script>` tag on first use. Runs on main thread because heic-to needs Canvas/DOM for encoding. The ~2.5MB WASM is only fetched when a HEIC file is actually dropped.
+- `heic-worker.js` (ES module): Lazy-loads heic-to's `dist/csp` build with a dynamic `import()` on first use. The IIFE build is unusable in production: it builds functions with `new Function` inside its blob worker, which the CSP rejects. Runs on main thread because heic-to needs Canvas/DOM for encoding. The ~2.5MB WASM is only fetched when a HEIC file is actually dropped.
 
 ## Image Metadata Viewer/Editor
 

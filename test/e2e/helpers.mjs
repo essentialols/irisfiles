@@ -84,21 +84,30 @@ const CDN_CACHE = resolve(import.meta.dirname, '..', '..', '.patrol', 'cdn-cache
 export async function cacheCdnAssets(page) {
   await mkdir(CDN_CACHE, { recursive: true });
   await page.route('**://cdn.jsdelivr.net/**', async (route) => {
-    const url = route.request().url();
-    const key = join(CDN_CACHE, createHash('sha1').update(url).digest('hex'));
+    // Don't throw if the context closed while a cold fetch was in flight.
     try {
-      const body = await readFile(key);
-      const meta = JSON.parse(await readFile(`${key}.json`, 'utf8'));
-      return route.fulfill({ status: 200, headers: meta.headers, body });
+      await serveFromCache(route);
     } catch {
-      const response = await route.fetch();
-      const body = await response.body();
-      const headers = response.headers();
-      await writeFile(key, body);
-      await writeFile(`${key}.json`, JSON.stringify({ headers }));
-      return route.fulfill({ status: response.status(), headers, body });
+      await route.abort().catch(() => {});
     }
   });
+}
+
+async function serveFromCache(route) {
+  const url = route.request().url();
+  const key = join(CDN_CACHE, createHash('sha1').update(url).digest('hex'));
+  try {
+    const body = await readFile(key);
+    const meta = JSON.parse(await readFile(`${key}.json`, 'utf8'));
+    return route.fulfill({ status: 200, headers: meta.headers, body });
+  } catch {
+    const response = await route.fetch();
+    const body = await response.body();
+    const headers = response.headers();
+    await writeFile(key, body);
+    await writeFile(`${key}.json`, JSON.stringify({ headers }));
+    return route.fulfill({ status: response.status(), headers, body });
+  }
 }
 
 /**

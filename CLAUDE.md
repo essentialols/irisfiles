@@ -6,6 +6,11 @@ Privacy-first client-side file converter. See [README.md](README.md) for project
 - `npm run dev` - Dev server (`npx serve . -p 3000`)
 - `npm test` - Validation suite (155 pages)
 - `npm run test:e2e` - Playwright e2e suite (test/e2e, own server on :3988)
+- **The e2e server sends production's security headers.** `test/server.mjs` reads them out
+  of `vercel.json`, so the suite runs under the real CSP. `npx serve` sends none, and that
+  gap hid a CSP violation that broke every HEIC conversion on the live site while the
+  suite stayed green. Never swap the webServer command back to a plain static server.
+  `npm run dev` is still header-free.
 - `IRIS_TEST_BASE_URL=https://irisfiles.com npx playwright test` - run the suite against
   the deployed site instead of a local server. Catches what only exists once deployed:
   a path `.vercelignore` excludes, a CDN header overriding `vercel.json`.
