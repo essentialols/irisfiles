@@ -97,7 +97,7 @@ a code-path reproduction.
 - UI layout, colors, fonts, spacing, design
 - UX flows, button placement, copy/text content
 - HTML template structure (meta tags, SEO, JSON-LD)
-- Third-party bundled files: fflate.min.js, gifenc.min.js, heic-to.iife.js
+- Third-party bundled files: fflate.min.js, gifenc.min.js, heic-to.csp.js
 - package.json, package-lock.json, vercel.json, build.sh
 
 ## Priority files (scan these)

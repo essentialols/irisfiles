@@ -40,7 +40,10 @@ export default defineConfig({
   // No local server when testing a deployment; it would serve the wrong code.
   ...(BASE_URL ? {} : {
     webServer: {
-      command: `npx serve . -p ${PORT}`,
+      // Not `npx serve`: that sends no CSP, so the suite could not see that
+      // production's CSP broke every HEIC conversion. test/server.mjs reads the
+      // headers out of vercel.json.
+      command: `node test/server.mjs ${PORT}`,
       port: PORT,
       reuseExistingServer: REUSE,
       timeout: 15_000,
