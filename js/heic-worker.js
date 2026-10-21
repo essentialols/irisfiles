@@ -1,35 +1,26 @@
 /**
  * HEIC conversion loader.
- * Lazily loads the heic-to IIFE (with embedded WASM) on first use.
+ * Lazily loads the heic-to CSP build; the IIFE build needs 'unsafe-eval', which our CSP forbids.
  * Primary: jsDelivr CDN (free, unlimited bandwidth, not counted against Vercel).
  * Fallback: local copy in wasm/heic/.
  * Runs on the main thread because heic-to needs Canvas/DOM access.
  */
 
-const CDN_URL = 'https://cdn.jsdelivr.net/npm/heic-to@1.4.2/dist/iife/heic-to.js';
-const LOCAL_URL = 'wasm/heic/heic-to.iife.js';
+const CDN_URL = 'https://cdn.jsdelivr.net/npm/heic-to@1.4.2/dist/csp/heic-to.js';
+const LOCAL_URL = '/wasm/heic/heic-to.csp.js';
 
 let heicToFn = null;
 let loadPromise = null;
-
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = src;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load: ' + src));
-    document.head.appendChild(script);
-  });
-}
 
 export function loadHeicTo() {
   if (heicToFn) return Promise.resolve(heicToFn);
   if (loadPromise) return loadPromise;
 
-  loadPromise = loadScript(CDN_URL)
-    .catch(() => loadScript(LOCAL_URL))
-    .then(() => {
-      heicToFn = window.HeicTo;
+  // The CSP build is an ES module exporting heicTo, with no global.
+  loadPromise = import(CDN_URL)
+    .catch(() => import(LOCAL_URL))
+    .then((mod) => {
+      heicToFn = mod && mod.heicTo;
       if (!heicToFn) throw new Error('HEIC decoder not found after loading');
       return heicToFn;
     })

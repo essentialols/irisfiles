@@ -40,7 +40,8 @@ export default defineConfig({
   // No local server when testing a deployment; it would serve the wrong code.
   ...(BASE_URL ? {} : {
     webServer: {
-      command: `npx serve . -p ${PORT}`,
+      // Serves vercel.json's headers so the suite enforces production's CSP.
+      command: `node test/server.mjs ${PORT}`,
       port: PORT,
       reuseExistingServer: REUSE,
       timeout: 15_000,
