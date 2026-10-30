@@ -13,3 +13,10 @@ artifacts/
 .codegraph.db-wal
 test-results/
 playwright-report/
+
+# Local-only working files: kept on disk, not published (the repo root is the live site)
+CLAUDE.md
+PATROL.md
+patrol.sh
+reddit/
+docs/
