@@ -32,7 +32,7 @@ queue is what actually clears those findings.
 
 | How | Command | When |
 | --- | --- | --- |
-| Scheduled | `launchctl load -w ~/Library/LaunchAgents/com.irisfiles.patrol.plist` | Daily 04:00. Primary trigger. |
+| Scheduled | `launchctl load -w ~/Library/LaunchAgents/com.irisfiles.patrol.plist` | Daily 04:00, if you enable it. |
 | Triage only | `bash patrol.sh --dry-run` | Safe. Finds issues, changes nothing, opens nothing. |
 | One full run | `bash patrol.sh` | Opens PRs. |
 | On push to main | `PATROL_ON_PUSH=1 git push origin main` | Opt-in; off by default because a run takes hours. |

@@ -66,8 +66,8 @@ Privacy-first client-side file converter. See [README.md](README.md) for project
   live URL. Never move a root `.html` into a subdirectory.
 - **`patrol.sh` must stay at the repo root** — `.git/hooks/pre-push` invokes it by path, and that
   hook is outside the working tree where no in-repo search will find it.
-- Documentation lives in exactly three root files: README.md (what and why), ARCHITECTURE.md (how),
-  CLAUDE.md (working conventions). Do not start a `docs/` directory.
+- Documentation lives in README.md (what and why), ARCHITECTURE.md (how), CLAUDE.md (working
+  conventions) and THIRD_PARTY.md (bundled licenses).
 - Generated data goes in `data/`, with its generator in `scripts/` under a matching stem.
 - One-off, non-site work (launch posts, experiments) gets its own directory named for the concept,
   not for its status — see `reddit/`. No `output/`, `misc/`, `archive/`, or `tmp/`.
