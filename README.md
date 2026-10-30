@@ -28,7 +28,7 @@ counting `index.html`, `about.html`, `privacy.html` and the
 | **Images** | HEIC, WebP, PNG, JPG, SVG, BMP, GIF, AVIF, TIFF, ICO (cross-convert to JPG/PNG/WebP/PDF), plus PNG-to-ICO |
 | **Image Tools** | Background Remover with local AI + edge refinement + manual mask cleanup, Compress, Resize, Strip EXIF, Metadata Viewer/Editor, Images-to-GIF, Image-to-Text OCR |
 | **Video** | MOV/AVI/MKV/WebM/MP4 cross-convert, Video-to-GIF, Compress, Speed, Metadata |
-| **Video → Audio** | MP4/MOV/WebM/AVI/MKV to MP3 or WAV, with browser decoding first and FFmpeg.wasm fallback |
+| **Video to Audio** | MP4/MOV/WebM/AVI/MKV to MP3 or WAV, with browser decoding first and FFmpeg.wasm fallback |
 | **Audio** | MP3, WAV, OGG, FLAC, M4A, AAC cross-convert, Compress |
 | **PDF** | PDF-to-Image, Merge, Split, OCR, Compress, Rotate, Delete Pages, Extract Pages, Reorder Pages, PDF-to-Text |
 | **Documents** | EPUB/RTF/DOCX/MOBI to TXT and PDF; self-contained HTML to PDF with scripts and remote resources blocked |
@@ -54,12 +54,9 @@ npm run test:e2e
 
 # Build (only needed if updating WASM or fflate)
 bash build.sh
-
-# Deploy (auto-deploys on push to main via Vercel)
-git push origin main
 ```
 
-No build step required for day-to-day development. Edit HTML/JS/CSS and refresh.
+No build step is required for day-to-day development: edit HTML/JS/CSS and refresh. The live site is static and deploys from `main` on Vercel.
 
 ## Technology
 
@@ -96,9 +93,7 @@ IrisFiles is free with no limits, no accounts, and no ads. If you find it useful
 
 - [Ko-fi](https://ko-fi.com/irisfiles)
 
-### Principles
-- No ads. No tracking. No data collection. The privacy-first positioning is the product's primary differentiator and should never be compromised for revenue.
-- Any monetization should be obvious and non-intrusive. No dark patterns, no artificial limits on free features.
+The project's principles: no ads, no tracking, no data collection, and no artificial limits on free features.
 
 ## Architecture
 
@@ -145,7 +140,8 @@ irisfiles/
   test/validate.mjs       # Validation suite (155 pages, SEO/links/sitemap/CSP)
   test/e2e/               # Playwright specs, driven by playwright.config.mjs
   reddit/                 # One-off launch promotion, not part of the site
-  patrol.sh, PATROL.md    # Automated code patrol support
+  patrol.sh, PATROL.md    # Optional automated code patrol (see PATROL.md)
+  THIRD_PARTY.md          # Licenses of bundled third-party code
   build.sh                # One-shot: copy WASM + bundle fflate from node_modules
   vercel.json             # Clean URLs, CSP headers, WASM/model CDN permissions
   serve.json              # Clean URLs for local `npx serve`
@@ -153,8 +149,6 @@ irisfiles/
   robots.txt
 ```
 
-Generated, gitignored, and safe to delete at any time: `test-results/`, `.patrol/`, `.project-state/`, `.serena/`, `.claude/`, `.vercel/`, `.codegraph.db*`.
-
 ## License
 
-MIT
+MIT, see [LICENSE](LICENSE). Bundled third-party components are listed in [THIRD_PARTY.md](THIRD_PARTY.md).

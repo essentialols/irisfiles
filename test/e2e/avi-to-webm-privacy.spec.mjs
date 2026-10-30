@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { fixture, dropFile, dropFiles, waitForDone, expectDownloadOnClick, getFileItemCount } from './helpers.mjs';
 
@@ -9,10 +10,12 @@ import { fixture, dropFile, dropFiles, waitForDone, expectDownloadOnClick, getFi
 // real conversion correctness (verified by system ffprobe, not the filename),
 // error-path behavior on a damaged input, single-file-only behavior, and a
 // full network trace of the conversion flow for the privacy guide. It does
-// NOT touch avi-to-webm.html: another worker owns that file concurrently.
+// NOT modify avi-to-webm.html.
 
-const FFPROBE = '/opt/homebrew/bin/ffprobe';
-const EVIDENCE_DIR = '~/.project-state/irisfiles-seo';
+const FFPROBE = process.env.FFPROBE || 'ffprobe';
+// Raw evidence goes to IRIS_EVIDENCE_DIR if set, otherwise to the system temp directory.
+const EVIDENCE_DIR = process.env.IRIS_EVIDENCE_DIR || join(tmpdir(), 'irisfiles-evidence');
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const RAW_DIR = join(EVIDENCE_DIR, 'raw');
 const SCREENSHOT_DIR = join(EVIDENCE_DIR, 'screenshots');
 if (!existsSync(RAW_DIR)) mkdirSync(RAW_DIR, { recursive: true });
@@ -273,7 +276,7 @@ test.describe('AVI to WebM - network and privacy observation @evidence', () => {
     const bodied = requests.filter((r) => r.postDataSize && r.postDataSize > 0);
 
     const commitSha = execFileSync('git', ['rev-parse', 'HEAD'], {
-      cwd: '~/Documents/GitHub/irisfiles',
+      cwd: REPO_ROOT,
       encoding: 'utf8',
     }).trim();
 
