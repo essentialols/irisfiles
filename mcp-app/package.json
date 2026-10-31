@@ -1,0 +1,28 @@
+{
+  "name": "irisfiles-mcp-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "IrisFiles as an MCP App: the converter UI runs in the chat host's sandboxed iframe, so files are converted on the person's device and never sent to the model or a server.",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node server.mjs",
+    "test": "node build.mjs && node test/server-contract.mjs && node test/sandbox-runtime.mjs"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^2.0.4",
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "express": "^5.3.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
+    "esbuild": "^0.24.2",
+    "fflate": "^0.8.2",
+    "heic-to": "^1.4.2",
+    "pdf-lib": "^1.17.1",
+    "playwright": "~1.60.0"
+  }
+}

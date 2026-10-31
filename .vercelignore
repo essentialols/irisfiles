@@ -13,3 +13,6 @@ patrol.sh
 PATROL.md
 playwright.config.mjs
 CLAUDE.md
+
+# MCP App server: a separate Node service, not part of the static site.
+mcp-app

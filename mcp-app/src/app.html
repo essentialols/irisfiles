@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IrisFiles</title>
+<style>
+  :root { color-scheme: light dark; --fg: var(--color-text-primary, #17201b); --muted: var(--color-text-secondary, #5b665f);
+    --bg: var(--color-background-primary, #fff); --line: var(--color-border-secondary, #d9e2dc); --accent: #087a5b; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; font: 14px/1.45 var(--font-sans, system-ui, sans-serif); color: var(--fg); background: var(--bg); }
+  h1 { font-size: 16px; margin: 0 0 2px; }
+  .lede { margin: 0 0 12px; color: var(--muted); }
+  #drop { display: block; border: 1.5px dashed var(--line); border-radius: 12px; padding: 18px; text-align: center; cursor: pointer; }
+  #drop.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  #file-input { display: none; }
+  .row { display: flex; gap: 8px; align-items: center; margin: 12px 0; flex-wrap: wrap; }
+  select, button { font: inherit; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:disabled { opacity: .5; }
+  ul { list-style: none; padding: 0; margin: 6px 0; }
+  li { display: flex; gap: 8px; align-items: center; padding: 4px 0; }
+  li span { color: var(--muted); }
+  #status, #device { color: var(--muted); min-height: 1em; margin: 4px 0; }
+</style>
+</head>
+<body>
+  <h1>IrisFiles converter</h1>
+  <p class="lede">Files are converted on your device. They are not sent to the AI or to any server. After a conversion the AI is told only how many files, the output format and the total sizes, never file names or contents.</p>
+  <label id="drop" for="file-input">Drop files here, or click to choose
+    <input type="file" id="file-input" multiple>
+  </label>
+  <ul id="file-list"></ul>
+  <div class="row">
+    <label for="target">Convert to</label>
+    <select id="target">
+      <option value="jpg">JPG</option>
+      <option value="png">PNG</option>
+      <option value="webp">WebP</option>
+      <option value="merge-pdf">Merge PDFs</option>
+      <option value="zip">ZIP archive</option>
+    </select>
+    <button id="convert" class="primary">Convert</button>
+    <button id="clear">Clear</button>
+  </div>
+  <p id="status" aria-live="polite"></p>
+  <ul id="results"></ul>
+  <p id="device"></p>
+  <script type="module">/*__APP_JS__*/</script>
+</body>
+</html>
