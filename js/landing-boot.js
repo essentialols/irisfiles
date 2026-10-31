@@ -137,12 +137,12 @@ if (toolsFilterInput) {
 
   const updateToolsFilter = () => {
     const query = toolsFilterInput.value.trim();
-    let visibleRows = 0;
+    const visibleTools = new Set();
 
     rows.forEach((row) => {
       const match = rowMatchesToolsQuery(row, query);
       row.style.display = match ? '' : 'none';
-      if (match) visibleRows += 1;
+      if (match) row.querySelectorAll('.tool-link').forEach(link => visibleTools.add(link.getAttribute('href')));
     });
 
     groups.forEach((group) => {
@@ -159,12 +159,13 @@ if (toolsFilterInput) {
     });
 
     if (toolsFilterSummary) {
+      const countText = n => `${n} tool${n === 1 ? '' : 's'}`;
       if (!query) {
-        toolsFilterSummary.textContent = `${totalTools} tools`;
-      } else if (visibleRows === 0) {
-        toolsFilterSummary.textContent = 'No matching conversions. Try a format like PNG or a task like compress.';
+        toolsFilterSummary.textContent = countText(totalTools);
+      } else if (visibleTools.size === 0) {
+        toolsFilterSummary.textContent = 'No matching tools. Try a format like PNG or a task like compress.';
       } else {
-        toolsFilterSummary.textContent = `${visibleRows} matching conversion${visibleRows === 1 ? '' : 's'}`;
+        toolsFilterSummary.textContent = `${countText(visibleTools.size)} shown`;
       }
     }
   };
