@@ -20,3 +20,6 @@ PATROL.md
 patrol.sh
 reddit/
 docs/
+
+# MCP App build output (npm run build in mcp-app/)
+mcp-app/dist/
