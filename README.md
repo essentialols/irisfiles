@@ -37,6 +37,18 @@ counting `index.html`, `about.html`, `privacy.html` and the
 
 Most conversion tools include batch processing (up to 50 files), ZIP download, and drag-and-drop. The landing page auto-detects common file types, suggests relevant tools, and hands dropped files to the selected converter without uploading them.
 
+### Tools for AI agents (WebMCP)
+
+In browsers that support [WebMCP](https://github.com/webmachinelearning/webmcp) (`document.modelContext`, Chrome origin trial 149-156), every page registers tools that an in-browser agent can call instead of clicking through the UI ([js/webmcp.js](js/webmcp.js)):
+
+| Tool | Pages | What it does |
+|---|---|---|
+| `find_tool` | all | Search the catalog by format pair or task and return tool URLs |
+| `get_page_info` | all | Accepted types, batch support, quality range, related tools and FAQ for the current page |
+| `convert_files` | tool pages | Run the page's tool on base64 files and return the outputs as base64 |
+
+`convert_files` feeds the files to the page's own pipeline, so the person sees the same file list and progress. Files are converted in the browser tab, not on a server, and the outputs go only to the agent that called the tool. A quality argument applies to that call only: the person's saved quality and earlier files are left alone. Tools that need choices made on the page (which PDF pages to rotate, reorder, delete or extract) report that rather than guess. Browsers without WebMCP ignore the module.
+
 ## Usage
 
 ```bash
