@@ -166,11 +166,26 @@ function render() {
 
 function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
+// Everything is held in this iframe's memory, and ui/download-file sends each
+// result base64-encoded (+33%), so cap what one session takes on. The per-file
+// cap matches irisfiles.com; the total keeps a batch well inside tab memory.
+export const MAX_FILE_BYTES = 100 * 1024 * 1024;
+export const MAX_TOTAL_BYTES = 200 * 1024 * 1024;
+
 function addFiles(list) {
   generation += 1; // an in-flight conversion no longer matches the file list
-  state.files.push(...Array.from(list));
+  const skipped = [];
+  let total = state.files.reduce((n, f) => n + f.size, 0);
+  for (const f of Array.from(list)) {
+    if (f.size > MAX_FILE_BYTES) { skipped.push(`${f.name} is over ${fmt(MAX_FILE_BYTES)}`); continue; }
+    if (total + f.size > MAX_TOTAL_BYTES) { skipped.push(`${f.name} would take this batch over ${fmt(MAX_TOTAL_BYTES)}`); continue; }
+    total += f.size;
+    state.files.push(f);
+  }
   state.results = [];
-  $('status').textContent = '';
+  $('status').textContent = skipped.length
+    ? `Skipped: ${skipped.join('; ')}. For larger files use irisfiles.com, where nothing is sent through the chat app.`
+    : '';
   render();
 }
 

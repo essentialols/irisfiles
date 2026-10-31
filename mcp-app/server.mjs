@@ -12,13 +12,16 @@ import { readFile } from 'node:fs/promises';
 import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import express from 'express';
-import { McpServer } from '@modelcontextprotocol/server';
+import { McpServer, createMcpHandler } from '@modelcontextprotocol/server';
 import { NodeStreamableHTTPServerTransport } from '@modelcontextprotocol/node';
 import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
 import { z } from 'zod';
 
 const RESOURCE_URI = 'ui://irisfiles/converter.html';
 const HTML_PATH = new URL('dist/irisfiles-app.html', import.meta.url);
+// Read once per process: serverless instances serve many requests.
+let htmlPromise;
+const loadHtml = () => (htmlPromise ??= readFile(HTML_PATH, 'utf8'));
 
 export function createServer() {
   const server = new McpServer({ name: 'IrisFiles', version: '0.1.0' });
@@ -48,7 +51,7 @@ export function createServer() {
     contents: [{
       uri: RESOURCE_URI,
       mimeType: RESOURCE_MIME_TYPE,
-      text: await readFile(HTML_PATH, 'utf8'),
+      text: await loadHtml(),
       // Everything is inlined, so the restrictive default CSP is all we need.
       _meta: { ui: { csp: { connectDomains: [], resourceDomains: [] }, prefersBorder: true } },
     }],
@@ -56,6 +59,12 @@ export function createServer() {
 
   return server;
 }
+
+/**
+ * Web-standard handler (Request -> Response), stateless, for serverless
+ * runtimes; api/mcp.js serves it on Vercel. It also answers older MCP clients.
+ */
+export const handler = createMcpHandler(() => createServer());
 
 export async function startHttp(port = Number(process.env.PORT || 3001), host = process.env.HOST || '127.0.0.1') {
   const app = express();
