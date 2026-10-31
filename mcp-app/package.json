@@ -7,7 +7,7 @@
   "scripts": {
     "build": "node build.mjs",
     "start": "node server.mjs",
-    "test": "node build.mjs && node test/server-contract.mjs && node test/sandbox-runtime.mjs"
+    "test": "node build.mjs && node test/server-contract.mjs && node test/vercel-function.mjs && node test/sandbox-runtime.mjs"
   },
   "license": "MIT",
   "dependencies": {
@@ -24,5 +24,8 @@
     "heic-to": "^1.4.2",
     "pdf-lib": "^1.17.1",
     "playwright": "~1.60.0"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

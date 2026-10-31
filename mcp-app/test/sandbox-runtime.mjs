@@ -193,6 +193,28 @@ for (const mode of ['reference', 'strict']) {
   await page.close();
 }
 
+// Size caps: a file over 100 MB, or one that takes the batch over 200 MB, is skipped with a reason.
+{
+  const { page, view } = await openHost('reference', true);
+  facts.sizeCaps = await view.evaluate(() => {
+    const put = files => {
+      const dt = new DataTransfer();
+      files.forEach(f => dt.items.add(f));
+      const input = document.getElementById('file-input');
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    const mb = n => new File([new Uint8Array(n * 1024 * 1024)], `f${n}.png`, { type: 'image/png' });
+    document.getElementById('clear').click();
+    put([mb(101)]);
+    const tooBig = { files: window.__iris.state.files.length, status: document.getElementById('status').textContent };
+    put([mb(90), mb(90), mb(30)]);
+    const overTotal = { files: window.__iris.state.files.map(f => f.name), status: document.getElementById('status').textContent };
+    return { tooBig, overTotal };
+  });
+  await page.close();
+}
+
 await browser.close();
 hostServer.close(); sandboxServer.close();
 
@@ -233,4 +255,8 @@ for (const m of ['reference', 'strict']) {
 assert.equal(facts['no-download:label'], 'Saving not supported here');
 assert.equal(facts['no-download:native'], 0, 'no-download host: nothing saved behind the host\'s back');
 assert.deepEqual(facts.stale, { results: 0, files: 0, status: '', listed: 0 }, 'a stale conversion does not overwrite a cleared view');
+assert.equal(facts.sizeCaps.tooBig.files, 0, 'a file over 100 MB is not taken on');
+assert.match(facts.sizeCaps.tooBig.status, /f101\.png is over 100\.0 MB/);
+assert.deepEqual(facts.sizeCaps.overTotal.files, ['f90.png', 'f90.png'], 'a file that would pass the 200 MB batch total is skipped');
+assert.match(facts.sizeCaps.overTotal.status, /f30\.png would take this batch over 200\.0 MB/);
 console.log('\nsandbox runtime spike OK');

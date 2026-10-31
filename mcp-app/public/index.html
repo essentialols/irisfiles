@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IrisFiles MCP App</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:40rem;margin:3rem auto;padding:0 1rem;color:#17201b}code{background:#eef3f0;padding:.1rem .3rem;border-radius:4px}</style>
+</head><body>
+<h1>IrisFiles MCP App</h1>
+<p>This is the connector endpoint for using <a href="https://irisfiles.com">IrisFiles</a> inside Claude, ChatGPT and other MCP Apps hosts.</p>
+<p>Add <code id="u">/mcp</code> on this domain as a custom connector. Files are converted inside the chat on your device; this server never receives them.</p>
+<script>document.getElementById('u').textContent = location.origin + '/mcp';</script>
+</body></html>

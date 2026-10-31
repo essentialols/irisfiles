@@ -1,0 +1,4 @@
+# Takes precedence over the repository-root .vercelignore, which is written for
+# the static site and would otherwise apply to this project too.
+node_modules
+test
