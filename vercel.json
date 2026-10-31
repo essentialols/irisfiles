@@ -42,6 +42,10 @@
       "source": "/(.*)",
       "headers": [
         {
+          "key": "Origin-Trial",
+          "value": "AiFEy03emQ5k2dO9Cuff5qJkLYJVVCXjRM1Kmhygz6VSdquyTmIGlo5vt6pzgsOlim28rAYhLwmF9I2yc45o8AEAAABNeyJvcmlnaW4iOiJodHRwczovL2lyaXNmaWxlcy5jb206NDQzIiwiZmVhdHVyZSI6IldlYk1DUCIsImV4cGlyeSI6MTgwNjM2NDgwMH0="
+        },
+        {
           "key": "X-Content-Type-Options",
           "value": "nosniff"
         },
