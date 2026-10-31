@@ -2,8 +2,9 @@
  * IrisFiles MCP App view: runs inside the chat host's sandboxed iframe.
  *
  * The person drops files here; conversion happens in this iframe on their
- * device. Only a one-line summary (names and sizes, never contents) is shared
- * with the model, and results are handed back through the host's download
+ * device. Only a one-line summary (counts, target format and total sizes; never
+ * file names or contents) is shared with the model, and results are handed back
+ * through the host's download
  * mechanism (ui/download-file), because sandboxed iframes cannot download.
  */
 import { App, PostMessageTransport } from '@modelcontextprotocol/ext-apps';
@@ -14,6 +15,7 @@ import { PDFDocument } from 'pdf-lib';
 const app = new App({ name: 'IrisFiles', version: '0.1.0' });
 const $ = id => document.getElementById(id);
 const state = { files: [], results: [] };
+let generation = 0; // bumped on every drop, clear and convert; stale completions are dropped
 
 // ---------- capability probes (also used by the spike test) ----------
 const WASM_MODULE = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]); // empty, valid module
@@ -48,6 +50,18 @@ const TARGETS = {
 };
 
 const baseName = name => name.replace(/\.[^.]+$/, '');
+
+// Make output names unique: a.jpg, then a (1).jpg, a (2).jpg. Comparison is
+// case-insensitive because the person's file system usually is.
+function uniqueName(name, used) {
+  const dot = name.lastIndexOf('.');
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  const ext = dot > 0 ? name.slice(dot) : '';
+  let candidate = name;
+  for (let i = 1; used.has(candidate.toLowerCase()); i += 1) candidate = `${stem} (${i})${ext}`;
+  used.add(candidate.toLowerCase());
+  return candidate;
+}
 const isHeic = f => /\.(heic|heif)$/i.test(f.name) || /hei[cf]/i.test(f.type);
 
 async function toImage(file, target, quality) {
@@ -86,7 +100,8 @@ async function mergePdfs(files) {
 
 async function zipFiles(files) {
   const input = {};
-  for (const f of files) input[f.name] = new Uint8Array(await f.arrayBuffer());
+  const used = new Set();
+  for (const f of files) input[uniqueName(f.name, used)] = new Uint8Array(await f.arrayBuffer());
   return { name: 'files.zip', blob: new Blob([zipSync(input, { level: 6 })], { type: 'application/zip' }) };
 }
 
@@ -96,7 +111,11 @@ export async function convert(files, targetKey, quality = 0.92) {
   if (targetKey === 'merge-pdf') return [await mergePdfs(files)];
   if (targetKey === 'zip') return [await zipFiles(files)];
   const results = [];
-  for (const f of files) results.push(await toImage(f, target, quality));
+  const used = new Set();
+  for (const f of files) {
+    const r = await toImage(f, target, quality);
+    results.push({ ...r, name: uniqueName(r.name, used) });
+  }
   return results;
 }
 
@@ -148,8 +167,10 @@ function render() {
 function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 function addFiles(list) {
+  generation += 1; // an in-flight conversion no longer matches the file list
   state.files.push(...Array.from(list));
   state.results = [];
+  $('status').textContent = '';
   render();
 }
 
@@ -159,23 +180,39 @@ function wire() {
   drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
   drop.addEventListener('dragleave', () => drop.classList.remove('over'));
   drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); addFiles(e.dataTransfer.files); });
-  $('clear').onclick = () => { state.files = []; state.results = []; $('status').textContent = ''; render(); };
+  $('clear').onclick = () => { generation += 1; state.files = []; state.results = []; $('status').textContent = ''; render(); };
   $('convert').onclick = async () => {
+    const mine = ++generation;
+    const files = state.files.slice();
+    const targetKey = $('target').value;
     $('status').textContent = 'Converting on your device…';
     $('convert').disabled = true;
-    try {
-      state.results = await convert(state.files, $('target').value);
-      $('status').textContent = `Done. ${state.results.length} file(s) ready. Nothing was uploaded.`;
-      // Tell the model what happened, never the contents.
+    let results;
+    let error;
+    try { results = await convert(files, targetKey); } catch (e) { error = e; }
+    if (mine !== generation) return; // files were dropped or cleared meanwhile: this result is stale
+    if (error) {
+      $('status').textContent = `Could not convert: ${error.message}`;
+    } else {
+      state.results = results;
+      $('status').textContent = `Done. ${results.length} file(s) ready. Nothing was uploaded.`;
+      // Tell the model what happened: counts, format and total sizes only. No names, no contents.
+      const total = list => list.reduce((n, x) => n + (x.size ?? x.blob.size), 0);
       app.updateModelContext?.({
-        content: [{ type: 'text', text: `IrisFiles converted ${state.files.length} file(s) to ${TARGETS[$('target').value].label} on the user's device: ${state.results.map(r => `${r.name} (${fmt(r.blob.size)})`).join(', ')}. File contents were not shared.` }],
+        content: [{ type: 'text', text: `IrisFiles converted ${files.length} file(s) to ${TARGETS[targetKey].label} on the user's device: ${results.length} output file(s), input ${fmt(total(files))}, output ${fmt(total(results))}. File names and contents were not shared.` }],
       }).catch(() => {});
-    } catch (e) {
-      $('status').textContent = `Could not convert: ${e.message}`;
     }
     render();
   };
 }
+
+// The tool's `target` argument preselects the output format. Handlers are
+// registered before connect() so the host's first notifications are not missed.
+function applyTarget(target) {
+  if (typeof target === 'string' && Object.hasOwn(TARGETS, target)) $('target').value = target;
+}
+app.addEventListener('toolinput', params => applyTarget(params.arguments?.target));
+app.addEventListener('toolresult', params => applyTarget(params.structuredContent?.target));
 
 window.__iris = { probe, convert, save, state, app };
 

@@ -42,4 +42,6 @@ const initialized = new Promise(resolve => { bridge.oninitialized = resolve; });
 await bridge.connect(new PostMessageTransport(iframe.contentWindow, iframe.contentWindow));
 await bridge.sendSandboxResourceReady({ html });
 await initialized;
+// As a real host does after the tool call: hand the view the call's arguments.
+if (params.get('target')) await bridge.sendToolInput({ arguments: { target: params.get('target') } });
 window.__host.ready = true;

@@ -5,9 +5,12 @@
  * The server only ever serves static HTML: it never receives a file, and the
  * tool takes no file arguments, so file bytes cannot reach it or the model.
  *
- *   node server.mjs            Streamable HTTP on :3001/mcp (PORT to change)
+ *   node server.mjs            Streamable HTTP on 127.0.0.1:3001/mcp (PORT and HOST to change;
+ *                              set HOST=0.0.0.0 only behind the deploy's own TLS/proxy)
  */
 import { readFile } from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import express from 'express';
 import { McpServer } from '@modelcontextprotocol/server';
 import { NodeStreamableHTTPServerTransport } from '@modelcontextprotocol/node';
@@ -54,7 +57,7 @@ export function createServer() {
   return server;
 }
 
-export async function startHttp(port = Number(process.env.PORT || 3001)) {
+export async function startHttp(port = Number(process.env.PORT || 3001), host = process.env.HOST || '127.0.0.1') {
   const app = express();
   app.use(express.json({ limit: '1mb' }));
   app.all('/mcp', async (req, res) => {
@@ -65,11 +68,12 @@ export async function startHttp(port = Number(process.env.PORT || 3001)) {
     await transport.handleRequest(req, res, req.body);
   });
   return new Promise(resolve => {
-    const httpServer = app.listen(port, () => resolve(httpServer));
+    const httpServer = app.listen(port, host, () => resolve(httpServer));
   });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// import.meta.url is the symlink-resolved path, so resolve argv[1] too (e.g. /tmp -> /private/tmp).
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   const s = await startHttp();
-  console.log(`IrisFiles MCP App server on http://localhost:${s.address().port}/mcp`);
+  console.log(`IrisFiles MCP App server on http://${s.address().address}:${s.address().port}/mcp`);
 }

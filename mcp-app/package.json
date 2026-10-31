@@ -11,8 +11,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/client": "^2.0.0",
-    "@modelcontextprotocol/core": "^2.0.0",
     "@modelcontextprotocol/ext-apps": "^2.0.4",
     "@modelcontextprotocol/node": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
@@ -20,9 +18,11 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
     "esbuild": "^0.24.2",
     "fflate": "^0.8.2",
     "heic-to": "^1.4.2",
-    "pdf-lib": "^1.17.1"
+    "pdf-lib": "^1.17.1",
+    "playwright": "~1.60.0"
   }
 }

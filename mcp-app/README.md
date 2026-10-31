@@ -1,6 +1,6 @@
 # IrisFiles MCP App (prototype)
 
-IrisFiles inside Claude, ChatGPT and other MCP Apps hosts. A tool, `open_converter`, shows the converter in the chat. The person drops files into it, and they are converted **in the host's sandboxed iframe on their device**. The model only gets a one-line summary (names and sizes). The server only ever serves static HTML and never receives a file.
+IrisFiles inside Claude, ChatGPT and other MCP Apps hosts. A tool, `open_converter`, shows the converter in the chat. The person drops files into it, and they are converted **in the host's sandboxed iframe on their device**. After a conversion the model gets a one-line summary: the number of files, the output format and the total input and output sizes. It never gets file names or contents. The server only ever serves static HTML and never receives a file.
 
 ```
 user: "convert my iPhone photos to JPG"
@@ -8,19 +8,26 @@ user: "convert my iPhone photos to JPG"
         └─▶ host renders ui://irisfiles/converter.html in a sandboxed iframe
               ├─ person drops files ─▶ converted in the iframe (canvas / pdf-lib / fflate / libheif)
               ├─ "Save" ─▶ ui/download-file ─▶ host saves the file
-              └─ updateModelContext: "converted 2 files: a.jpg (120 KB)…"  (no contents)
+              └─ updateModelContext: "converted 2 file(s) to JPG: 2 output file(s), input 3 MB, output 1 MB"  (no names, no contents)
 ```
 
 ## Run
 
 ```bash
-npm install
+npm install           # tests also need a Playwright Chromium: npx playwright install chromium
 npm run build        # bundles src/ into one self-contained dist/irisfiles-app.html
-npm start            # MCP server on http://localhost:3001/mcp
+npm start            # MCP server on http://127.0.0.1:3001/mcp (PORT, HOST to override)
 npm test             # server contract + sandbox runtime spike
 ```
 
-To try it in Claude or ChatGPT, deploy `server.mjs` to a public HTTPS URL and add it as a custom connector.
+The tool's optional `target` argument preselects the output format in the view (via the host's tool-input notification).
+
+To try it in Claude or ChatGPT, deploy `server.mjs` to a public HTTPS URL (set `HOST=0.0.0.0` behind your own proxy; the default binds loopback only) and add it as a custom connector. This directory is an undeployed prototype and is excluded from the Vercel site by `.vercelignore`.
+
+## Known gaps before deploying
+
+- **No file-size limits.** Every input is read into memory in the iframe, and `ui/download-file` base64-encodes the whole result. Large files can exhaust memory or exceed the host's download cap.
+- **LGPL inlining.** The bundle inlines libheif (via `heic-to`), which is LGPL. Inlining it into one HTML file needs a license review and the notices/relinking terms the LGPL requires; the main site's third-party notices do not cover this bundle.
 
 ## Spike results (2026-10-30)
 
