@@ -110,3 +110,5 @@ one-year `immutable` header, which "respect existing headers" honours.
 the deploy. Root is the output directory, so anything committed outside it is a live URL:
 the test fixtures and the SEO experiment write-up were both publicly readable until then.
 A test that needs a fixture must build it in-page rather than fetch it from the server.
+
+`mcp-app/` is an undeployed prototype (an MCP App server plus converter view), excluded from the site via `.vercelignore`.

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>html,body{margin:0;height:100%}iframe{width:100%;height:100%;border:0}</style></head>
+<body>
+<script>
+// Outer sandbox proxy, as in ext-apps/examples/basic-host/src/sandbox.ts:
+// a separate origin whose CSP header (set by the harness server) the inner
+// view inherits because it is written with document.write().
+const HOST_ORIGIN = new URLSearchParams(location.search).get('host') || document.referrer.replace(/\/[^/]*$/, '').replace(/(:\/\/[^/]+).*/, '$1');
+const inner = document.createElement('iframe');
+inner.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms');
+document.body.appendChild(inner);
+window.addEventListener('message', e => {
+  if (e.source === window.parent) {
+    if (e.data && e.data.method === 'ui/notifications/sandbox-resource-ready') {
+      const doc = inner.contentDocument;
+      doc.open(); doc.write(e.data.params.html); doc.close();
+    } else {
+      inner.contentWindow.postMessage(e.data, '*');
+    }
+  } else if (e.source === inner.contentWindow) {
+    window.parent.postMessage(e.data, '*');
+  }
+});
+window.parent.postMessage({ jsonrpc: '2.0', method: 'ui/notifications/sandbox-proxy-ready', params: {} }, '*');
+</script>
+</body></html>

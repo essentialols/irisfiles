@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+// The summary counts distinct tools in the visible rows, the same unit as the idle "N tools".
+async function expectToolsShown(page, summary) {
+  const n = await page.locator('.convert-row:visible .tool-link')
+    .evaluateAll(links => new Set(links.map(l => l.getAttribute('href'))).size);
+  await expect(summary).toHaveText(`${n} tool${n === 1 ? '' : 's'} shown`);
+}
+
 test.describe('Landing page tool search', () => {
   test('understands natural directional conversion queries', async ({ page }) => {
     await page.goto('/');
@@ -7,18 +14,18 @@ test.describe('Landing page tool search', () => {
     const summary = page.locator('#tools-filter-summary');
 
     await search.fill('AVIF to PNG');
-    await expect(summary).toHaveText('1 matching conversion');
+    await expectToolsShown(page, summary);
     await expect(page.locator('.convert-row:visible')).toHaveCount(1);
     await expect(page.locator('.convert-row:visible .convert-source')).toHaveText('AVIF');
     await expect(page.locator('a[href="/avif-to-png"]')).toBeVisible();
 
     await search.fill('JPEG to PNG');
-    await expect(summary).toHaveText('1 matching conversion');
+    await expectToolsShown(page, summary);
     await expect(page.locator('.convert-row:visible .convert-source')).toHaveText('JPG');
     await expect(page.locator('a[href="/jpg-to-png"]')).toBeVisible();
 
     await search.fill('AVIF -> PNG');
-    await expect(summary).toHaveText('1 matching conversion');
+    await expectToolsShown(page, summary);
     await expect(page.locator('.convert-row:visible .convert-source')).toHaveText('AVIF');
   });
 
@@ -32,7 +39,7 @@ test.describe('Landing page tool search', () => {
 
     await search.fill('definitely-not-a-real-tool');
     await expect(page.locator('.convert-row:visible')).toHaveCount(0);
-    await expect(summary).toHaveText('No matching conversions. Try a format like PNG or a task like compress.');
+    await expect(summary).toHaveText('No matching tools. Try a format like PNG or a task like compress.');
   });
 
   test('keeps every tool visible for queries that are only filler words', async ({ page }) => {
