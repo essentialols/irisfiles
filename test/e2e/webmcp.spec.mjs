@@ -39,9 +39,19 @@ test.describe('WebMCP page tools', () => {
   test('does nothing in a browser without WebMCP', async ({ page }) => {
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
+    page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+    const loaded = page.waitForResponse(r => new URL(r.url()).pathname === '/js/webmcp.js');
     await page.goto('/png-to-jpg');
+    expect((await loaded).status()).toBe(200);
     await page.waitForLoadState('networkidle');
     expect(await page.evaluate(() => 'modelContext' in document)).toBe(false);
+    // The module really ran (a 404 or a throw at import would otherwise pass):
+    // importing it again hits the cache, and with no WebMCP it registers nothing.
+    const outcome = await page.evaluate(async () => {
+      const mod = await import('/js/webmcp.js');
+      return { context: mod.getModelContext(), registered: mod.registerPageTools() };
+    });
+    expect(outcome).toEqual({ context: null, registered: null });
     expect(errors).toEqual([]);
   });
 
@@ -150,6 +160,113 @@ test.describe('WebMCP page tools', () => {
     });
     expect(result.ok, JSON.stringify(result)).toBe(true);
     expect(Buffer.from(result.outputs[0].data_base64, 'base64').subarray(0, 3).toString()).toBe('GIF');
+  });
+
+  test('convert_files after earlier files returns only its own output and keeps the saved quality', async ({ page }) => {
+    await installAgentStub(page);
+    await page.goto('/png-to-jpg');
+    await registeredTools(page);
+    // The person converts a file first, with their own quality.
+    await page.locator('#quality-slider').evaluate(el => {
+      el.value = '50';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.setInputFiles('#file-input', fixture('sample.png'));
+    await expect(page.locator('.file-item.done')).toHaveCount(1);
+
+    const result = await callTool(page, 'convert_files', { files: [await fileArg('portrait.png')], quality: 75 });
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    expect(result.quality).toBe(75);
+    expect(result.outputs.map(o => o.name)).toEqual(['portrait.jpg']);
+
+    // The person's value and their earlier file are untouched.
+    expect(await page.evaluate(() => localStorage.getItem('cf-quality'))).toBe('50');
+    expect(await page.locator('#quality-slider').inputValue()).toBe('50');
+    await expect(page.locator('.file-item.done')).toHaveCount(2);
+    await expect(page.locator('.file-item__status', { hasText: 'Queued' })).toHaveCount(0);
+  });
+
+  test('a download the person clicks during a call is not captured or handed to the agent', async ({ page }) => {
+    await installAgentStub(page);
+    await page.goto('/png-to-jpg');
+    await registeredTools(page);
+    const personal = page.waitForEvent('download');
+    const result = JSON.parse(await page.evaluate(async file => {
+      const run = window.__webmcpTools.get('convert_files').execute({ files: [file] });
+      // The call is in flight (it is still waiting on the page): the person saves
+      // another file through the same <a download> mechanism the tools use.
+      const a = document.createElement('a');
+      a.download = 'personal.txt';
+      a.href = URL.createObjectURL(new Blob(['private']));
+      document.body.append(a);
+      a.click();
+      a.remove();
+      return run;
+    }, await fileArg('sample.png')));
+    expect((await personal).suggestedFilename()).toBe('personal.txt');
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    expect(result.outputs.map(o => o.name)).toEqual(['sample.jpg']);
+  });
+
+  test('page globals are restored after success, error and timeout', async ({ page }) => {
+    await installAgentStub(page);
+    await page.goto('/png-to-jpg');
+    await registeredTools(page);
+    const file = await fileArg('sample.png');
+    const restored = await page.evaluate(async f => {
+      const tool = window.__webmcpTools.get('convert_files');
+      const click = HTMLAnchorElement.prototype.click;
+      const create = URL.createObjectURL;
+      const intact = () => HTMLAnchorElement.prototype.click === click && URL.createObjectURL === create;
+      const run = async args => JSON.parse(await tool.execute(args));
+      const out = {};
+      out.success = (await run({ files: [f] })).ok && intact();
+      out.error = !(await run({ files: [{ name: 'x.png' }] })).ok && intact();
+      // Timeout: swallow the change event and leave a row that never finishes.
+      document.getElementById('file-input').addEventListener('change', e => {
+        e.stopImmediatePropagation();
+        const row = document.createElement('div');
+        row.className = 'file-item';
+        document.getElementById('file-list').append(row);
+      }, true);
+      const timedOut = await run({ files: [f], timeout_seconds: 5 });
+      out.timeout = /Timed out/.test(timedOut.error) && intact();
+      return out;
+    }, file);
+    expect(restored).toEqual({ success: true, error: true, timeout: true });
+  });
+
+  test('convert_files returns an error instead of hanging when the batch limit blocks the files', async ({ page }) => {
+    test.setTimeout(120_000);
+    await installAgentStub(page);
+    await page.goto('/png-to-jpg');
+    await registeredTools(page);
+    const png = await fileArg('sample.png');
+    const fill = await callTool(page, 'convert_files', {
+      files: Array.from({ length: 50 }, (_, i) => ({ ...png, name: `fill-${i}.png` })),
+      include_data: false,
+    });
+    expect(fill.ok, JSON.stringify(fill)).toBe(true);
+    const started = Date.now();
+    const result = await callTool(page, 'convert_files', { files: [png] });
+    expect(result.ok, JSON.stringify({ ...result, outputs: result.outputs?.map(o => o.name) })).toBe(false);
+    expect(result.error).toMatch(/did not accept the files/);
+    expect(result.error).toMatch(/Batch limit/);
+    expect(Date.now() - started).toBeLessThan(20_000);
+  });
+
+  test('non-numeric arguments fall back to defaults', async ({ page }) => {
+    await installAgentStub(page);
+    await page.goto('/png-to-jpg');
+    await registeredTools(page);
+    const found = await callTool(page, 'find_tool', { query: 'pdf', limit: 'lots' });
+    expect(found.count).toBeGreaterThan(0);
+    expect(found.count).toBeLessThanOrEqual(10);
+    const result = await callTool(page, 'convert_files', {
+      files: [await fileArg('sample.png')], quality: 'high', timeout_seconds: 'soon',
+    });
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    expect(result.quality).toBeNull();
   });
 
   test('convert_files refuses bad input clearly', async ({ page }) => {

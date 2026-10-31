@@ -47,7 +47,7 @@ In browsers that support [WebMCP](https://github.com/webmachinelearning/webmcp) 
 | `get_page_info` | all | Accepted types, batch support, quality range, related tools and FAQ for the current page |
 | `convert_files` | tool pages | Run the page's tool on base64 files and return the outputs as base64 |
 
-`convert_files` feeds the files to the page's own pipeline, so the person sees the same file list and progress, and nothing is uploaded. Tools that need choices made on the page (which PDF pages to rotate, reorder, delete or extract) report that rather than guess. Browsers without WebMCP ignore the module.
+`convert_files` feeds the files to the page's own pipeline, so the person sees the same file list and progress. Files are converted in the browser tab, not on a server, and the outputs go only to the agent that called the tool. A quality argument applies to that call only: the person's saved quality and earlier files are left alone. Tools that need choices made on the page (which PDF pages to rotate, reorder, delete or extract) report that rather than guess. Browsers without WebMCP ignore the module.
 
 ## Usage
 
