@@ -8,45 +8,6 @@
 
 import { storePendingFiles } from './pending-store.js';
 
-const LANDING_GROUPS = [
-  {
-    label: 'Video → Audio',
-    rows: [
-      ['MP4', [['MP3', '/mp4-to-mp3'], ['WAV', '/mp4-to-wav']]],
-      ['MOV', [['MP3', '/mov-to-mp3'], ['WAV', '/mov-to-wav']]],
-      ['WebM', [['MP3', '/webm-to-mp3'], ['WAV', '/webm-to-wav']]],
-      ['AVI', [['MP3', '/avi-to-mp3'], ['WAV', '/avi-to-wav']]],
-      ['MKV', [['MP3', '/mkv-to-mp3'], ['WAV', '/mkv-to-wav']]],
-    ],
-  },
-  {
-    label: 'Image Tools',
-    rows: [
-      ['Image', [['Background Remover', '/background-remover'], ['Text (OCR)', '/image-to-text']]],
-      ['PNG', [['ICO', '/png-to-ico']]],
-    ],
-  },
-  {
-    label: 'PDF Tools',
-    rows: [
-      ['PDF', [
-        ['Compress', '/compress-pdf'],
-        ['Rotate', '/rotate-pdf'],
-        ['Delete Pages', '/delete-pdf-pages'],
-        ['Extract Pages', '/extract-pdf-pages'],
-        ['Reorder', '/reorder-pdf-pages'],
-        ['Text', '/pdf-to-text'],
-      ]],
-    ],
-  },
-  {
-    label: 'Documents',
-    rows: [
-      ['HTML', [['PDF', '/html-to-pdf']]],
-    ],
-  },
-];
-
 const IMAGE_TOOLS = [
   ['Remove Background', '/background-remover'],
   ['Extract Text (OCR)', '/image-to-text'],
@@ -81,46 +42,6 @@ const SMART_ROUTES = {
   html: { conversions: [['PDF', '/html-to-pdf']] },
   htm: { conversions: [['PDF', '/html-to-pdf']] },
 };
-
-function appendLandingRows() {
-  const table = document.querySelector('.convert-table');
-  if (!table || table.dataset.highValueTools === '1') return;
-  table.dataset.highValueTools = '1';
-
-  for (const group of LANDING_GROUPS) {
-    const heading = document.createElement('div');
-    heading.className = 'convert-group';
-    heading.textContent = group.label;
-    table.appendChild(heading);
-
-    for (const [source, targets] of group.rows) {
-      const row = document.createElement('div');
-      row.className = 'convert-row';
-
-      const sourceEl = document.createElement('span');
-      sourceEl.className = 'convert-source';
-      sourceEl.textContent = source;
-      row.appendChild(sourceEl);
-
-      const arrow = document.createElement('span');
-      arrow.className = 'convert-arrow';
-      arrow.textContent = '→';
-      row.appendChild(arrow);
-
-      const targetWrap = document.createElement('div');
-      targetWrap.className = 'convert-targets';
-      for (const [label, href] of targets) {
-        const link = document.createElement('a');
-        link.href = href;
-        link.className = 'tool-link';
-        link.textContent = label;
-        targetWrap.appendChild(link);
-      }
-      row.appendChild(targetWrap);
-      table.appendChild(row);
-    }
-  }
-}
 
 function extensionOf(file) {
   const match = (file?.name || '').toLowerCase().match(/\.([a-z0-9]+)$/);
@@ -203,6 +124,8 @@ function enhanceSmartDrop() {
 }
 
 export function enhanceLanding() {
-  appendLandingRows();
+  // The tool rows for these pages live in index.html itself (merged into the
+  // matching groups) so they are crawlable and never render as duplicate
+  // "Image Tools" / "Documents" headings.
   enhanceSmartDrop();
 }

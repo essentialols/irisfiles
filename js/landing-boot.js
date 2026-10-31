@@ -131,6 +131,9 @@ const toolsFilterSummary = document.getElementById('tools-filter-summary');
 if (toolsFilterInput) {
   const rows = Array.from(document.querySelectorAll('.convert-row'));
   const groups = Array.from(document.querySelectorAll('.convert-group'));
+  // Count distinct destinations, not rows: one row (e.g. "MP4 →") holds many tools.
+  const totalTools = new Set(Array.from(document.querySelectorAll('.convert-row .tool-link'))
+    .map(link => link.getAttribute('href'))).size;
 
   const updateToolsFilter = () => {
     const query = toolsFilterInput.value.trim();
@@ -157,7 +160,7 @@ if (toolsFilterInput) {
 
     if (toolsFilterSummary) {
       if (!query) {
-        toolsFilterSummary.textContent = `${rows.length} total conversions`;
+        toolsFilterSummary.textContent = `${totalTools} tools`;
       } else if (visibleRows === 0) {
         toolsFilterSummary.textContent = 'No matching conversions. Try a format like PNG or a task like compress.';
       } else {

@@ -48,7 +48,7 @@
           "name": "Is it really free? What's the catch?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes, completely free with no account required and no watermarks. Most image, audio, and video tools enforce a 100 MB per-file limit, and image conversion tools enforce a 100-megapixel limit. Some tools use stricter limits (for example, font conversion and PDF merge). IrisFiles costs almost nothing to run (static files, no server processing), so there's no reason to charge."
+            "text": "Yes, completely free with no account required and no watermarks. Most image and audio tools enforce a 100 MB per-file limit, and image conversion tools enforce a 100-megapixel limit. Video tools have no size cap but reject videos longer than 10 minutes. Some tools use stricter limits (for example, font conversion and PDF merge). IrisFiles costs almost nothing to run (static files, no server processing), so there's no reason to charge."
           }
         },
         {
@@ -105,7 +105,7 @@
     <section class="tools-section">
       <div class="tools-search">
         <label class="tools-search__label" for="tools-filter">Find a conversion or tool</label>
-        <input id="tools-filter" class="tools-search__input" type="search" placeholder="Search by format, extension, or task (e.g. mp4, metadata, compress)">
+        <input id="tools-filter" class="tools-search__input" type="search" placeholder="Search tools, e.g. mp4 or compress">
         <p id="tools-filter-summary" class="tools-search__summary" aria-live="polite"></p>
       </div>
       <div class="convert-table">
@@ -140,6 +140,7 @@
             <a href="/png-to-webp" class="tool-link">WebP</a>
             <a href="/png-to-gif" class="tool-link">GIF</a>
             <a href="/png-to-pdf" class="tool-link">PDF</a>
+            <a href="/png-to-ico" class="tool-link">ICO</a>
             <a href="/compress" class="tool-link">Compress</a>
           </div>
         </div>
@@ -229,6 +230,8 @@
             <a href="/strip-exif" class="tool-link">Strip EXIF</a>
             <a href="/image-metadata" class="tool-link">Metadata</a>
             <a href="/compress" class="tool-link">Compress</a>
+            <a href="/background-remover" class="tool-link">Background Remover</a>
+            <a href="/image-to-text" class="tool-link">Text (OCR)</a>
           </div>
         </div>
         <div class="convert-group">Video</div>
@@ -313,6 +316,47 @@
             <a href="/gif-to-mkv" class="tool-link">MKV</a>
           </div>
         </div>
+        <div class="convert-group">Video → Audio</div>
+        <div class="convert-row">
+          <span class="convert-source">MP4</span>
+          <span class="convert-arrow">→</span>
+          <div class="convert-targets">
+            <a href="/mp4-to-mp3" class="tool-link">MP3</a>
+            <a href="/mp4-to-wav" class="tool-link">WAV</a>
+          </div>
+        </div>
+        <div class="convert-row">
+          <span class="convert-source">MOV</span>
+          <span class="convert-arrow">→</span>
+          <div class="convert-targets">
+            <a href="/mov-to-mp3" class="tool-link">MP3</a>
+            <a href="/mov-to-wav" class="tool-link">WAV</a>
+          </div>
+        </div>
+        <div class="convert-row">
+          <span class="convert-source">WebM</span>
+          <span class="convert-arrow">→</span>
+          <div class="convert-targets">
+            <a href="/webm-to-mp3" class="tool-link">MP3</a>
+            <a href="/webm-to-wav" class="tool-link">WAV</a>
+          </div>
+        </div>
+        <div class="convert-row">
+          <span class="convert-source">AVI</span>
+          <span class="convert-arrow">→</span>
+          <div class="convert-targets">
+            <a href="/avi-to-mp3" class="tool-link">MP3</a>
+            <a href="/avi-to-wav" class="tool-link">WAV</a>
+          </div>
+        </div>
+        <div class="convert-row">
+          <span class="convert-source">MKV</span>
+          <span class="convert-arrow">→</span>
+          <div class="convert-targets">
+            <a href="/mkv-to-mp3" class="tool-link">MP3</a>
+            <a href="/mkv-to-wav" class="tool-link">WAV</a>
+          </div>
+        </div>
         <div class="convert-group">Audio</div>
         <div class="convert-row">
           <span class="convert-source">MP3</span>
@@ -386,18 +430,31 @@
             <a href="/compress-audio" class="tool-link">Compress</a>
           </div>
         </div>
-        <div class="convert-group">Documents</div>
+        <div class="convert-group">PDF</div>
         <div class="convert-row">
           <span class="convert-source">PDF</span>
           <span class="convert-arrow">→</span>
           <div class="convert-targets">
             <a href="/pdf-to-jpg" class="tool-link">JPG</a>
             <a href="/pdf-to-png" class="tool-link">PNG</a>
-            <a href="/merge-pdf" class="tool-link">Merge</a>
-            <a href="/split-pdf" class="tool-link">Split</a>
+            <a href="/pdf-to-text" class="tool-link">Text</a>
             <a href="/pdf-ocr" class="tool-link">OCR</a>
+            <a href="/compress-pdf" class="tool-link">Compress</a>
           </div>
         </div>
+        <div class="convert-row">
+          <span class="convert-source">Edit PDF</span>
+          <span class="convert-arrow">→</span>
+          <div class="convert-targets">
+            <a href="/merge-pdf" class="tool-link">Merge</a>
+            <a href="/split-pdf" class="tool-link">Split</a>
+            <a href="/rotate-pdf" class="tool-link">Rotate</a>
+            <a href="/reorder-pdf-pages" class="tool-link">Reorder</a>
+            <a href="/extract-pdf-pages" class="tool-link">Extract</a>
+            <a href="/delete-pdf-pages" class="tool-link">Delete</a>
+          </div>
+        </div>
+        <div class="convert-group">Documents</div>
         <div class="convert-row">
           <span class="convert-source">EPUB</span>
           <span class="convert-arrow">→</span>
@@ -428,6 +485,13 @@
           <div class="convert-targets">
             <a href="/mobi-to-txt" class="tool-link">TXT</a>
             <a href="/mobi-to-pdf" class="tool-link">PDF</a>
+          </div>
+        </div>
+        <div class="convert-row">
+          <span class="convert-source">HTML</span>
+          <span class="convert-arrow">→</span>
+          <div class="convert-targets">
+            <a href="/html-to-pdf" class="tool-link">PDF</a>
           </div>
         </div>
         <div class="convert-group">Fonts</div>
@@ -478,7 +542,7 @@
       <div class="faq-item">
         <button class="faq-question">Is it really free? What's the catch?</button>
         <div class="faq-answer">
-          <p>Yes, completely free with no account required and no watermarks. Most image, audio, and video tools enforce a 100 MB per-file limit, and image conversion tools enforce a 100-megapixel limit. Some tools use stricter limits (for example, font conversion and PDF merge). IrisFiles costs almost nothing to run (static files, no server processing), so there's no reason to charge.</p>
+          <p>Yes, completely free with no account required and no watermarks. Most image and audio tools enforce a 100 MB per-file limit, and image conversion tools enforce a 100-megapixel limit. Video tools have no size cap but reject videos longer than 10 minutes. Some tools use stricter limits (for example, font conversion and PDF merge). IrisFiles costs almost nothing to run (static files, no server processing), so there's no reason to charge.</p>
         </div>
       </div>
       <div class="faq-item">
