@@ -12,7 +12,7 @@ const result = await build({
   minify: true,
   write: false,
   target: 'es2022',
-  legalComments: 'none',
+  legalComments: 'eof',
 });
 const js = result.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
 const template = await readFile(new URL('src/app.html', here), 'utf8');

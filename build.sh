@@ -3,7 +3,11 @@ set -e
 cd "$(dirname "$0")"
 
 echo "Copying heic-to CSP build..."
-cp node_modules/heic-to/dist/csp/heic-to.js wasm/heic/heic-to.csp.js
+# The LGPL needs a notice with each copy; this file is served as-is.
+{
+  echo "/*! heic-to $(node -p "require('./node_modules/heic-to/package.json').version") (libheif + libde265), LGPL-3.0-or-later. Versions, source code, license texts and how to replace this file: https://irisfiles.com/THIRD_PARTY.md */"
+  cat node_modules/heic-to/dist/csp/heic-to.js
+} > wasm/heic/heic-to.csp.js
 
 echo "Bundling fflate..."
 npx esbuild node_modules/fflate/esm/browser.js \

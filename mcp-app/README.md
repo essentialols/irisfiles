@@ -48,7 +48,7 @@ Then ask *"convert my HEIC photos to JPG"*. If the host blocks WebAssembly, HEIC
 ## Known gaps before deploying
 
 - **File-size limits (addressed).** The view takes at most 100 MB per file (the same as irisfiles.com) and 200 MB per batch. Larger files are skipped with a reason and a pointer to irisfiles.com. A host can still cap `ui/download-file` lower; a declined save shows as such.
-- **LGPL inlining.** The bundle inlines libheif (via `heic-to`), which is LGPL. Inlining it into one HTML file needs a license review and the notices/relinking terms the LGPL requires; the main site's third-party notices do not cover this bundle.
+- **LGPL inlining (addressed).** The bundle inlines libheif and libde265 (via `heic-to`), which are LGPL-3.0. The view carries a notice, and [THIRD_PARTY.md](../THIRD_PARTY.md) lists the exact versions, source links, license texts and how to rebuild the view with a replaced library.
 
 ## Spike results (2026-10-30)
 
@@ -71,4 +71,4 @@ What it means:
 - **Pure-JavaScript tools work in every compliant host.** That covers canvas image conversion, PDF merge/split, ZIP, and likely fonts and documents.
 - **WebAssembly tools depend on the host.** HEIC, AVIF fallback, video/audio (FFmpeg), OCR and background removal all use WebAssembly. A strict reading of the spec blocks them. A spec proposal to let apps declare WebAssembly is open (ext-apps issue #605). One public report says ChatGPT's iframe allows WebAssembly and blob workers. Claude's policy is undocumented and has to be tested with a deployed connector.
 - **Saving results needs `ui/download-file`.** It is in the draft spec, not the 2026-01-26 stable one. Without it the view says "Saving not supported here" rather than failing silently. The host may also cap download size.
-- **Size.** Inlining libheif makes the resource about 3.7 MB, which fits Vercel's 4.5 MB response limit. If a host limits resource size, or the LGPL review prefers libheif as a separate file, it could be served from the deployment's own origin and declared in `_meta.ui.csp.resourceDomains`. That trades the current no-network CSP for a smaller, separately loaded library.
+- **Size.** Inlining libheif makes the resource about 3.7 MB, which fits Vercel's 4.5 MB response limit. If a host limits resource size, it could be served from the deployment's own origin and declared in `_meta.ui.csp.resourceDomains`. That trades the current no-network CSP for a smaller, separately loaded library.
