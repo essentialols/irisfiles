@@ -2,6 +2,8 @@
 
 IrisFiles inside Claude, ChatGPT and other MCP Apps hosts. A tool, `open_converter`, shows the converter in the chat. The person drops files into it, and they are converted **in the host's sandboxed iframe on their device**. After a conversion the model gets a one-line summary: the number of files, the output format and the total input and output sizes. It never gets file names or contents. The server only ever serves static HTML and never receives a file.
 
+**Saving is the host's step, not ours.** Results are saved through the host's `ui/download-file`. A network capture of claude.ai showed no file bytes uploaded during conversion or save, but on save Claude embeds a C2PA content credential ("Claude provided this file", about 6 KB) in the file and posts the output's SHA-256 hash and format to Anthropic (`/api/organizations/<org>/c2pa/sign_claim`), with no contents or file name. So the accurate claim is "never sent to the AI, to Anthropic or to us; on save Claude labels the file and registers its fingerprint", not "nothing reaches Claude". Claude Desktop and ChatGPT traffic have not been measured yet.
+
 ```
 user: "convert my iPhone photos to JPG"
   └─▶ model calls open_converter {target: "jpg"}
