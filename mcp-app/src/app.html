@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- IrisFiles MCP App (MIT). Includes heic-to, libheif and libde265 under LGPL-3.0-or-later. Versions, source code, license texts and how to rebuild with a replaced library: https://irisfiles.com/THIRD_PARTY.md -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -22,6 +23,7 @@
   li { display: flex; gap: 8px; align-items: center; padding: 4px 0; }
   li span { color: var(--muted); }
   #status, #device { color: var(--muted); min-height: 1em; margin: 4px 0; }
+  .legal { color: var(--muted); font-size: 12px; margin: 12px 0 0; }
 </style>
 </head>
 <body>
@@ -46,6 +48,7 @@
   <p id="status" aria-live="polite"></p>
   <ul id="results"></ul>
   <p id="device"></p>
+  <p class="legal">HEIC support uses libheif and libde265 (LGPL-3.0). Source code and licenses: irisfiles.com/THIRD_PARTY.md</p>
   <script type="module">/*__APP_JS__*/</script>
 </body>
 </html>
