@@ -39,7 +39,7 @@ Most conversion tools include batch processing (up to 50 files), ZIP download, a
 
 ### Tools for AI agents (WebMCP)
 
-In browsers that support [WebMCP](https://github.com/webmachinelearning/webmcp) (`document.modelContext`, Chrome origin trial 149-156), every page registers tools that an in-browser agent can call instead of clicking through the UI ([js/webmcp.js](js/webmcp.js)):
+In browsers that support [WebMCP](https://github.com/webmachinelearning/webmcp) (`document.modelContext`, Chrome origin trial 149-162), every page registers tools that an in-browser agent can call instead of clicking through the UI ([js/webmcp.js](js/webmcp.js)):
 
 | Tool | Pages | What it does |
 |---|---|---|
