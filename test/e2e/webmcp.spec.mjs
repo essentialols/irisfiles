@@ -186,6 +186,42 @@ test.describe('WebMCP page tools', () => {
     await expect(page.locator('.file-item__status', { hasText: 'Queued' })).toHaveCount(0);
   });
 
+  test('a start-button tool with the person\'s files already loaded refuses the call', async ({ page }) => {
+    await installAgentStub(page);
+    await page.goto('/create-zip');
+    await registeredTools(page);
+    await page.setInputFiles('#file-input', fixture('portrait.png'));
+    await expect(page.locator('#action-btn')).toBeEnabled();
+    const result = await callTool(page, 'convert_files', { files: [await fileArg('sample.png')] });
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/already has files loaded/);
+  });
+
+  test('files an earlier call left on a start-button tool do not block the next call', async ({ page }) => {
+    await installAgentStub(page);
+    await page.goto('/create-zip');
+    await registeredTools(page);
+    const first = await callTool(page, 'convert_files', { files: [await fileArg('sample.png')] });
+    expect(first.ok, JSON.stringify(first)).toBe(true);
+    const second = await callTool(page, 'convert_files', { files: [await fileArg('sample.jpg')] });
+    expect(second.ok, JSON.stringify(second)).toBe(true);
+  });
+
+  test('files the person adds during a call are held off and not handed to the agent', async ({ page }) => {
+    await installAgentStub(page);
+    await page.goto('/create-zip');
+    await registeredTools(page);
+    await page.evaluate(file => {
+      window.__run = window.__webmcpTools.get('convert_files').execute({ files: [file] });
+    }, await fileArg('sample.png'));
+    await page.setInputFiles('#file-input', fixture('portrait.png'));
+    const result = JSON.parse(await page.evaluate(() => window.__run));
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    const zip = Buffer.from(result.outputs[0].data_base64, 'base64').toString('latin1');
+    expect(zip).toContain('sample.png');
+    expect(zip).not.toContain('portrait.png');
+  });
+
   test('a download the person clicks during a call is not captured or handed to the agent', async ({ page }) => {
     await installAgentStub(page);
     await page.goto('/png-to-jpg');
