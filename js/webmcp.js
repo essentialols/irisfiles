@@ -311,6 +311,32 @@ function busy() {
 }
 
 let running = false;
+// True while the start-button queue holds only files earlier calls loaded; the
+// person adding a file of their own clears it.
+let onlyAgentFilesLoaded = false;
+const FILE_EVENTS = ['drop', 'paste', 'change'];
+
+function personFiles(event) {
+  if (!event.isTrusted) return null;
+  const files = event.type === 'drop' ? event.dataTransfer?.files
+    : event.type === 'paste' ? event.clipboardData?.files
+      : event.target?.type === 'file' ? event.target.files : null;
+  return files?.length ? files : null;
+}
+
+// While a call runs, files the person drops, pastes or picks would show up as
+// this call's rows (start-button pages count every new row after the press)
+// and their outputs would go to the agent. Hold them off until the call ends.
+function holdPersonFiles() {
+  const stop = event => {
+    if (!personFiles(event)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (event.type === 'change') event.target.value = '';
+  };
+  FILE_EVENTS.forEach(type => window.addEventListener(type, stop, true));
+  return () => FILE_EVENTS.forEach(type => window.removeEventListener(type, stop, true));
+}
 
 export async function convertFiles({ files = [], quality = null, include_data = true, timeout_seconds = null } = {}) {
   const input = document.getElementById('file-input');
@@ -318,7 +344,17 @@ export async function convertFiles({ files = [], quality = null, include_data = 
   if (!Array.isArray(files) || files.length === 0) return { ok: false, error: 'Pass at least one file as { name, data_base64 }.' };
   if (!input.multiple && files.length > 1) return { ok: false, error: 'This tool takes one file at a time. Call convert_files once per file.' };
   if (running) return { ok: false, error: 'A conversion is already running on this page. Wait for it to finish.' };
+  // A start button only becomes clickable once files are loaded, and pressing it
+  // converts every queued file, so the person's own files would run at the
+  // agent's quality and come back as this call's outputs.
+  if (!onlyAgentFilesLoaded && startButtons().some(isVisible)) {
+    return {
+      ok: false,
+      error: 'The person already has files loaded in this tool. Ask them to clear them (or reload the page), then try again.',
+    };
+  }
   running = true;
+  const releasePersonFiles = holdPersonFiles();
 
   const ctx = {
     before: new Set(document.querySelectorAll(`.file-item, ${DOWNLOAD_GROUPS.join(', ')}, ${ERROR_SELECTORS}`)),
@@ -347,6 +383,7 @@ export async function convertFiles({ files = [], quality = null, include_data = 
     fileObjects.forEach(file => transfer.items.add(file));
     input.files = transfer.files;
     input.dispatchEvent(new Event('change', { bubbles: true }));
+    onlyAgentFilesLoaded = true;
     // Ownership is fixed here: ui.js-style pages add their rows synchronously,
     // so anything that appears later in the list is not from this call.
     const ownRows = newOnly('.file-item', ctx);
@@ -450,6 +487,7 @@ export async function convertFiles({ files = [], quality = null, include_data = 
   } finally {
     capture.stop();
     slider.restore();
+    releasePersonFiles();
     running = false;
   }
 }
@@ -510,6 +548,11 @@ export function registerPageTools(modelContext = getModelContext()) {
   if (!modelContext || typeof modelContext.registerTool !== 'function') return null;
   const controller = new AbortController();
   const isToolPage = Boolean(document.getElementById('file-input'));
+  if (isToolPage) {
+    FILE_EVENTS.forEach(type => window.addEventListener(type, event => {
+      if (!running && personFiles(event)) onlyAgentFilesLoaded = false; // held off while running
+    }, { capture: true, signal: controller.signal }));
+  }
   const registered = [];
   for (const tool of TOOLS) {
     if (tool.name === 'convert_files' && !isToolPage) continue;
